@@ -1,6 +1,12 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+
 import           Control.Exception
 import qualified Control.Monad.Catch           as Catch
 import           Control.Monad.IO.Class
+import           Control.Monad.Trans.Class      ( lift )
+import           Control.Monad.State
 import           Data.Char                      ( isSpace )
 import qualified Data.Colour.Names             as CNames
 import           Options.Applicative     hiding ( Parser )
@@ -18,38 +24,43 @@ data LoopState = LoopState { curDir :: FilePath
                            }
 type Reference = String -- For now.
 
+instance MonadState s m => MonadState s (InputT m) where
+  get = lift get
+  put = lift . put
+
 main :: IO ()
 main = do
   options  <- execParser opts
   startDir <- expandDirectory (startingDirectory options)
   let startState = LoopState startDir startDir []
-  runInputT defaultSettings (loop startState)
+  evalStateT (runInputT defaultSettings loop) startState
  where
-  -- Actually, StateT would be better here?
-  loop :: LoopState -> InputT IO ()
-  loop lState = do
-    cwd    <- liftIO $ expandDirectory (curDir lState)
-    minput <- getInputLine $ makePrompt cwd
+  loop :: InputT (StateT LoopState IO) ()
+  loop = do
+    curDirectory <- gets curDir
+    cwd          <- liftIO $ expandDirectory curDirectory
+    minput       <- getInputLine $ makePrompt cwd
     case minput of
       Nothing                 -> pure ()
       Just ('c' : 'd' : rest) -> do
         let rest'      = dropWhile isSpace rest
             gotoOldDir = filter (not . isSpace) rest == "-"   -- `cd -`
         newDirectory <- if gotoOldDir
-          then pure $ oldDir lState
-          else liftIO $ expandDirectory rest'
+                           then gets oldDir
+                           else liftIO $ expandDirectory rest'
         Catch.catchIOError
           (  liftIO (setCurrentDirectory newDirectory)
-          >> loop (LoopState newDirectory (curDir lState) [])
+          >> put (LoopState newDirectory curDirectory [])
+          >> loop
           )
           (  const
           $  (liftIO . putStrLn $ newDirectory ++ ": no such directory")
-          >> loop lState
+          >> loop
           )
       Just "quit" -> pure ()
       Just input  -> do
         outputStrLn $ "Input was: " ++ input
-        loop lState
+        loop
 
 
 {- | Generates the prompt, including the ANSI escape characters for colours
@@ -87,10 +98,10 @@ optionParser = Options <$> strOption
                              <> showDefaultWith (const "current working directory")
                              )
 
-{- | Expands relative paths and tildes in directories. Tilde expansion does not work
-- with arbitrary users (`~user/path/to/file`), only the currently logged in user
-- (`~/path/to/file`).
-- Relative paths are resolved with respect to the current working directory.
+{- | Expands relative paths and tildes in directories. Tilde expansion does not
+work with arbitrary users (`~user/path/to/file`), only the currently logged in user
+(`~/path/to/file`).
+Relative paths are resolved with respect to the current working directory.
 -}
 expandDirectory :: FilePath -> IO FilePath
 expandDirectory fp =
