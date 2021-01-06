@@ -33,10 +33,10 @@ main = do
   options  <- execParser opts
   startDir <- expandDirectory (startingDirectory options)
   let startState = LoopState startDir startDir []
-  evalStateT (runInputT defaultSettings loop) startState
+  evalStateT (runInputT defaultSettings $ withInterrupt loop) startState
  where
   loop :: InputT (StateT LoopState IO) ()
-  loop = do
+  loop = handleInterrupt loop $ do
     curDirectory <- gets curDir
     cwd          <- liftIO $ expandDirectory curDirectory
     minput       <- getInputLine $ makePrompt cwd
