@@ -1,3 +1,5 @@
+import           Control.Exception
+import qualified Control.Monad.Catch           as Catch
 import           Control.Monad.IO.Class
 import           Data.Char                      ( isSpace )
 import qualified Data.Colour.Names             as CNames
@@ -8,11 +10,20 @@ import           System.Console.Haskeline
 import           System.Directory
 import           System.FilePath
 
+{- | All information needed for the main loop.
+-}
+data LoopState = LoopState { curDir :: FilePath
+                           , oldDir :: FilePath
+                           , references :: [Reference]
+                           }
+type Reference = String -- For now.
+
 main :: IO ()
 main = do
-  options <- execParser opts
+  options  <- execParser opts
   startDir <- expandDirectory (startingDirectory options)
-  runInputT defaultSettings (loop $ LoopState startDir startDir [])
+  let startState = LoopState startDir startDir []
+  runInputT defaultSettings (loop startState)
  where
   -- Actually, StateT would be better here?
   loop :: LoopState -> InputT IO ()
@@ -22,12 +33,19 @@ main = do
     case minput of
       Nothing                 -> pure ()
       Just ('c' : 'd' : rest) -> do
-        let rest' = dropWhile isSpace rest
+        let rest'      = dropWhile isSpace rest
             gotoOldDir = filter (not . isSpace) rest == "-"   -- `cd -`
-        newDirectory <- if gotoOldDir then pure $ oldDir lState
-                                      else liftIO $ expandDirectory rest'
-        liftIO $ setCurrentDirectory newDirectory
-        loop $ LoopState newDirectory (curDir lState) []
+        newDirectory <- if gotoOldDir
+          then pure $ oldDir lState
+          else liftIO $ expandDirectory rest'
+        Catch.catchIOError
+          (  liftIO (setCurrentDirectory newDirectory)
+          >> loop (LoopState newDirectory (curDir lState) [])
+          )
+          (  const
+          $  (liftIO . putStrLn $ newDirectory ++ ": no such directory")
+          >> loop lState
+          )
       Just "quit" -> pure ()
       Just input  -> do
         outputStrLn $ "Input was: " ++ input
@@ -87,11 +105,3 @@ expandDirectory fp =
         _ -> pure fp
       )
         >>= canonicalizePath
-
-{- | All information needed for the main loop.
--}
-data LoopState = LoopState { curDir :: FilePath
-                           , oldDir :: FilePath
-                           , articles :: [Article]
-                           }
-type Article = String
