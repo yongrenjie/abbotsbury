@@ -16,17 +16,35 @@ maintainer:          yongrenjie@gmail.com
 -- category:
 extra-source-files:  README.md
 
+library
+  build-depends:
+    , base ^>=4.14.1.0
+  hs-source-dirs:
+    lib
+  default-language:
+    Haskell2010
+
 executable abbot
-  main-is:             Main.hs
-  build-depends:       base ^>=4.14.1.0
-                       , haskeline
-                       , ansi-terminal
-                       , colour
-                       , optparse-applicative
-                       , directory
-                       , filepath >=1.3.0.0
-                       , exceptions
-                       , mtl
-                       , transformers
-  hs-source-dirs:      src
-  default-language:    Haskell2010
+  main-is:
+    Main.hs
+  build-depends:
+    , base ^>=4.14.1.0
+    , abbotsbury
+    , haskeline
+    , ansi-terminal
+    , colour
+    , optparse-applicative
+    , directory
+    , filepath >=1.3.0.0
+    , exceptions
+    , mtl
+    , transformers
+    , megaparsec
+  hs-source-dirs:
+    src
+  other-modules:
+    Abbot.Monad
+    Abbot.Parse
+    Abbot.Path
+  default-language:
+    Haskell2010

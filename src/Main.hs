@@ -1,118 +1,105 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+module Main where
+
+import           Abbot.Monad
+import           Abbot.Parse
+import           Abbot.Path
 
 import           Control.Exception
-import qualified Control.Monad.Catch           as Catch
-import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Class      ( lift )
-import           Control.Monad.State
 import           Data.Char                      ( isSpace )
 import qualified Data.Colour.Names             as CNames
 import           Options.Applicative     hiding ( Parser )
 import qualified Options.Applicative           as O
 import           System.Console.ANSI
 import           System.Console.Haskeline
-import           System.Directory
-import           System.FilePath
 
 {- | All information needed for the main loop.
 -}
-data LoopState = LoopState { curDir :: FilePath
-                           , oldDir :: FilePath
-                           , references :: [Reference]
-                           }
+data LoopState = LoopState
+  { curDir     :: FilePath
+  , oldDir     :: FilePath
+  , references :: [Reference]
+  }
 type Reference = String -- For now.
 
-instance MonadState s m => MonadState s (InputT m) where
-  get = lift get
-  put = lift . put
 
 main :: IO ()
 main = do
-  options  <- execParser opts
+  options  <- execParser replOptionInfo
   startDir <- expandDirectory (startingDirectory options)
   let startState = LoopState startDir startDir []
   evalStateT (runInputT defaultSettings $ withInterrupt loop) startState
- where
-  loop :: InputT (StateT LoopState IO) ()
-  loop = handleInterrupt loop $ do
-    curDirectory <- gets curDir
-    cwd          <- liftIO $ expandDirectory curDirectory
-    minput       <- getInputLine $ makePrompt cwd
-    case minput of
-      Nothing                 -> pure ()
-      Just ('c' : 'd' : rest) -> do
-        let rest'      = dropWhile isSpace rest
-            gotoOldDir = filter (not . isSpace) rest == "-"   -- `cd -`
-        newDirectory <- if gotoOldDir
-                           then gets oldDir
-                           else liftIO $ expandDirectory rest'
-        Catch.catchIOError
-          (  liftIO (setCurrentDirectory newDirectory)
-          >> put (LoopState newDirectory curDirectory [])
-          >> loop
-          )
-          (  const
-          $  (liftIO . putStrLn $ newDirectory ++ ": no such directory")
-          >> loop
-          )
-      Just "quit" -> pure ()
-      Just input  -> do
-        outputStrLn $ "Input was: " ++ input
-        loop
+
+-- | The main REPL loop of abbot.
+loop :: InputT (StateT LoopState IO) ()
+loop =
+  let exit = return ()
+  in
+    handleInterrupt loop $ do
+      curDirectory <- gets curDir
+      cwd          <- liftIO $ expandDirectory curDirectory
+      minput       <- getInputLine $ makePrompt cwd
+      case minput of
+        Nothing  -> exit                  -- Ctrl-D
+        Just cmd -> case runReplParser cmd of
+          Left  _       -> outputStrLn (makeErrStr $ "unrecognised command " ++ cmd) >> loop
+          Right Quit    -> exit
+          Right (Cd fp) -> do
+            let gotoOldDir = filter (not . isSpace) fp == "-"   -- `cd -`
+            newDirectory <- if gotoOldDir
+              then gets oldDir
+              else liftIO $ expandDirectory fp
+            catchIOError
+              (  liftIO (setCurrentDirectory newDirectory)
+              >> put (LoopState newDirectory curDirectory [])
+              >> loop
+              )
+              (\e -> outputStrLn (newDirectory ++ ": no such directory") >> loop
+              )
 
 
 {- | Generates the prompt, including the ANSI escape characters for colours
 - and styling.
 -}
 makePrompt :: FilePath -> String
-makePrompt fp = mconcat [ setSGRCode [SetRGBColor Foreground CNames.plum]
-                        , "("
-                        , fp
-                        , ")"
-                        , setSGRCode [ SetRGBColor Foreground CNames.salmon
-                                     , SetConsoleIntensity BoldIntensity
-                                     , SetItalicized True
-                                     ]
-                        , " peep > "
-                        , setSGRCode [Reset]
-                        ]
+makePrompt fp = mconcat
+  [ setSGRCode [SetRGBColor Foreground CNames.plum]
+  , "("
+  , fp
+  , ")"
+  , setSGRCode
+    [ SetRGBColor Foreground CNames.salmon
+    , SetConsoleIntensity BoldIntensity
+    , SetItalicized True
+    ]
+  , " peep > "
+  , setSGRCode [Reset]
+  ]
+
+makeErrStr :: String -> String
+makeErrStr err = mconcat
+  [ setSGRCode [SetRGBColor Foreground CNames.tomato]
+  , "error: "
+  , setSGRCode [Reset]
+  , err
+  ]
 
 
 -- Command-line option parsing for the executable itself.
-newtype Options = Options
+newtype ReplOptions = ReplOptions
              { startingDirectory :: FilePath
              }
              deriving (Show)
-opts :: ParserInfo Options
-opts = info (helper <*> optionParser) ( fullDesc
-                                      <> progDesc "Minimalistic command-line reference manager"
-                                      )
-optionParser :: O.Parser Options
-optionParser = Options <$> strOption
-                             (  short 'd'
-                             <> long "directory"
-                             <> help "Directory to start in"
-                             <> value "."
-                             <> showDefaultWith (const "current working directory")
-                             )
 
-{- | Expands relative paths and tildes in directories. Tilde expansion does not
-work with arbitrary users (`~user/path/to/file`), only the currently logged in user
-(`~/path/to/file`).
-Relative paths are resolved with respect to the current working directory.
--}
-expandDirectory :: FilePath -> IO FilePath
-expandDirectory fp =
-  let components = splitPath . dropTrailingPathSeparator $ fp
-  in  (case components of
-        []            -> getHomeDirectory
-        ["/"        ] -> pure fp
-        ["~"        ] -> getHomeDirectory
-        ("~/" : rest) -> do
-          home <- getHomeDirectory
-          pure $ joinPath ((home ++ "/") : rest)
-        _ -> pure fp
-      )
-        >>= canonicalizePath
+replOptionInfo :: ParserInfo ReplOptions
+replOptionInfo = info
+  (helper <*> replOptionParser)
+  (fullDesc <> progDesc "Minimalistic command-line reference manager")
+
+replOptionParser :: O.Parser ReplOptions
+replOptionParser = ReplOptions <$> strOption
+  (  short 'd'
+  <> long "directory"
+  <> help "Directory to start in"
+  <> value "."
+  <> showDefaultWith (const "current working directory")
+  )
