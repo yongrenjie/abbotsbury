@@ -18,7 +18,8 @@ import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer    as L
 
 
-data ReplCmd = Nop | Quit | Help | Cd
+data ReplCmd = Nop | Quit | Help | Cd | Cite
+             deriving (Eq, Show)
 type ReplArgs = Text
 
 
@@ -53,30 +54,26 @@ pRepl = do
 -- | The output of a command is either an error message (Left), OR
 --   1) an optional set of refnos (which can be piped to another command), plus
 --   2) a list of IO actions to be performed by the main loop
-type CmdOutput = Either Text (Maybe IntSet, [IO ()])
+type CmdOutput = Either Text ([Reference], Maybe IntSet, Text)
 type Reference = Text
 
--- | Return a result which has no effect except for (eventually) being printed
--- by the main loop.
-purePrint :: Text -> CmdOutput
-purePrint s = Right (Nothing, [TIO.putStrLn s])
+purePrintWith :: [Reference] -> Text -> CmdOutput
+purePrintWith refs s = Right (refs, Nothing, s)
 
 -- | Run a command.
-runCommand :: ReplCmd       -- The command to be run.
-           -> ReplArgs      -- The arguments passed to the command.
-           -> [Reference]   -- The current state of the reference list.
-           -> CmdOutput     -- The output of the command.
-runCommand Help args _ = runHelp args
-runCommand _    _    _ = undefined
+runCommand :: ReplCmd         -- The command to be run.
+           -> ReplArgs        -- The arguments passed to the command.
+           -> [Reference]     -- The current state of the reference list.
+           -> IO CmdOutput    -- The output of the command.
+runCommand Help args refs = pure $ runHelp args refs
+runCommand _    _    _    = undefined
 
 
--- HELP
-
-runHelp :: ReplArgs -> CmdOutput
-runHelp ""   = purePrint genericHelp
-runHelp args = case runReplParser args of
-  Left  _        -> Left "command not recognised"
-  Right (cmd, _) -> purePrint $ getHelpText cmd
+runHelp :: ReplArgs -> [Reference] -> CmdOutput
+runHelp ""   refs = purePrintWith refs genericHelp
+runHelp args refs = case runReplParser args of
+  Left  _        -> Left $ "help: command '" <> args <> "' not recognised"
+  Right (cmd, _) -> purePrintWith refs $ getHelpText cmd
 
 
 genericHelp :: Text

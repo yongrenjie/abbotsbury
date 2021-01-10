@@ -10,6 +10,7 @@ import           Abbot.Style
 import           Control.Exception
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
+import qualified Data.Text.IO                  as TIO
 import           Options.Applicative     hiding ( Parser )
 import qualified Options.Applicative           as O
 import           System.Console.Haskeline
@@ -37,14 +38,13 @@ loop =
   let exit = return ()
   in
     handleInterrupt loop $ do
-      curDirectory <- gets curDir
-      refs         <- gets references
+      LoopState curDirectory oldDirectory refs <- get
       cwd          <- liftIO $ expandDirectory curDirectory
-      minput       <- prompt cwd
-      case fmap T.pack minput of
+      input        <- prompt cwd
+      case fmap T.pack input of
         Nothing  -> exit                  -- Ctrl-D
         Just cmd -> case runReplParser cmd of
-          Left  _          -> printErr ("unrecognised command " <> cmd) >> loop
+          Left  _          -> printErr ("command '" <> cmd <> "' not recognised") >> loop
           Right (Nop , _ ) -> loop
           Right (Quit, _ ) -> exit
           Right (Cd  , fp) -> do
@@ -59,10 +59,15 @@ loop =
               (\e ->
                 printErr (T.pack newDirectory <> ": no such directory") >> loop
               )
-          Right (cmd, args) -> case runCommand cmd args refs of
-            Left  err          -> printErr err >> loop
-            Right (_, actions) -> liftIO (sequence_ actions) >> loop
-
+          Right (cmd, args) -> do
+            cmdOutput  <- liftIO $ runCommand cmd args refs
+            case cmdOutput of
+                 Left err -> printErr err >> loop
+                 Right (newRefs, _, outText) -> do
+                   put (LoopState curDirectory oldDirectory newRefs)
+                   outputStrLn . T.unpack $ outText
+                   when (cmd == Cite) (liftIO $ copyToClipboard outText)
+                   loop
 
 -- | Generates the prompt.
 prompt :: FilePath -> InputT (StateT LoopState IO) (Maybe String)
@@ -78,6 +83,9 @@ printErr errMsg = outputStrLn . T.unpack $ mconcat
   , setColor "coral" errMsg
   ]
 
+-- | Copies to clipboard. Not done yet (obviously.)
+copyToClipboard :: Text -> IO ()
+copyToClipboard = TIO.putStrLn
 
 -- Command-line option parsing for the executable itself.
 newtype ReplOptions = ReplOptions
