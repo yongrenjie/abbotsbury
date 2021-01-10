@@ -8,20 +8,24 @@ module Abbot.Commands
 import           Data.Char
 import           Data.Functor                   ( void )
 import           Data.IntSet                    ( IntSet )
-import qualified Data.IntSet                   as IS
+-- import qualified Data.IntSet                   as IS
 import           Data.Text                      ( Text )
-import qualified Data.Text                     as T
+-- import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           Data.Void                      ( Void )
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer    as L
 
-
+-- | We don't want to hardcode the types of the arguments, because they will
+-- be different for each command. Each command, when run, will parse their
+-- arguments using a particular parser.
 data ReplCmd = Nop | Quit | Help | Cd | Cite
              deriving (Eq, Show)
 type ReplArgs = Text
 
+
+-- | Command-line parsing
 
 type Parser = Parsec Void Text
 
@@ -51,34 +55,35 @@ pRepl = do
   eof
   return (cmd, args)
 
--- | The output of a command is either an error message (Left), OR
---   1) an optional set of refnos (which can be piped to another command), plus
---   2) a list of IO actions to be performed by the main loop
-type CmdOutput = Either Text ([Reference], Maybe IntSet, Text)
+
+-- | A command can perform several IO actions, which ultimately return either
+--   an error message (Left), OR a successful return with
+--   1) the final state of the reference list, plus
+--   2) an optional set of refnos (which can be piped to another command)
+type CmdOutput = IO (Either Text ([Reference], Maybe IntSet))
 type Reference = Text
 
-purePrintWith :: [Reference] -> Text -> CmdOutput
-purePrintWith refs s = Right (refs, Nothing, s)
 
--- | Run a command.
-runCommand :: ReplCmd         -- The command to be run.
-           -> ReplArgs        -- The arguments passed to the command.
-           -> [Reference]     -- The current state of the reference list.
-           -> IO CmdOutput    -- The output of the command.
-runCommand Help args refs = pure $ runHelp args refs
-runCommand _    _    _    = undefined
+-- | Run a command. This is just a helper function which delegates to the
+-- individual command runners.
+runCommand
+  :: ReplCmd         -- The command to be run.
+  -> ReplArgs        -- The arguments passed to the command.
+  -> [Reference]     -- The current state of the reference list.
+  -> CmdOutput       -- The output of the command.
+runCommand Help = runHelp
+runCommand _    = undefined
 
-
+-- | HELP
 runHelp :: ReplArgs -> [Reference] -> CmdOutput
-runHelp ""   refs = purePrintWith refs genericHelp
 runHelp args refs = case runReplParser args of
-  Left  _        -> Left $ "help: command '" <> args <> "' not recognised"
-  Right (cmd, _) -> purePrintWith refs $ getHelpText cmd
+  Left _ -> pure $ Left $ "help: command '" <> args <> "' not recognised"
+  Right (cmd, _) ->
+    TIO.putStrLn (getHelpText cmd) >> pure (Right (refs, Nothing))
 
-
-genericHelp :: Text
-genericHelp = "Welcome to abbotsbury! The help hasn't been written yet."
 getHelpText :: ReplCmd -> Text
+getHelpText Nop  = "Welcome to abbotsbury! The help hasn't been written yet."
 getHelpText Quit = "Exit the program."
 getHelpText Help = "Print help."
 getHelpText Cd   = "Change the working directory."
+getHelpText Cite = "Cite some references."
