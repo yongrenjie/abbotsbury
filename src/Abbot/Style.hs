@@ -3,7 +3,6 @@ module Abbot.Style
   ) where
 
 import           Data.Maybe                     ( fromJust )
-import           Data.Colour                    ( Colour )
 import qualified Data.Colour.Names             as CNames
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
@@ -11,6 +10,7 @@ import           System.Console.ANSI     hiding ( setSGRCode )
 import qualified System.Console.ANSI           as ANSI
 
 -- | Wrapper around ansi-terminal's setSGRCode which returns String values.
+setSGRCode :: [SGR] -> Text
 setSGRCode = T.pack . ANSI.setSGRCode
 
 -- | Change the foreground colour.
