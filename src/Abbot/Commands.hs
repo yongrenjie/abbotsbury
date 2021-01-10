@@ -5,6 +5,8 @@ module Abbot.Commands
   ( module Abbot.Commands
   ) where
 
+import           Abbotsbury
+
 import           Data.Char
 import           Data.Functor                   ( void )
 import           Data.IntSet                    ( IntSet )
@@ -61,7 +63,6 @@ pRepl = do
 --   1) the final state of the reference list, plus
 --   2) an optional set of refnos (which can be piped to another command)
 type CmdOutput = IO (Either Text ([Reference], Maybe IntSet))
-type Reference = Text
 
 
 -- | Run a command. This is just a helper function which delegates to the

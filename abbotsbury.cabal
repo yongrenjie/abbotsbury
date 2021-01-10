@@ -16,13 +16,18 @@ maintainer:          yongrenjie@gmail.com
 -- category:
 extra-source-files:  README.md
 
--- library
---   build-depends:
---     , base ^>=4.14.1.0
---   hs-source-dirs:
---     lib
---   default-language:
---     Haskell2010
+library
+  build-depends:
+    , base ^>=4.14.1.0
+    , text
+  hs-source-dirs:
+    lib
+  exposed-modules:
+    Abbotsbury
+  other-modules:
+    Abbotsbury.Reference
+  default-language:
+    Haskell2010
 
 executable abbot
   main-is:
@@ -31,7 +36,7 @@ executable abbot
     -Wall -j4 +RTS -A128m -n2m -RTS
   build-depends:
     , base ^>=4.14.1.0
-    -- , abbotsbury
+    , abbotsbury
     , haskeline
     , ansi-terminal
     , colour
@@ -44,11 +49,12 @@ executable abbot
     , megaparsec
     , containers
     , text
+    , yaml
+    , time
   hs-source-dirs:
     src
   other-modules:
     Abbot.Commands
-    Abbot.Monad
     Abbot.Path
     Abbot.Style
   default-language:

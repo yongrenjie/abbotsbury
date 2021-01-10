@@ -1,12 +1,20 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+
 
 module Main where
 
 import           Abbot.Commands
-import           Abbot.Monad
 import           Abbot.Path
 import           Abbot.Style
 
+import           Abbotsbury
+
+import           Control.Monad.Catch            ( catchIOError )
+import           Control.Monad.IO.Class
+import           Control.Monad.State
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
@@ -22,6 +30,7 @@ main = do
   let startState = LoopState startDir startDir True []
   evalStateT (runInputT defaultSettings $ withInterrupt loop) startState
 
+
 -- | All information needed for the main loop.
 data LoopState = LoopState
   { curDir     :: FilePath     -- Current working directory ('wd').
@@ -34,19 +43,21 @@ data LoopState = LoopState
 -- | The main REPL loop of abbot. The `quit` and `cd` functions are implemented
 -- here, because they affect the entire state of the program. Other functions
 -- are implemented elsewhere.
+-- OK, instead of using lift . put everywhere, ideally I would make a MonadState
+-- instance for this. But I'm afraid that as of now, I don't know how to do that.
 loop :: InputT (StateT LoopState IO) ()
 loop =
   let exit = return ()
   in
     handleInterrupt loop $ do
-      ls@(LoopState curD oldD dirC refs) <- get
+      ls@(LoopState curD oldD dirC refs) <- lift get
       -- Read in new data if the directory was changed, then turn off the flag
       when
         dirC
         (liftIO $ putStrLn
           "directory changed! in general we should read/write here..."
         )
-      put $ ls { dirChanged = False }
+      lift $ put (ls { dirChanged = False })
       -- Show the prompt and get the command
       cwd   <- liftIO $ expandDirectory curD
       input <- prompt cwd
@@ -56,26 +67,25 @@ loop =
         Just cmdArgs -> case runReplParser cmdArgs of
           Left _ -> printErr ("command '" <> cmdArgs <> "' not recognised") >> loop
           Right (Nop , _ ) -> loop
-          Right (Quit, _ ) -> exit
+          Right (Quit, _ ) -> outputStrLn "quitting..." >> exit
           Right (Cd  , fp) -> do
+            -- Check for 'cd -'
             newD <- if fp == "-"
-              then gets oldDir
-              else liftIO . expandDirectory . T.unpack $ fp
-            if newD == curD
-              then loop
-              else catchIOError
+              then lift $ gets oldDir
+              else liftIO $ expandDirectory . T.unpack $ fp
+            -- If the new directory is different, then change the working directory
+            when (newD /= curD) $ catchIOError
                 (  liftIO (setCurrentDirectory newD)
-                >> put (LoopState newD curD True [])
-                >> loop
+                >> lift (put (LoopState newD curD True []))
                 )
-                (\_ -> printErr (T.pack newD <> ": no such directory") >> loop)
+                (\_ -> printErr (T.pack newD <> ": no such directory"))
             loop
           Right (cmd, args) -> do
             cmdOutput <- liftIO $ runCommand cmd args refs
             case cmdOutput of
               Left  err          -> printErr err >> loop
               Right (newRefs, _) -> do
-                put (LoopState curD oldD False newRefs)
+                lift . put $ LoopState curD oldD False newRefs
                 loop
 
 -- | Generates the prompt.
