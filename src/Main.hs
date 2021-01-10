@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
 import           Abbot.Commands
@@ -6,26 +8,26 @@ import           Abbot.Path
 import           Abbot.Style
 
 import           Control.Exception
-import           Data.Char                      ( isSpace )
+import           Data.Text                      ( Text )
+import qualified Data.Text                     as T
 import           Options.Applicative     hiding ( Parser )
 import qualified Options.Applicative           as O
 import           System.Console.Haskeline
 
-{- | All information needed for the main loop.
--}
-data LoopState = LoopState
-  { curDir     :: FilePath
-  , oldDir     :: FilePath
-  , references :: [Reference]
-  }
-
-
+-- | Entry point.
 main :: IO ()
 main = do
   options  <- execParser replOptionInfo
   startDir <- expandDirectory (startingDirectory options)
   let startState = LoopState startDir startDir []
   evalStateT (runInputT defaultSettings $ withInterrupt loop) startState
+
+-- | All information needed for the main loop.
+data LoopState = LoopState
+  { curDir     :: FilePath
+  , oldDir     :: FilePath
+  , references :: [Reference]
+  }
 
 -- | The main REPL loop of abbot. The `quit` and `cd` functions are implemented
 -- here, because they affect the entire state of the program. Other functions
@@ -39,35 +41,39 @@ loop =
       refs         <- gets references
       cwd          <- liftIO $ expandDirectory curDirectory
       minput       <- prompt cwd
-      case minput of
+      case fmap T.pack minput of
         Nothing  -> exit                  -- Ctrl-D
         Just cmd -> case runReplParser cmd of
-          Left  _          -> printErr ("unrecognised command " ++ cmd) >> loop
-          Right (Quit, _)  -> exit
-          Right (Cd, fp)   -> do
-            newDirectory <- if fp == "-" then gets oldDir else liftIO $ expandDirectory fp
+          Left  _          -> printErr ("unrecognised command " <> cmd) >> loop
+          Right (Nop , _ ) -> loop
+          Right (Quit, _ ) -> exit
+          Right (Cd  , fp) -> do
+            newDirectory <- if fp == "-"
+              then gets oldDir
+              else liftIO . expandDirectory . T.unpack $ fp
             catchIOError
               (  liftIO (setCurrentDirectory newDirectory)
               >> put (LoopState newDirectory curDirectory [])
               >> loop
               )
-              (\e -> printErr (newDirectory ++ ": no such directory") >> loop
+              (\e ->
+                printErr (T.pack newDirectory <> ": no such directory") >> loop
               )
           Right (cmd, args) -> case runCommand cmd args refs of
-                                    Left err -> printErr err >> loop
-                                    Right (_, actions) -> liftIO (sequence_ actions) >> loop
+            Left  err          -> printErr err >> loop
+            Right (_, actions) -> liftIO (sequence_ actions) >> loop
 
 
 -- | Generates the prompt.
 prompt :: FilePath -> InputT (StateT LoopState IO) (Maybe String)
-prompt fp = getInputLine $ mconcat
-  [ setColor "plum" $ "(" ++ fp ++ ") "
+prompt fp = getInputLine . T.unpack $ mconcat
+  [ setColor "plum" . T.pack $ "(" ++ fp ++ ") "
   , setColor "hotpink" . setBold . setItalic $ "peep > "
   ]
 
 -- | Prints an error.
-printErr :: String -> InputT (StateT LoopState IO) ()
-printErr errMsg = outputStrLn $ mconcat
+printErr :: Text -> InputT (StateT LoopState IO) ()
+printErr errMsg = outputStrLn . T.unpack $ mconcat
   [ setColor "red" "error: "
   , setColor "coral" errMsg
   ]

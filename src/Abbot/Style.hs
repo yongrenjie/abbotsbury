@@ -5,9 +5,18 @@ module Abbot.Style
 import           Data.Maybe                     ( fromJust )
 import           Data.Colour                    ( Colour )
 import qualified Data.Colour.Names             as CNames
-import           System.Console.ANSI
+import           Data.Text                      ( Text )
+import qualified Data.Text                     as T
+import           System.Console.ANSI     hiding ( setSGRCode )
+import qualified System.Console.ANSI           as ANSI
 
-setColor :: String -> String -> String
+-- | Wrapper around ansi-terminal's setSGRCode which returns String values.
+setSGRCode = T.pack . ANSI.setSGRCode
+
+-- | Change the foreground colour.
+setColor :: String  -- The name of the colour. Only CSS colours are accepted.
+         -> Text    -- The text to transform.
+         -> Text    -- The coloured text.
 setColor colourName text = mconcat
   [ setSGRCode [SetRGBColor Foreground colour]
   , text
@@ -16,14 +25,16 @@ setColor colourName text = mconcat
   where
     colour = fromJust $ CNames.readColourName colourName
 
-setBold :: String -> String
+-- | Makes text bold.
+setBold :: Text -> Text
 setBold text = mconcat
   [ setSGRCode [SetConsoleIntensity BoldIntensity]
   , text
   , setSGRCode [Reset]
   ]
 
-setItalic :: String -> String
+-- | Makes text italicised.
+setItalic :: Text -> Text
 setItalic text = mconcat
   [ setSGRCode [SetItalicized True]
   , text
