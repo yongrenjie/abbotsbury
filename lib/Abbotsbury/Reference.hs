@@ -4,6 +4,7 @@ module Abbotsbury.Reference
 
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
+import           Data.Time.Clock
 
 data Reference = Article
   { title        :: Text
@@ -15,8 +16,8 @@ data Reference = Article
   , issue        :: Text
   , pages        :: Text
   , doi          :: DOI
-  , timeAdded    :: Text
-  , timeOpened   :: Text
+  , timeAdded    :: UTCTime
+  , timeOpened   :: UTCTime
   }
 
 type DOI = Text

@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Abbot.Commands
@@ -27,14 +26,8 @@ data ReplCmd = Nop | Quit | Help | Cd | Cite
 type ReplArgs = Text
 
 
--- | Command-line parsing
-
+-- | Setup for command-line parsing.
 type Parser = Parsec Void Text
-
--- | It's a Haskell port, so of course we need to make the comment string be
--- '--' instead of '#' in cygnet. In fact, it also saves us some trouble
--- because '--' feels far less likely to appear in something like a URL or a
--- filename.
 replSpace :: Parser ()
 replSpace = L.space space1 (L.skipLineComment "--") empty
 replLexeme :: Parser a -> Parser a
@@ -74,6 +67,7 @@ runCommand
   -> CmdOutput       -- The output of the command.
 runCommand Help = runHelp
 runCommand _    = undefined
+
 
 -- | HELP
 runHelp :: ReplArgs -> [Reference] -> CmdOutput

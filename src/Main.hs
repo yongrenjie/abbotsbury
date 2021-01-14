@@ -1,8 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-
 
 module Main where
 
@@ -40,11 +36,11 @@ data LoopState = LoopState
   , references :: [Reference]  -- The reference list.
   }
 
+-- TODO: make a MonadState instance for InputT...
+
 -- | The main REPL loop of abbot. The `quit` and `cd` functions are implemented
 -- here, because they affect the entire state of the program. Other functions
 -- are implemented elsewhere.
--- OK, instead of using lift . put everywhere, ideally I would make a MonadState
--- instance for this. But I'm afraid that as of now, I don't know how to do that.
 loop :: InputT (StateT LoopState IO) ()
 loop =
   let exit = return ()
@@ -52,11 +48,10 @@ loop =
     handleInterrupt loop $ do
       ls@(LoopState curD oldD dirC refs) <- lift get
       -- Read in new data if the directory was changed, then turn off the flag
-      when
-        dirC
-        (liftIO $ putStrLn
-          "directory changed! in general we should read/write here..."
-        )
+      -- TODO: This could be a lot cleaner with some basic lenses
+      when dirC $ do
+        newRefs <- liftIO (readRefs curD)
+        lift $ put (ls { references = newRefs} )
       lift $ put (ls { dirChanged = False })
       -- Show the prompt and get the command
       cwd   <- liftIO $ expandDirectory curD
