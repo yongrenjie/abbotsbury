@@ -30,7 +30,7 @@ expandDirectory fp =
 
 -- | Reads in a list of references from a FilePath.
 readRefs :: FilePath -> IO [Reference]
-readRefs = undefined
+readRefs _ = return [] -- undefined
 
 -- | Saves a list of references to the given FilePath.
 writeRefs :: [Reference] -> FilePath -> IO ()
