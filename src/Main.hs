@@ -1,4 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Main where
 
@@ -8,7 +12,11 @@ import           Abbot.Style
 
 import           Abbotsbury
 
-import           Control.Monad.Catch            ( catchIOError )
+import           Control.Monad.Catch            ( MonadCatch
+                                                , MonadMask
+                                                , MonadThrow
+                                                , catchIOError
+                                                )
 import           Control.Monad.IO.Class
 import           Control.Monad.State
 import           Data.Text                      ( Text )
@@ -16,7 +24,35 @@ import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           Options.Applicative     hiding ( Parser )
 import qualified Options.Applicative           as O
-import           System.Console.Haskeline
+import           System.Console.Haskeline      as HL
+
+
+-- InputT doesn't provide instances of MTL classes, so we need to do it ourselves
+-- The approach is taken from the (no longer working) haskeline-class package, which
+-- can be found at https://hackage.haskell.org/package/haskeline-class
+newtype MInputT m a = MInputT { unMInputT :: HL.InputT m a }
+   deriving (Functor, Applicative, Monad, MonadTrans, MonadIO, MonadThrow, MonadCatch)
+instance MonadState s m => MonadState s (MInputT m) where
+  get   = lift get
+  put   = lift . put
+  state = lift . state
+mRunInputT :: (MonadIO m, MonadMask m) => HL.Settings m -> MInputT m a -> m a
+mRunInputT s m = HL.runInputT s (unMInputT m)
+mWithInterrupt :: (MonadIO m, MonadMask m) => MInputT m a -> MInputT m a
+mWithInterrupt = MInputT . HL.withInterrupt . unMInputT
+mHandleInterrupt
+  :: (MonadIO m, MonadMask m) => MInputT m a -> MInputT m a -> MInputT m a
+mHandleInterrupt catchA tryA =
+  MInputT $ HL.handleInterrupt (unMInputT catchA) (unMInputT tryA)
+mGetInputLine :: (MonadIO m, MonadMask m) => String -> MInputT m (Maybe String)
+mGetInputLine = MInputT . HL.getInputLine
+mGetInputChar :: (MonadIO m, MonadMask m) => String -> MInputT m (Maybe Char)
+mGetInputChar = MInputT . HL.getInputChar
+mOutputStr :: MonadIO m => String -> MInputT m ()
+mOutputStr = MInputT . HL.outputStr
+mOutputStrLn :: MonadIO m => String -> MInputT m ()
+mOutputStrLn = MInputT . HL.outputStrLn
+
 
 -- | Entry point.
 main :: IO ()
@@ -24,7 +60,7 @@ main = do
   options  <- execParser replOptionInfo
   startDir <- expandDirectory (startingDirectory options)
   let startState = LoopState startDir startDir True []
-  evalStateT (runInputT defaultSettings $ withInterrupt loop) startState
+  evalStateT (mRunInputT defaultSettings $ mWithInterrupt loop) startState
 
 
 -- | All information needed for the main loop.
@@ -36,63 +72,62 @@ data LoopState = LoopState
   , references :: [Reference]  -- The reference list.
   }
 
--- TODO: make a MonadState instance for InputT...
-
 -- | The main REPL loop of abbot. The `quit` and `cd` functions are implemented
 -- here, because they affect the entire state of the program. Other functions
 -- are implemented elsewhere.
-loop :: InputT (StateT LoopState IO) ()
+loop :: MInputT (StateT LoopState IO) ()
 loop =
   let exit = return ()
   in
-    handleInterrupt loop $ do
-      ls@(LoopState curD oldD dirC refs) <- lift get
+    mHandleInterrupt loop $ do
+      ls@(LoopState curD oldD dirC refs) <- get
       -- Read in new data if the directory was changed, then turn off the flag
       -- TODO: This could be a lot cleaner with some basic lenses
       when dirC $ do
         newRefs <- liftIO (readRefs curD)
-        lift $ put (ls { references = newRefs} )
-      lift $ put (ls { dirChanged = False })
+        put (ls { references = newRefs })
+      put (ls { dirChanged = False })
       -- Show the prompt and get the command
       cwd   <- liftIO $ expandDirectory curD
       input <- prompt cwd
       -- Parse and run the command
       case fmap T.pack input of
-        Nothing  -> exit                  -- Ctrl-D
+        Nothing      -> exit                  -- Ctrl-D
         Just cmdArgs -> case runReplParser cmdArgs of
-          Left _ -> printErr ("command '" <> cmdArgs <> "' not recognised") >> loop
+          Left _ ->
+            printErr ("command '" <> cmdArgs <> "' not recognised") >> loop
           Right (Nop , _ ) -> loop
-          Right (Quit, _ ) -> outputStrLn "quitting..." >> exit
+          Right (Quit, _ ) -> mOutputStrLn "quitting..." >> exit
           Right (Cd  , fp) -> do
             -- Check for 'cd -'
             newD <- if fp == "-"
-              then lift $ gets oldDir
+              then gets oldDir
               else liftIO $ expandDirectory . T.unpack $ fp
             -- If the new directory is different, then change the working directory
             when (newD /= curD) $ catchIOError
-                (  liftIO (setCurrentDirectory newD)
-                >> lift (put (LoopState newD curD True []))
-                )
-                (\_ -> printErr (T.pack newD <> ": no such directory"))
+              (  liftIO (setCurrentDirectory newD)
+              >> put (LoopState newD curD True [])
+              )
+              (\_ -> printErr (T.pack newD <> ": no such directory"))
             loop
           Right (cmd, args) -> do
             cmdOutput <- liftIO $ runCommand cmd args refs
             case cmdOutput of
               Left  err          -> printErr err >> loop
               Right (newRefs, _) -> do
-                lift . put $ LoopState curD oldD False newRefs
+                put $ LoopState curD oldD False newRefs
                 loop
 
 -- | Generates the prompt.
-prompt :: FilePath -> InputT (StateT LoopState IO) (Maybe String)
-prompt fp = getInputLine . T.unpack $ mconcat
+prompt :: FilePath -> MInputT (StateT LoopState IO) (Maybe String)
+prompt fp = mGetInputLine . T.unpack $ mconcat
   [ setColor "plum" $ "(" <> T.pack fp <> ") "
   , setColor "hotpink" . setBold . setItalic $ "peep > "
   ]
 
 -- | Prints an error.
-printErr :: Text -> InputT (StateT LoopState IO) ()
-printErr errMsg = outputStrLn . T.unpack $ mconcat
+printErr :: Text -> MInputT (StateT LoopState IO) ()
+printErr errMsg = mOutputStrLn . T.unpack $ mconcat
   [setColor "red" "error: ", setColor "coral" errMsg]
 
 -- | Copies to clipboard. Not done yet (obviously.)
