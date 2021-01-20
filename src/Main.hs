@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Main where
 
@@ -22,6 +23,7 @@ import           Control.Monad.State
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
+import           Lens.Micro.Platform
 import           Options.Applicative     hiding ( Parser )
 import qualified Options.Applicative           as O
 import           System.Console.Haskeline      as HL
@@ -54,6 +56,18 @@ mOutputStrLn :: MonadIO m => String -> MInputT m ()
 mOutputStrLn = MInputT . HL.outputStrLn
 
 
+-- | All information needed for the main loop.
+data LoopState = LoopState
+  { _curDir     :: FilePath    -- Current working directory ('wd').
+  , _oldDir     :: FilePath    -- The last wd. Analogous to bash $OLDPWD.
+  , _dirChanged :: Bool        -- Flag to indicate that the wd was changed by the last command,
+                               --   which means that we should save and reread the references.
+  , _references :: [Reference] -- The reference list.
+  }
+
+makeLenses ''LoopState
+
+
 -- | Entry point.
 main :: IO ()
 main = do
@@ -62,15 +76,6 @@ main = do
   let startState = LoopState startDir startDir True []
   evalStateT (mRunInputT defaultSettings $ mWithInterrupt loop) startState
 
-
--- | All information needed for the main loop.
-data LoopState = LoopState
-  { curDir     :: FilePath     -- Current working directory ('wd').
-  , oldDir     :: FilePath     -- The last wd. Analogous to bash $OLDPWD.
-  , dirChanged :: Bool         -- Flag to indicate that the wd was changed by the last command,
-                               --   which means that we should save and reread the references.
-  , references :: [Reference]  -- The reference list.
-  }
 
 -- | The main REPL loop of abbot. The `quit` and `cd` functions are implemented
 -- here, because they affect the entire state of the program. Other functions
@@ -85,8 +90,8 @@ loop =
       -- TODO: This could be a lot cleaner with some basic lenses
       when dirC $ do
         newRefs <- liftIO (readRefs curD)
-        put (ls { references = newRefs })
-      put (ls { dirChanged = False })
+        put (ls { _references = newRefs })
+      dirChanged .= False
       -- Show the prompt and get the command
       cwd   <- liftIO $ expandDirectory curD
       input <- prompt cwd
@@ -101,7 +106,7 @@ loop =
           Right (Cd  , fp) -> do
             -- Check for 'cd -'
             newD <- if fp == "-"
-              then gets oldDir
+              then gets _oldDir
               else liftIO $ expandDirectory . T.unpack $ fp
             -- If the new directory is different, then change the working directory
             when (newD /= curD) $ catchIOError

@@ -52,6 +52,7 @@ executable abbot
     , text
     , yaml
     , time
+    , microlens-platform
   hs-source-dirs:
     src
   other-modules:
