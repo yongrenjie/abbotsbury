@@ -62,5 +62,7 @@ readRefs fp = do
                   )
 
 -- | Saves a list of references to the given FilePath.
-writeRefs :: [Reference] -> FilePath -> IO ()
-writeRefs = flip encodeFile
+saveRefs :: [Reference] -> FilePath -> IO ()
+saveRefs rs fp = case rs of
+                      [] -> pure ()
+                      _  -> encodeFile (fp </> yamlFileName) rs

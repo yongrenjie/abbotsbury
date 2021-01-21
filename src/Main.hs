@@ -81,7 +81,13 @@ main = do
 -- are implemented elsewhere.
 loop :: MInputT (StateT LoopState IO) ()
 loop =
-  let exit = pure ()
+  let
+    save = do
+      refs <- use references
+      curD <- use curDir
+      unless (null refs)
+             (mOutputStrLn "saving..." >> liftIO (saveRefs refs curD))
+    exit = pure ()
   in
     mHandleInterrupt loop $ do
       LoopState curD oldD dirC refs <- get
@@ -89,20 +95,22 @@ loop =
       when dirC $ do
         newRefs <- liftIO (readRefs curD)
         case newRefs of
-             Right nrefs -> references .= nrefs >> mOutputStrLn "Yay!"
-             Left errmsg -> printErr errmsg
+          Right nrefs  -> references .= nrefs
+                          >> unless (null nrefs) (mOutputStrLn ("read in " ++ show (length nrefs) ++ " references"))
+          Left  errmsg -> printErr errmsg
       dirChanged .= False
       -- Show the prompt and get the command
       cwd   <- liftIO $ expandDirectory curD
       input <- prompt cwd
       -- Parse and run the command
       case fmap T.pack input of
-        Nothing      -> exit                  -- Ctrl-D
+        Nothing      -> save >> exit              -- Ctrl-D
         Just cmdArgs -> case runReplParser cmdArgs of
           Left _ ->
             printErr ("command '" <> cmdArgs <> "' not recognised") >> loop
+          -- Special commands that we need to handle in main loop
           Right (Nop , _ ) -> loop
-          Right (Quit, _ ) -> mOutputStrLn "quitting..." >> exit
+          Right (Quit, _ ) -> mOutputStrLn "quitting..." >> save >> exit
           Right (Cd  , fp) -> do
             -- Check for 'cd -'
             newD <- if fp == "-"
@@ -110,17 +118,20 @@ loop =
               else liftIO $ expandDirectory $ T.unpack fp
             -- If the new directory is different, then change the working directory
             when (newD /= curD) $ catchIOError
-              (  liftIO (setCurrentDirectory newD)
+              (  save
+              >> liftIO (setCurrentDirectory newD)
               >> put (LoopState newD curD True [])
               )
               (\_ -> printErr (T.pack newD <> ": no such directory"))
             loop
+          -- All other commands
           Right (cmd, args) -> do
             cmdOutput <- liftIO $ runCommand cmd args refs
             case cmdOutput of
               Left  err          -> printErr err >> loop
               Right (newRefs, _) -> do
                 put (LoopState curD oldD False newRefs)
+                save
                 loop
 
 -- | Generates the prompt.
