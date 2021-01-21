@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE MultiWayIf #-}
 
 module Abbot.Path
   ( module Abbot.Path
@@ -37,32 +38,46 @@ expandDirectory fp =
 yamlFileName :: FilePath
 yamlFileName = "peep.yaml"
 
+-- | My own set of YAML errors, which is meant to make error reporting less
+-- complicated, as we don't need the full set of ParseExceptions.
+data MyYamlError = YamlFileNotFound
+                 | InvalidYamlInFile
+                 | OtherYamlError
+
+-- | Simplify the full set of ParseExceptions into MyYamlError.
+categoriseYamlError :: ParseException -> MyYamlError
+categoriseYamlError (InvalidYaml (Just (YamlException excText)))
+  | "Yaml file not found" `isInfixOf` excText = YamlFileNotFound
+  | "mapping values are not allowed" `isInfixOf` excText = InvalidYamlInFile
+  | otherwise = OtherYamlError
+categoriseYamlError (AesonException _) = InvalidYamlInFile
+categoriseYamlError _                  = OtherYamlError
+
 -- | Reads in a list of references from the YAML file in a folder, but
 -- also does some pattern matching on the returned result so that error
 -- messages are easier to deal with in the main loop.
 readRefs :: FilePath -> IO (Either Text [Reference])
 readRefs fp = do
   let fname = fp </> yamlFileName
+      invalidYamlErrMsg =
+        "The file "
+          <> T.pack fname
+          <> " was found, but it does not "
+          <> "contain articles in the correct "
+          <> "format for abbotsbury."
   refs <- decodeFileEither fname
   case refs of
-    Right newRefs -> pure $ Right newRefs
-    Left (InvalidYaml (Just (YamlException excText))) ->
-      if "Yaml file not found" `isInfixOf` excText
-        then pure $ Right []    -- no file, refs are therefore empty
-        else pure $ Left "other error"
-    Left (AesonException _) ->
-      pure $ Left ("The file "
-                  <> T.pack fname
-                  <> " was found, but it does not "
-                  <> "contain articles in the correct format for abbotsbury."
-                  )
-    Left otherParseExc ->
-      pure $ Left (T.pack $ show otherParseExc
-                  <> "\nThis error is unexpected; please file a bug!"
-                  )
+    -- Successfully parsed.
+    Right newRefs  -> pure $ Right newRefs
+    -- Some error
+    Left  parseExc -> case categoriseYamlError parseExc of
+      YamlFileNotFound  -> pure $ Right []
+      InvalidYamlInFile -> pure $ Left invalidYamlErrMsg
+      OtherYamlError    -> pure $ Left $ T.pack
+        (show parseExc <> "\n This error is unexpected; please file a bug!")
 
 -- | Saves a list of references to the given FilePath.
 saveRefs :: [Reference] -> FilePath -> IO ()
 saveRefs rs fp = case rs of
-                      [] -> pure ()
-                      _  -> encodeFile (fp </> yamlFileName) rs
+  [] -> pure ()
+  _  -> encodeFile (fp </> yamlFileName) rs
