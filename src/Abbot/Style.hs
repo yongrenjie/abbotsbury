@@ -13,30 +13,29 @@ import qualified System.Console.ANSI           as ANSI
 setSGRCode :: [SGR] -> Text
 setSGRCode = T.pack . ANSI.setSGRCode
 
+resetCode :: Text
+resetCode = setSGRCode [Reset]
+
 -- | Change the foreground colour.
-setColor :: String  -- The name of the colour. Only CSS colours are accepted.
-         -> Text    -- The text to transform.
-         -> Text    -- The coloured text.
-setColor colourName text = mconcat
-  [ setSGRCode [SetRGBColor Foreground colour]
-  , text
-  , setSGRCode [Reset]
-  ]
-  where
-    colour = fromJust $ CNames.readColourName colourName
+setColor
+  :: String  -- The name of the colour. Only CSS colours are accepted.
+  -> Text    -- The text to transform.
+  -> Text    -- The coloured text.
+setColor colourName =
+  let colour        = fromJust $ CNames.readColourName colourName
+      colourCode    = setSGRCode [SetRGBColor Foreground colour]
+  in  styleText colourCode
 
 -- | Makes text bold.
 setBold :: Text -> Text
-setBold text = mconcat
-  [ setSGRCode [SetConsoleIntensity BoldIntensity]
-  , text
-  , setSGRCode [Reset]
-  ]
+setBold = styleText (setSGRCode [SetConsoleIntensity BoldIntensity])
 
 -- | Makes text italicised.
 setItalic :: Text -> Text
-setItalic text = mconcat
-  [ setSGRCode [SetItalicized True]
-  , text
-  , setSGRCode [Reset]
-  ]
+setItalic = styleText (setSGRCode [SetItalicized True])
+
+-- | Style a text.
+styleText :: Text -> Text -> Text
+styleText code text =
+  let endsWithReset = T.takeEnd 4 text == resetCode
+  in  if endsWithReset then code <> text else code <> text <> resetCode
