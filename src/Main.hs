@@ -64,7 +64,6 @@ data LoopState = LoopState
                                --   which means that we should save and reread the references.
   , _references :: [Reference] -- The reference list.
   }
-
 makeLenses ''LoopState
 
 
@@ -85,12 +84,11 @@ loop =
   let exit = return ()
   in
     mHandleInterrupt loop $ do
-      ls@(LoopState curD oldD dirC refs) <- get
+      LoopState curD oldD dirC refs <- get
       -- Read in new data if the directory was changed, then turn off the flag
-      -- TODO: This could be a lot cleaner with some basic lenses
       when dirC $ do
         newRefs <- liftIO (readRefs curD)
-        put (ls { _references = newRefs })
+        references .= newRefs
       dirChanged .= False
       -- Show the prompt and get the command
       cwd   <- liftIO $ expandDirectory curD
@@ -106,8 +104,8 @@ loop =
           Right (Cd  , fp) -> do
             -- Check for 'cd -'
             newD <- if fp == "-"
-              then gets _oldDir
-              else liftIO $ expandDirectory . T.unpack $ fp
+              then use oldDir   -- we can't just use oldD because of the <-
+              else liftIO $ expandDirectory $ T.unpack fp
             -- If the new directory is different, then change the working directory
             when (newD /= curD) $ catchIOError
               (  liftIO (setCurrentDirectory newD)
@@ -120,7 +118,7 @@ loop =
             case cmdOutput of
               Left  err          -> printErr err >> loop
               Right (newRefs, _) -> do
-                put $ LoopState curD oldD False newRefs
+                put (LoopState curD oldD False newRefs)
                 loop
 
 -- | Generates the prompt.
