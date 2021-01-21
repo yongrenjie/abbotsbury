@@ -81,14 +81,16 @@ main = do
 -- are implemented elsewhere.
 loop :: MInputT (StateT LoopState IO) ()
 loop =
-  let exit = return ()
+  let exit = pure ()
   in
     mHandleInterrupt loop $ do
       LoopState curD oldD dirC refs <- get
       -- Read in new data if the directory was changed, then turn off the flag
       when dirC $ do
         newRefs <- liftIO (readRefs curD)
-        references .= newRefs
+        case newRefs of
+             Right nrefs -> references .= nrefs >> mOutputStrLn "Yay!"
+             Left errmsg -> printErr errmsg
       dirChanged .= False
       -- Show the prompt and get the command
       cwd   <- liftIO $ expandDirectory curD
@@ -104,7 +106,7 @@ loop =
           Right (Cd  , fp) -> do
             -- Check for 'cd -'
             newD <- if fp == "-"
-              then use oldDir   -- we can't just use oldD because of the <-
+              then pure oldD
               else liftIO $ expandDirectory $ T.unpack fp
             -- If the new directory is different, then change the working directory
             when (newD /= curD) $ catchIOError

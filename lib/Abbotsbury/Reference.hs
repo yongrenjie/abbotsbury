@@ -1,27 +1,45 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE TemplateHaskell #-}
+
 module Abbotsbury.Reference
   ( module Abbotsbury.Reference
   ) where
 
+import           Data.Aeson
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import           Data.Time.Clock
+import           GHC.Generics
+import           Lens.Micro.Platform
 
 data Reference = Article
-  { title        :: Text
-  , authors      :: [Author]
-  , journalLong  :: Text
-  , journalShort :: Text
-  , year         :: Int
-  , volume       :: Text
-  , issue        :: Text
-  , pages        :: Text
-  , doi          :: DOI
-  , timeAdded    :: UTCTime
-  , timeOpened   :: UTCTime
+  { _title        :: Text
+  , _authors      :: [Author]
+  , _journalLong  :: Text
+  , _journalShort :: Text
+  , _year         :: Int
+  , _volume       :: Text
+  , _issue        :: Text
+  , _pages        :: Text
+  , _doi          :: DOI
+  , _timeAdded    :: UTCTime
+  , _timeOpened   :: UTCTime
   }
+  deriving (Generic, Show)
 
 type DOI = Text
 data Author = Author
-  { given  :: Text
-  , family :: Text
+  { _given  :: Text
+  , _family :: Text
   }
+  deriving (Generic, Show)
+
+makeLenses ''Reference
+makeLenses ''Author
+
+instance ToJSON Reference where
+  toEncoding = genericToEncoding defaultOptions
+instance FromJSON Reference
+instance ToJSON Author where
+  toEncoding = genericToEncoding defaultOptions
+instance FromJSON Author

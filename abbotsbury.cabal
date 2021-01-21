@@ -21,6 +21,8 @@ library
     , base ^>=4.14.1.0
     , text
     , time
+    , aeson
+    , microlens-platform
   hs-source-dirs:
     lib
   exposed-modules:

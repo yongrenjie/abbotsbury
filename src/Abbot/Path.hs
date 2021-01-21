@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Abbot.Path
   ( module Abbot.Path
   , System.Directory.setCurrentDirectory
@@ -5,6 +7,9 @@ module Abbot.Path
 
 import           Abbotsbury
 
+import           Data.List                      ( isInfixOf )
+import           Data.Text                      ( Text )
+import qualified Data.Text                     as T
 import           Data.Yaml
 import           System.Directory
 import           System.FilePath
@@ -27,11 +32,35 @@ expandDirectory fp =
       )
         >>= canonicalizePath
 
+-- | The file name where abbotsbury stores its information. In theory this
+-- could be customisable, but in practice I can't be bothered.
+yamlFileName :: FilePath
+yamlFileName = "peep.yaml"
 
--- | Reads in a list of references from a FilePath.
-readRefs :: FilePath -> IO [Reference]
-readRefs _ = return [] -- undefined
+-- | Reads in a list of references from the YAML file in a folder, but
+-- also does some pattern matching on the returned result so that error
+-- messages are easier to deal with in the main loop.
+readRefs :: FilePath -> IO (Either Text [Reference])
+readRefs fp = do
+  let fname = fp </> yamlFileName
+  refs <- decodeFileEither fname
+  case refs of
+    Right newRefs -> pure $ Right newRefs
+    Left (InvalidYaml (Just (YamlException excText))) ->
+      if "Yaml file not found" `isInfixOf` excText
+        then pure $ Right []    -- no file, refs are therefore empty
+        else pure $ Left "other error"
+    Left (AesonException _) ->
+      pure $ Left ("The file "
+                  <> T.pack fname
+                  <> " was found, but it does not "
+                  <> "contain articles in the correct format for abbotsbury."
+                  )
+    Left otherParseExc ->
+      pure $ Left (T.pack $ show otherParseExc
+                  <> "\nThis error is unexpected; please file a bug!"
+                  )
 
 -- | Saves a list of references to the given FilePath.
 writeRefs :: [Reference] -> FilePath -> IO ()
-writeRefs = undefined
+writeRefs = flip encodeFile
