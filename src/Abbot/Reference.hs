@@ -1,8 +1,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Abbotsbury.Reference
-  ( module Abbotsbury.Reference
+module Abbot.Reference
+  ( module Abbot.Reference
   ) where
 
 import           Data.Aeson

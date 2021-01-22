@@ -2,3 +2,4 @@
 **/.DS_Store
 dist-newstyle/
 .envrc
+cabal.project.local

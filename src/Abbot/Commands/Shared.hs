@@ -2,7 +2,7 @@ module Abbot.Commands.Shared
   ( module Abbot.Commands.Shared
   ) where
 
-import           Abbotsbury
+import           Abbot.Reference
 
 import           Data.Char
 import           Data.Functor                   ( void )

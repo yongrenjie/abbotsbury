@@ -3,7 +3,7 @@ module Abbot.Path
   , System.Directory.setCurrentDirectory
   ) where
 
-import           Abbotsbury
+import           Abbot.Reference
 
 import           Control.Monad                  ( unless )
 import           Data.IntMap                    ( IntMap )

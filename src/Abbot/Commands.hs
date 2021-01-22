@@ -6,7 +6,7 @@ module Abbot.Commands
 
 import           Abbot.Commands.List
 import           Abbot.Commands.Shared
-import           Abbotsbury
+import           Abbot.Reference
 
 import           Data.IntMap                    ( IntMap )
 

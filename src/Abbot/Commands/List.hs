@@ -3,7 +3,7 @@ module Abbot.Commands.List
   ) where
 
 import           Abbot.Commands.Shared
-import           Abbotsbury
+import           Abbot.Reference
 
 import           Data.IntMap                    ( IntMap )
 import qualified Data.IntMap                   as IM

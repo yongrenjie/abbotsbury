@@ -16,30 +16,6 @@ maintainer:          yongrenjie@gmail.com
 -- category:
 extra-source-files:  README.md
 
-library
-  build-depends:
-    , base ^>=4.14.1.0
-    , text
-    , time
-    , aeson
-    , microlens-platform
-  ghc-options:
-    -O0 -Wall -j4 +RTS -A128m -n2m -RTS
-  hs-source-dirs:
-    lib
-  exposed-modules:
-    Abbotsbury
-  other-modules:
-    Abbotsbury.Reference
-  default-language:
-    Haskell2010
-  default-extensions:
-    OverloadedStrings
-    LambdaCase
-    GeneralisedNewtypeDeriving
-    InstanceSigs
-    FlexibleInstances
-
 executable abbot
   main-is:
     Main.hs
@@ -47,7 +23,6 @@ executable abbot
     -O0 -Wall -j4 +RTS -A128m -n2m -RTS
   build-depends:
     , base ^>=4.14.1.0
-    , abbotsbury
     , haskeline
     , ansi-terminal
     , colour
@@ -61,6 +36,7 @@ executable abbot
     , containers
     , text
     , yaml
+    , aeson
     , time
     , microlens-platform
   hs-source-dirs:
@@ -70,6 +46,7 @@ executable abbot
     Abbot.Commands.List
     Abbot.Commands.Shared
     Abbot.Path
+    Abbot.Reference
     Abbot.Style
   default-language:
     Haskell2010
