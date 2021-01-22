@@ -31,6 +31,12 @@ library
     Abbotsbury.Reference
   default-language:
     Haskell2010
+  default-extensions:
+    OverloadedStrings
+    LambdaCase
+    GeneralisedNewtypeDeriving
+    InstanceSigs
+    FlexibleInstances
 
 executable abbot
   main-is:
@@ -63,3 +69,9 @@ executable abbot
     Abbot.Style
   default-language:
     Haskell2010
+  default-extensions:
+    OverloadedStrings
+    LambdaCase
+    GeneralisedNewtypeDeriving
+    InstanceSigs
+    FlexibleInstances

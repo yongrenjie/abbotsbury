@@ -1,6 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE MultiWayIf #-}
-
 module Abbot.Path
   ( module Abbot.Path
   , System.Directory.setCurrentDirectory
