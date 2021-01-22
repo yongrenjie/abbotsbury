@@ -20,6 +20,8 @@ import           Control.Monad.Catch            ( MonadCatch
                                                 )
 import           Control.Monad.IO.Class
 import           Control.Monad.State
+import           Data.IntMap                    ( IntMap )
+import qualified Data.IntMap                   as IM
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
@@ -58,13 +60,21 @@ mOutputStrLn = MInputT . HL.outputStrLn
 
 -- | All information needed for the main loop.
 data LoopState = LoopState
-  { _curDir     :: FilePath    -- Current working directory ('wd').
-  , _oldDir     :: FilePath    -- The last wd. Analogous to bash $OLDPWD.
-  , _dirChanged :: Bool        -- Flag to indicate that the wd was changed by the last command,
-                               --   which means that we should save and reread the references.
-  , _references :: [Reference] -- The reference list.
+  { _curDir     :: FilePath         -- Current working directory ('wd').
+  , _oldDir     :: FilePath         -- The last wd. Analogous to bash $OLDPWD.
+  , _dirChanged :: Bool             -- Flag to indicate that the working directory was
+                                    --  changed by the last command, which means that we
+                                    --  should save and reread the references.
+  , _references :: IntMap Reference -- The references.
   }
-makeLenses ''LoopState
+-- Template Haskell is cool, but slows down compilation a bit.
+curDir, oldDir :: Lens' LoopState FilePath
+curDir = lens _curDir (\ls dir -> ls { _curDir = dir })
+oldDir = lens _oldDir (\ls dir -> ls { _oldDir = dir })
+dirChanged :: Lens' LoopState Bool
+dirChanged = lens _dirChanged (\ls dir -> ls { _dirChanged = dir })
+references :: Lens' LoopState (IntMap Reference)
+references = lens _references (\ls dir -> ls { _references = dir })
 
 
 -- | Entry point.
@@ -72,7 +82,7 @@ main :: IO ()
 main = do
   options  <- execParser replOptionInfo
   startDir <- expandDirectory (startingDirectory options)
-  let startState = LoopState startDir startDir True []
+  let startState = LoopState startDir startDir True IM.empty
   evalStateT (mRunInputT defaultSettings $ mWithInterrupt loop) startState
 
 
@@ -81,76 +91,91 @@ main = do
 -- are implemented elsewhere.
 loop :: MInputT (StateT LoopState IO) ()
 loop =
-  let
-    save = do
-      refs <- use references
-      curD <- use curDir
-      unless (null refs)
-             (mOutputStrLn "saving..." >> liftIO (saveRefs refs curD))
-    exit = pure ()
-  in
-    mHandleInterrupt loop $ do
-      LoopState curD oldD dirC refs <- get
-      -- Read in new data if the directory was changed, then turn off the flag
-      when dirC $ do
-        newRefs <- liftIO (readRefs curD)
-        case newRefs of
-          Right nrefs  -> references .= nrefs
-                          >> unless (null nrefs) (mOutputStrLn ("read in " ++ show (length nrefs) ++ " references"))
-          Left  errmsg -> printErr errmsg
-      dirChanged .= False
-      -- Show the prompt and get the command
-      cwd   <- liftIO $ expandDirectory curD
-      input <- prompt cwd
-      -- Parse and run the command
-      case fmap T.pack input of
-        Nothing      -> save >> exit              -- Ctrl-D
-        Just cmdArgs -> case runReplParser cmdArgs of
-          Left _ ->
-            printErr ("command '" <> cmdArgs <> "' not recognised") >> loop
-          -- Special commands that we need to handle in main loop
-          Right (Nop , _ ) -> loop
-          Right (Quit, _ ) -> mOutputStrLn "quitting..." >> save >> exit
-          Right (Cd  , fp) -> do
-            -- Check for 'cd -'
-            newD <- if fp == "-"
-              then pure oldD
-              else liftIO $ expandDirectory $ T.unpack fp
-            -- If the new directory is different, then change the working directory
-            when (newD /= curD) $ catchIOError
-              (  save
-              >> liftIO (setCurrentDirectory newD)
-              >> put (LoopState newD curD True [])
-              )
-              (\_ -> printErr (T.pack newD <> ": no such directory"))
-            loop
-          -- All other commands
-          Right (cmd, args) -> do
-            cmdOutput <- liftIO $ runCommand cmd args refs
-            case cmdOutput of
-              Left  err          -> printErr err >> loop
-              Right (newRefs, _) -> do
-                put (LoopState curD oldD False newRefs)
-                save
-                loop
+  let exit = pure ()
+      save = do
+        refs <- use references
+        curD <- use curDir
+        unless (null refs) (liftIO $ saveRefs refs curD)
 
--- | Generates the prompt.
+  in  mHandleInterrupt loop $ do
+        curD <- use curDir
+        dirC <- use dirChanged
+
+        -- If the directory was changed, read in new data, then turn off the flag
+        when dirC $ do
+          newRefs <- liftIO (readRefs curD)
+          case newRefs of
+            Right nrefs -> do
+              references .= nrefs
+              unless
+                (null nrefs)
+                (mOutputStrLn
+                  ("Read in " ++ show (length nrefs) ++ " references.")
+                )
+            Left errmsg -> printErr errmsg
+        dirChanged .= False
+
+        -- Show the prompt and get the command
+        cwd   <- liftIO $ expandDirectory curD
+        input <- prompt cwd
+
+        -- Parse and run the command
+        case fmap T.pack input of
+          Nothing      -> save >> exit   -- Ctrl-D
+          Just cmdArgs -> case runReplParser cmdArgs of
+            Left _ ->
+              printErr ("command '" <> cmdArgs <> "' not recognised") >> loop
+            -- Special commands that we need to handle in main loop
+            Right (Nop , _ ) -> loop
+            Right (Quit, _ ) -> mOutputStrLn "quitting..." >> save >> exit
+            Right (Cd  , fp) -> do
+              -- Check for 'cd -'
+              newD <- if fp == "-"
+                then use oldDir
+                else liftIO $ expandDirectory $ T.unpack fp
+              -- If the new directory is different, then change the working directory
+              when (newD /= curD) $ catchIOError
+                (do
+                   save
+                   liftIO (setCurrentDirectory newD)
+                   curDir .= newD
+                   oldDir .= curD
+                   dirChanged .= True
+                )
+                (\_ -> printErr (T.pack newD <> ": no such directory"))
+              loop
+            -- All other commands
+            Right (cmd, args) -> do
+              currentRefs <- use references
+              cmdOutput   <- liftIO $ runCommand cmd args currentRefs
+              case cmdOutput of
+                Left  err          -> printErr err >> loop
+                Right (newRefs, _) -> do
+                  references .= newRefs
+                  save
+                  loop
+
+-- | Generates the prompt for the main loop.
 prompt :: FilePath -> MInputT (StateT LoopState IO) (Maybe String)
 prompt fp = mGetInputLine . T.unpack $ mconcat
   [ setColor "plum" $ "(" <> T.pack fp <> ") "
   , setColor "hotpink" . setBold . setItalic $ "peep > "
   ]
 
--- | Prints an error.
+
+-- | Prints an error in the main loop.
 printErr :: Text -> MInputT (StateT LoopState IO) ()
 printErr errMsg = mOutputStrLn . T.unpack $ mconcat
   [setColor "red" "error: ", setColor "coral" errMsg]
+
 
 -- | Copies to clipboard. Not done yet (obviously.)
 copyToClipboard :: Text -> IO ()
 copyToClipboard = TIO.putStrLn
 
--- Command-line option parsing for the executable itself.
+
+-- | Command-line option parsing for the executable itself. At the moment, the
+-- only option available is the starting directory, which is essentially argv[1].
 newtype ReplOptions = ReplOptions
              { startingDirectory :: FilePath
              }

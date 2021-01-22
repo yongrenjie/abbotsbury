@@ -8,6 +8,9 @@ module Abbot.Path
 
 import           Abbotsbury
 
+import           Control.Monad                  ( unless )
+import           Data.IntMap                    ( IntMap )
+import qualified Data.IntMap                   as IM
 import           Data.List                      ( isInfixOf )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
@@ -56,7 +59,7 @@ categoriseYamlError _                  = OtherYamlError
 -- | Reads in a list of references from the YAML file in a folder, but
 -- also does some pattern matching on the returned result so that error
 -- messages are easier to deal with in the main loop.
-readRefs :: FilePath -> IO (Either Text [Reference])
+readRefs :: FilePath -> IO (Either Text (IntMap Reference))
 readRefs fp = do
   let fname = fp </> yamlFileName
       invalidYamlErrMsg =
@@ -68,16 +71,15 @@ readRefs fp = do
   refs <- decodeFileEither fname
   case refs of
     -- Successfully parsed.
-    Right newRefs  -> pure $ Right newRefs
+    Right newRefs  -> pure $ Right (IM.fromList $ zip [1..] newRefs)
     -- Some error
     Left  parseExc -> case categoriseYamlError parseExc of
-      YamlFileNotFound  -> pure $ Right []
+      YamlFileNotFound  -> pure $ Right IM.empty
       InvalidYamlInFile -> pure $ Left invalidYamlErrMsg
       OtherYamlError    -> pure $ Left $ T.pack
         (show parseExc <> "\n This error is unexpected; please file a bug!")
 
 -- | Saves a list of references to the given FilePath.
-saveRefs :: [Reference] -> FilePath -> IO ()
-saveRefs rs fp = case rs of
-  [] -> pure ()
-  _  -> encodeFile (fp </> yamlFileName) rs
+saveRefs :: IntMap Reference -> FilePath -> IO ()
+saveRefs refs fp = unless (IM.null refs)
+                          (encodeFile (fp </> yamlFileName) (IM.elems refs))
