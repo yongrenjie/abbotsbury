@@ -7,7 +7,6 @@ module Abbotsbury.Reference
 
 import           Data.Aeson
 import           Data.Text                      ( Text )
-import qualified Data.Text                     as T
 import           Data.Time.Clock
 import           GHC.Generics
 import           Lens.Micro.Platform
