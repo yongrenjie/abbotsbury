@@ -143,6 +143,8 @@ loop =
             Right (cmd, args) -> do
               currentDir  <- use curDir
               currentRefs <- use references
+              -- TODO: In principle, all IO exceptions should be caught here, as
+              -- they are not exhaustively encoded in the (Either Text s) return type.
               cmdOutput   <- liftIO $ runCommand cmd args currentDir currentRefs
               case cmdOutput of
                 Left  err          -> printErr err >> loop

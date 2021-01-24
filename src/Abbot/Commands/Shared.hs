@@ -58,15 +58,24 @@ pRepl = do
 
 
 -- | A command can perform several IO actions, which ultimately return either
---   an error message (Left), OR a successful return with
---   1) the final state of the reference list, plus
---   2) an optional set of refnos (which can be piped to another command)
+-- an error message (Left), OR a successful return with
+-- 1) the final state of the reference list, plus
+-- 2) an optional set of refnos (which can be piped to another command)
+--
+-- This could be turned into ExceptT e IO s, which reduces some of the case/of
+-- boilerplate, but increases boilerplate of pure IO actions as they all need
+-- to be liftIO-ed. Because the actual IO side effects are so common (particularly
+-- printing to screen) I opt to keep this as IO (Either e s) for now.
 type CmdOutput = IO (Either Text (IntMap Reference, Maybe IntSet))
 
 
--- | Shortcuts to return an error
+-- | Shortcut to return an error. This is analogous to throwError in ExceptT,
+-- but if called more than once, this won't short-circuit the function like how
+-- throwError does, but instead requires explicit pattern-matching to be "passed
+-- on".
 cmdErr :: Text -> CmdOutput
 cmdErr = pure . Left
+-- | The same as `cmdErr` but for String type.
 cmdErrS :: String -> CmdOutput
 cmdErrS = pure . Left . T.pack
 
