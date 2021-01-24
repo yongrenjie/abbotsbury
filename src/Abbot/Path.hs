@@ -12,6 +12,7 @@ import           Data.List                      ( isInfixOf )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import           Data.Yaml
+import           Lens.Micro.Platform
 import           System.Directory
 import           System.FilePath
 
@@ -57,8 +58,8 @@ categoriseYamlError _                  = OtherYamlError
 -- also does some pattern matching on the returned result so that error
 -- messages are easier to deal with in the main loop.
 readRefs :: FilePath -> IO (Either Text (IntMap Reference))
-readRefs fp = do
-  let fname = fp </> yamlFileName
+readRefs cwd = do
+  let fname = cwd </> yamlFileName
       invalidYamlErrMsg =
         "The file "
           <> T.pack fname
@@ -76,7 +77,25 @@ readRefs fp = do
       OtherYamlError    -> pure $ Left $ T.pack
         (show parseExc <> "\n This error is unexpected; please file a bug!")
 
--- | Saves a list of references to the given FilePath.
+-- | Saves a list of references to the given FilePath, as long as it's not empty.
+-- This prevents us from creating files which didn't exist in the first place.
 saveRefs :: IntMap Reference -> FilePath -> IO ()
-saveRefs refs fp = unless (IM.null refs)
-                          (encodeFile (fp </> yamlFileName) (IM.elems refs))
+saveRefs refs cwd = unless (IM.null refs)
+                           (encodeFile (cwd </> yamlFileName) (IM.elems refs))
+
+
+data PDFType = FullText
+             | SI
+             deriving (Show, Eq)
+
+-- | Find the path to a PDF file belonging to a reference.
+getPDFPath :: PDFType    -- Full text or SI.
+           -> FilePath   -- Current working directory.
+           -> Reference  -- The reference.
+           -> FilePath   -- Path to the file.
+getPDFPath pdfType cwd ref = cwd </> dirName </> fileName
+  where
+    dirName = case pdfType of
+                   FullText -> "pdf-abbot"
+                   SI       -> "si-abbot"
+    fileName = T.unpack . flip T.append ".pdf" . T.replace "/" "#" $ ref ^. doi

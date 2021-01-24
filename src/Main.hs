@@ -141,8 +141,9 @@ loop =
               loop
             -- All other commands
             Right (cmd, args) -> do
+              currentDir  <- use curDir
               currentRefs <- use references
-              cmdOutput   <- liftIO $ runCommand cmd args currentRefs
+              cmdOutput   <- liftIO $ runCommand cmd args currentDir currentRefs
               case cmdOutput of
                 Left  err          -> printErr err >> loop
                 Right (newRefs, _) -> do

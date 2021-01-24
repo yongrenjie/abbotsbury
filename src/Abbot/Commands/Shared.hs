@@ -92,8 +92,8 @@ pRefnos = IS.unions <$> many (pNum <* pSeparator) <* eof
 
 -- | Because the help command requires runReplParser itself, we can't stick it
 -- in a different module (that would lead to a cyclic import).
-runHelp :: ReplArgs -> IntMap Reference -> CmdOutput
-runHelp args refs = case runReplParser args of
+runHelp :: ReplArgs -> FilePath -> IntMap Reference -> CmdOutput
+runHelp args _ refs = case runReplParser args of
   Left  _        -> cmdErr ("help: command '" <> args <> "' not recognised")
   Right (cmd, _) -> do
     TIO.putStrLn (getHelpText cmd)

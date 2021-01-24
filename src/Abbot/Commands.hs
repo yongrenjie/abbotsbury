@@ -16,6 +16,7 @@ import           Data.IntMap                    ( IntMap )
 runCommand
   :: ReplCmd          -- The command to be run.
   -> ReplArgs         -- The arguments passed to the command.
+  -> FilePath         -- The current working directory
   -> IntMap Reference -- The current state of the reference list.
   -> CmdOutput        -- The output of the command.
 runCommand Help = runHelp

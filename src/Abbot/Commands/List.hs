@@ -3,8 +3,13 @@ module Abbot.Commands.List
   ) where
 
 import           Abbot.Commands.Shared
+import           Abbot.Path                     ( PDFType(..)
+                                                , getPDFPath
+                                                )
 import           Abbot.Reference
-import           Abbot.Style                    ( setBold )
+import           Abbot.Style                    ( setBold
+                                                , setColor
+                                                )
 
 import           Data.Char                      ( isAlphaNum
                                                 , isSpace
@@ -22,10 +27,10 @@ import           Lens.Micro.Platform
 import           Text.Megaparsec
 import           Text.Printf                    ( printf )
 import           System.Console.ANSI            ( getTerminalSize )
+import           System.Directory               ( doesFileExist )
 
-
-runList :: ReplArgs -> IntMap Reference -> CmdOutput
-runList args refs = if IM.null refs
+runList :: ReplArgs -> FilePath -> IntMap Reference -> CmdOutput
+runList args cwd refs = if IM.null refs
   then cmdErrS "list: no references found"
   else
     let parsedArgs = parse pRefnos "" args
@@ -44,7 +49,7 @@ runList args refs = if IM.null refs
                   refnosToPrint = if IS.null refnos
                     then IS.fromList [1 .. numRefs]
                     else refnos
-                result <- prettyFormatRefs (IM.restrictKeys refs refnosToPrint)
+                result <- prettyFormatRefs cwd (IM.restrictKeys refs refnosToPrint)
                 case result of
                   Left  errMsg        -> cmdErr errMsg
                   Right formattedRefs -> do
@@ -103,14 +108,16 @@ getFieldSizes refs = do
   pure $ FieldSizes numberF' authorF' yearF' journalF' titleF'
 
 -- | Prettify an IntMap of references.
-prettyFormatRefs :: IntMap Reference -> IO (Either Text Text)
-prettyFormatRefs refs = if IM.null refs
+prettyFormatRefs :: FilePath -> IntMap Reference -> IO (Either Text Text)
+prettyFormatRefs cwd refs = if IM.null refs
   then pure $ Left "no references found"
   else do
     fss <- getFieldSizes refs
-    let text = prettyFormatHead fss
+    let headText = prettyFormatHead fss
+    refsText <- mapM (printRef fss cwd) (IM.assocs refs)
+    let text = headText
           <> "\n"
-          <> T.intercalate "\n\n" (map (printRef fss) (IM.assocs refs))
+          <> T.intercalate "\n\n" refsText
           <> "\n"   -- extra blank line looks nice.
     pure $ Right text
 
@@ -122,14 +129,21 @@ prettyFormatHead fss =
     <> setBold (T.replicate (totalSizes fss) "-")
 
 -- | Generate pretty output for one particular reference in an IntMap.
-printRef :: FieldSizes -> (Int, Reference) -> Text
-printRef fss (index, ref) =
+printRef :: FieldSizes -> FilePath -> (Int, Reference) -> IO Text
+printRef fss cwd (index, ref) = do
+  -- This line is the only thing that requires IO. So annoying.
+  availString <- getAvailString cwd ref
   -- Build up the columns first.
   let numberColumn  = [T.pack $ show index]
-      authorColumn  = map (formatAuthor ListCmd) (ref ^. authors)
+      authorColumn1 = map (formatAuthor ListCmd) (ref ^. authors)
+      authorColumn  = if length authorColumn1 <= 5
+                         then authorColumn1
+                         -- Inefficient but probably not important.
+                         else take 3 authorColumn1 ++ ["...", last authorColumn1]
       yearColumn    = [T.pack . show $ ref ^. year]
       journalColumn = [getShortestJournalName ref, getVolInfo ref]
-      titleColumn   = T.chunksOf (titleF fss) (ref ^. title) ++ [ref ^. doi]
+      titleColumn =
+        T.chunksOf (titleF fss) (ref ^. title) ++ [ref ^. doi, availString]
       -- Clone of Python's itertools.zip_longest(fillvalue="").
       zipLongest5
         :: [Text]  -- unpadded number column
@@ -142,11 +156,11 @@ printRef fss (index, ref) =
         let maxLen = maximum $ map length [as, bs, cs, ds, es]
             pad xs = xs ++ repeat ""
         in  take maxLen (zip5 (pad as) (pad bs) (pad cs) (pad ds) (pad es))
-  in  T.intercalate "\n" . map (formatLine fss) $ zipLongest5 numberColumn
-                                                              authorColumn
-                                                              yearColumn
-                                                              journalColumn
-                                                              titleColumn
+  pure . T.intercalate "\n" . map (formatLine fss) $ zipLongest5 numberColumn
+                                                                 authorColumn
+                                                                 yearColumn
+                                                                 journalColumn
+                                                                 titleColumn
 
 -- | Utility function to generate one line of output according to the field sizes
 -- and the text to be placed there.
@@ -185,3 +199,13 @@ getVolInfo ref =
   in  if T.null theIssue
         then T.pack $ printf "%s, %s" theVolume thePages
         else T.pack $ printf "%s (%s), %s" theVolume theIssue thePages
+
+
+-- | Get availability string for a reference.
+getAvailString :: FilePath -> Reference -> IO Text
+getAvailString cwd ref = do
+  fullTextAvail <- doesFileExist $ getPDFPath FullText cwd ref
+  siAvail <- doesFileExist $ getPDFPath SI cwd ref
+  let makeSymbol :: Bool -> Text
+      makeSymbol x = if x then setColor "seagreen" "\x2714" else setColor "crimson" "\x2718"
+  pure $ mconcat [makeSymbol fullTextAvail, " pdf ", makeSymbol siAvail, " si"]
