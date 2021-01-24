@@ -10,8 +10,16 @@ import           System.Console.ANSI     hiding ( setSGRCode )
 import qualified System.Console.ANSI           as ANSI
 
 -- | Wrapper around ansi-terminal's setSGRCode which returns String values.
+-- We need the "\STX" here because the ANSI escape sequence that setSGRCode
+-- produces looks like "\ESC[0m" (that's the reset code). A typical terminal
+-- would understand the 'm' to signify the end of the escape sequence. However,
+-- haskeline's internal stringToGraphemes function doesn't recognise the 'm' as
+-- the end of a control sequence: it only recognises "\STX" as the end of one.
+-- This leads to subtle bugs with styles not being correctly applied depending
+-- on the terminal width.
+-- See also https://github.com/judah/haskeline/wiki/ControlSequencesInPrompt.
 setSGRCode :: [SGR] -> Text
-setSGRCode = T.pack . ANSI.setSGRCode
+setSGRCode = T.pack . (++ "\STX") . ANSI.setSGRCode
 
 resetCode :: Text
 resetCode = setSGRCode [Reset]
