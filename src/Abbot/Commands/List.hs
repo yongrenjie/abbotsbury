@@ -6,15 +6,22 @@ import           Abbot.Commands.Shared
 import           Abbot.Reference
 import           Abbot.Style                    ( setBold )
 
+import           Data.Char                      ( isAlphaNum
+                                                , isSpace
+                                                )
 import           Data.IntMap                    ( IntMap )
 import qualified Data.IntMap                   as IM
 import qualified Data.IntSet                   as IS
+import           Data.List                      ( foldl'
+                                                , zip5
+                                                )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           Lens.Micro.Platform
 import           Text.Megaparsec
-import           System.Console.Terminal.Size  as TS
+import           Text.Printf                    ( printf )
+import           System.Console.ANSI            ( getTerminalSize )
 
 
 runList :: ReplArgs -> IntMap Reference -> CmdOutput
@@ -67,18 +74,32 @@ totalSizes fss = sum $ map ($ fss) [numberF, authorF, yearF, journalF, titleF]
 getFieldSizes :: IntMap Reference -> IO FieldSizes
 getFieldSizes refs = do
   -- Number field.
-  let maxRef    = fst $ IM.findMax refs
-      numberF'  = length (show maxRef) + fieldPadding
-  -- TODO Author field.
-  let authorF'  = 7 + fieldPadding   -- NOT CORRECT
+  let maxRef   = fst $ IM.findMax refs
+      numberF' = length (show maxRef) + fieldPadding
+  -- Author field.
+  let
+    getMaxAuthorLength :: Reference -> Int
+    getMaxAuthorLength =
+      maximum . map (T.length . formatAuthor ListCmd) . (^. authors)
+    authorF' = fieldPadding + maximum (map getMaxAuthorLength (IM.elems refs))
   -- Year field.
-  let yearF'    = 4 + fieldPadding
+  let yearF' = fieldPadding + 4
   -- Journal field.
-  let journalF' = fieldPadding + maximum (map (T.length . getShortestJournalName) (IM.elems refs))
-  -- Title field. The lower limit of 40 is to make sure that ANSI escape sequences
-  -- in the availability row (printed under the title) don't get messed up.
-  Just (Window _ (ncols :: Int)) <- TS.size  -- errors if output is not to a terminal
-  let titleF' = max 40 (ncols - numberF' - authorF' - yearF' - journalF')
+  let longestJName = maximum (map (T.length . getShortestJournalName) (IM.elems refs))
+      longestJInfo = maximum (map (T.length . getVolInfo) (IM.elems refs))
+      journalF' = fieldPadding + max longestJName longestJInfo
+  -- Title field. Our first guess is to just use up the remaining space.
+  Just (_, ncols) <- getTerminalSize
+  let titleF1      = ncols - numberF' - authorF' - yearF' - journalF'
+  -- We enforce an upper limit, which is the longest title / DOI / availability string.
+      longestTitle = maximum $ map (T.length . (^. title)) (IM.elems refs)
+      longestDOI   = maximum $ map (T.length . (^. doi)) (IM.elems refs)
+      availLength  = 40
+      upperLimit   = maximum [longestTitle, longestDOI, availLength]
+      titleF2      = min titleF1 upperLimit
+  -- We also enforce a lower limit, which is the availability string itself: or else
+  -- the ANSI escape sequences tend to get messed up.
+  let titleF' = max availLength titleF2
   pure $ FieldSizes numberF' authorF' yearF' journalF' titleF'
 
 -- | Prettify an IntMap of references.
@@ -88,30 +109,79 @@ prettyFormatRefs refs = if IM.null refs
   else do
     fss <- getFieldSizes refs
     let text = prettyFormatHead fss
+          <> "\n"
           <> T.intercalate "\n\n" (map (printRef fss) (IM.assocs refs))
+          <> "\n"   -- extra blank line looks nice.
     pure $ Right text
 
 -- | Generate a pretty header for the reference list.
 prettyFormatHead :: FieldSizes -> Text
 prettyFormatHead fss =
-  setBold
-      (mconcat
-        [ T.justifyLeft (numberF fss) ' ' "#"
-        , T.justifyLeft (authorF fss) ' ' "Authors"
-        , T.justifyLeft (yearF fss) ' ' "Year"
-        , T.justifyLeft (journalF fss) ' ' "Journal"
-        , T.justifyLeft (titleF fss) ' ' "Title and DOI"
-        ]
-      )
+  setBold (formatLine fss ("#", "Authors", "Year", "Journal", "Title and DOI"))
     <> "\n"
-    <> T.replicate (totalSizes fss) "-"
+    <> setBold (T.replicate (totalSizes fss) "-")
 
 -- | Generate pretty output for one particular reference in an IntMap.
 printRef :: FieldSizes -> (Int, Reference) -> Text
-printRef fss (index, ref) = mconcat
-  [ T.justifyLeft (numberF fss)  ' ' (T.pack $ show index)
-  , T.justifyLeft (authorF fss)  ' ' ".author."
-  , T.justifyLeft (yearF fss)    ' ' (T.pack . show $ ref ^. year)
-  , T.justifyLeft (journalF fss) ' ' (getShortestJournalName ref)
-  , T.justifyLeft (titleF fss)   ' ' (ref ^. title)
+printRef fss (index, ref) =
+  -- Build up the columns first.
+  let numberColumn  = [T.pack $ show index]
+      authorColumn  = map (formatAuthor ListCmd) (ref ^. authors)
+      yearColumn    = [T.pack . show $ ref ^. year]
+      journalColumn = [getShortestJournalName ref, getVolInfo ref]
+      titleColumn   = T.chunksOf (titleF fss) (ref ^. title) ++ [ref ^. doi]
+      -- Clone of Python's itertools.zip_longest(fillvalue="").
+      zipLongest5
+        :: [Text]  -- unpadded number column
+        -> [Text]  -- unpadded author column
+        -> [Text]  -- unpadded year column
+        -> [Text]  -- unpadded journal column
+        -> [Text]  -- unpadded title Column
+        -> [(Text, Text, Text, Text, Text)]
+      zipLongest5 as bs cs ds es =
+        let maxLen = maximum $ map length [as, bs, cs, ds, es]
+            pad xs = xs ++ repeat ""
+        in  take maxLen (zip5 (pad as) (pad bs) (pad cs) (pad ds) (pad es))
+  in  T.intercalate "\n" . map (formatLine fss) $ zipLongest5 numberColumn
+                                                              authorColumn
+                                                              yearColumn
+                                                              journalColumn
+                                                              titleColumn
+
+-- | Utility function to generate one line of output according to the field sizes
+-- and the text to be placed there.
+formatLine :: FieldSizes -> (Text, Text, Text, Text, Text) -> Text
+formatLine fss texts = mconcat
+  [ T.justifyLeft (numberF fss)  ' ' (texts ^. _1)
+  , T.justifyLeft (authorF fss)  ' ' (texts ^. _2)
+  , T.justifyLeft (yearF fss)    ' ' (texts ^. _3)
+  , T.justifyLeft (journalF fss) ' ' (texts ^. _4)
+  , T.justifyLeft (titleF fss)   ' ' (texts ^. _5)
   ]
+
+-- | Produce as short a journal name as possible, by removing special characters
+-- (only alphanumeric characters and spaces are retained), as well as using some
+-- acronyms such as "NMR". This function is only really used for the list command
+-- so we can keep it here.
+getShortestJournalName :: Reference -> Text
+getShortestJournalName =
+  replaceAcronyms
+    . T.strip
+    . T.filter ((||) <$> isAlphaNum <*> isSpace)
+    . view journalShort
+ where
+  acronyms = [("Nucl Magn Reson", "NMR")]
+  replaceAcronyms startText =
+    foldl' (flip (uncurry T.replace)) startText acronyms
+
+
+-- | Produce information about the volume, issue, and page numbers of a reference.
+-- This output is only meant for list printing, hence is placed here.
+getVolInfo :: Reference -> Text
+getVolInfo ref =
+  let theVolume = ref ^. volume
+      theIssue  = ref ^. issue
+      thePages  = ref ^. pages
+  in  if T.null theIssue
+        then T.pack $ printf "%s, %s" theVolume thePages
+        else T.pack $ printf "%s (%s), %s" theVolume theIssue thePages

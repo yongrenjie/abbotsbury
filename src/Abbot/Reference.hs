@@ -6,9 +6,7 @@ module Abbot.Reference
   ) where
 
 import           Data.Aeson
-import           Data.Char                      ( isAlphaNum
-                                                , isSpace
-                                                )
+import Data.Char (isSpace)
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import           Data.Time.Clock
@@ -32,7 +30,7 @@ data Reference = Article
 
 type DOI = Text
 data Author = Author
-  { _given  :: Text
+  { _given  :: Maybe Text  -- Not everyone has a given name.
   , _family :: Text
   }
   deriving (Generic, Show)
@@ -48,8 +46,17 @@ instance ToJSON Author where
   toEncoding = genericToEncoding defaultOptions
 instance FromJSON Author
 
--- | Produce as short a journal name as possible, by removing special characters
--- (only alphanumeric characters and spaces are retained), as well as using some
--- acronyms such as "NMR".
-getShortestJournalName :: Reference -> Text
-getShortestJournalName ref = T.strip $ T.filter ((||) <$> isAlphaNum <*> isSpace) (ref ^. journalShort)
+
+-- | Methods of formatting author names.
+data AuthorFormatting = ListCmd  -- For the list command.
+                      deriving (Eq, Show)
+
+-- | Formats an Author according to the specified AuthorFormatting mode.
+formatAuthor :: AuthorFormatting -> Author -> Text
+formatAuthor fmt auth = case auth ^. given of
+  Nothing  -> auth ^. family
+  Just gvn -> case fmt of
+    ListCmd ->
+      T.pack (map T.head (T.split (\c -> isSpace c || c == '-') gvn))
+        <> " "
+        <> auth ^. family
