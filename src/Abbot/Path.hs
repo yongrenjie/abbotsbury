@@ -37,7 +37,7 @@ expandDirectory fp =
 -- | The file name where abbotsbury stores its information. In theory this
 -- could be customisable, but in practice I can't be bothered.
 yamlFileName :: FilePath
-yamlFileName = "peep.yaml"
+yamlFileName = "abbot.yaml"
 
 -- | My own set of YAML errors, which is meant to make error reporting less
 -- complicated, as we don't need the full set of ParseExceptions.
