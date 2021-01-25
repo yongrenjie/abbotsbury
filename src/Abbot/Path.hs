@@ -86,7 +86,7 @@ saveRefs refs cwd = unless (IM.null refs)
 
 data PDFType = FullText
              | SI
-             deriving (Show, Eq)
+             deriving (Ord, Eq, Show)
 
 -- | Find the path to a PDF file belonging to a reference.
 getPDFPath :: PDFType    -- Full text or SI.

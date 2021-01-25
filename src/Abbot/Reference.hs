@@ -49,7 +49,7 @@ instance FromJSON Author
 
 -- | Methods of formatting author names.
 data AuthorFormatting = ListCmd  -- For the list command.
-                      deriving (Eq, Show)
+                      deriving (Ord, Eq, Show)
 
 -- | Formats an Author according to the specified AuthorFormatting mode.
 formatAuthor :: AuthorFormatting -> Author -> Text

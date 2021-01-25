@@ -45,6 +45,7 @@ executable abbot
   other-modules:
     Abbot.Commands
     Abbot.Commands.List
+    Abbot.Commands.Open
     Abbot.Commands.Shared
     Abbot.Path
     Abbot.Reference

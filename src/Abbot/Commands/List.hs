@@ -11,6 +11,7 @@ import           Abbot.Style                    ( setBold
                                                 , setColor
                                                 )
 
+import           Control.Applicative            ( (<|>) )
 import           Data.Char                      ( isAlphaNum
                                                 , isSpace
                                                 )
@@ -24,16 +25,18 @@ import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           Lens.Micro.Platform
-import           Text.Megaparsec
-import           Text.Printf                    ( printf )
 import           System.Console.ANSI            ( getTerminalSize )
 import           System.Directory               ( doesFileExist )
+import           Text.Megaparsec                ( eof
+                                                , errorBundlePretty
+                                                , parse
+                                                )
 
 runList :: ReplArgs -> FilePath -> IntMap Reference -> CmdOutput
 runList args cwd refs = if IM.null refs
-  then cmdErrS "list: no references found"
+  then cmdErr "list: no references found"
   else
-    let parsedArgs = parse pRefnos "" args
+    let parsedArgs = parse (pRefnos <* eof) "" args
         numRefs    = fst $ IM.findMax refs
     in  case parsedArgs of
           Left bundle -> cmdErrS ("list: " ++ errorBundlePretty bundle)  -- parse error
@@ -197,8 +200,8 @@ getVolInfo ref =
       theIssue  = ref ^. issue
       thePages  = ref ^. pages
   in  if T.null theIssue
-        then T.pack $ printf "%s, %s" theVolume thePages
-        else T.pack $ printf "%s (%s), %s" theVolume theIssue thePages
+        then mconcat [theVolume, ", ", thePages]
+        else mconcat [theVolume, " (", theIssue, "), ", thePages]
 
 
 -- | Get availability string for a reference.

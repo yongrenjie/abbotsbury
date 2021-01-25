@@ -3,8 +3,10 @@ module Abbot.Commands
   , Abbot.Commands.Shared.ReplCmd(..)
   , Abbot.Commands.Shared.runReplParser
   ) where
+-- The other two exports are needed for the Main.hs file.
 
 import           Abbot.Commands.List
+import           Abbot.Commands.Open
 import           Abbot.Commands.Shared
 import           Abbot.Reference
 
@@ -21,4 +23,5 @@ runCommand
   -> CmdOutput        -- The output of the command.
 runCommand Help = runHelp
 runCommand List = runList
+runCommand Open = runOpen
 runCommand _    = undefined
