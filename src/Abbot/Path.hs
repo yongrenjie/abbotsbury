@@ -5,7 +5,7 @@ module Abbot.Path
 
 import           Abbot.Reference
 
-import           Control.Monad                  ( unless )
+import           Control.Monad.Except
 import           Data.IntMap                    ( IntMap )
 import qualified Data.IntMap                   as IM
 import           Data.List                      ( isInfixOf )
@@ -57,7 +57,7 @@ categoriseYamlError _                  = OtherYamlError
 -- | Reads in a list of references from the YAML file in a folder, but
 -- also does some pattern matching on the returned result so that error
 -- messages are easier to deal with in the main loop.
-readRefs :: FilePath -> IO (Either Text (IntMap Reference))
+readRefs :: FilePath -> ExceptT Text IO (IntMap Reference)
 readRefs cwd = do
   let fname = cwd </> yamlFileName
       invalidYamlErrMsg =
@@ -66,15 +66,15 @@ readRefs cwd = do
           <> " was found, but it does not "
           <> "contain articles in the correct "
           <> "format for abbotsbury."
-  refs <- decodeFileEither fname
+  refs <- liftIO $ decodeFileEither fname
   case refs of
     -- Successfully parsed.
-    Right newRefs  -> pure $ Right (IM.fromList $ zip [1..] newRefs)
+    Right newRefs  -> pure (IM.fromList $ zip [1..] newRefs)
     -- Some error
     Left  parseExc -> case categoriseYamlError parseExc of
-      YamlFileNotFound  -> pure $ Right IM.empty
-      InvalidYamlInFile -> pure $ Left invalidYamlErrMsg
-      OtherYamlError    -> pure $ Left $ T.pack
+      YamlFileNotFound  -> pure IM.empty
+      InvalidYamlInFile -> throwError invalidYamlErrMsg
+      OtherYamlError    -> throwError $ T.pack
         (show parseExc <> "\n This error is unexpected; please file a bug!")
 
 -- | Saves a list of references to the given FilePath, as long as it's not empty.
@@ -82,7 +82,6 @@ readRefs cwd = do
 saveRefs :: IntMap Reference -> FilePath -> IO ()
 saveRefs refs cwd = unless (IM.null refs)
                            (encodeFile (cwd </> yamlFileName) (IM.elems refs))
-
 
 data PDFType = FullText
              | SI

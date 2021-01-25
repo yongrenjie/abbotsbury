@@ -13,7 +13,7 @@ import           Control.Monad.Catch            ( MonadCatch
                                                 , MonadThrow
                                                 , catchIOError
                                                 )
-import           Control.Monad.IO.Class
+import           Control.Monad.Except
 import           Control.Monad.State
 import           Data.IntMap                    ( IntMap )
 import qualified Data.IntMap                   as IM
@@ -98,7 +98,7 @@ loop =
 
         -- If the directory was changed, read in new data, then turn off the flag
         when dirC $ do
-          newRefs <- liftIO (readRefs curD)
+          newRefs <- liftIO . runExceptT $ readRefs curD
           case newRefs of
             Right nrefs -> do
               references .= nrefs
@@ -144,8 +144,8 @@ loop =
               currentDir  <- use curDir
               currentRefs <- use references
               -- TODO: In principle, all IO exceptions should be caught here, as
-              -- they are not exhaustively encoded in the (Either Text s) return type.
-              cmdOutput   <- liftIO $ runCommand cmd args currentDir currentRefs
+              -- they are not exhaustively encoded in the ExceptT error type.
+              cmdOutput   <- liftIO . runExceptT $ runCommand cmd args currentDir currentRefs
               case cmdOutput of
                 Left  err          -> printErr err >> loop
                 Right (newRefs, _) -> do

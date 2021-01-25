@@ -4,8 +4,8 @@ module Abbot.Commands.Shared
 
 import           Abbot.Reference
 
+import           Control.Monad.Except
 import           Data.Char
-import           Data.Functor                   ( void )
 import           Data.IntMap                    ( IntMap )
 import           Data.IntSet                    ( IntSet )
 import qualified Data.IntSet                   as IS
@@ -66,24 +66,11 @@ pRepl = do
 -- an error message (Left), OR a successful return with
 -- 1) the final state of the reference list, plus
 -- 2) an optional set of refnos (which can be piped to another command)
---
--- This could be turned into ExceptT e IO s, which reduces some of the case/of
--- boilerplate, but increases boilerplate of pure IO actions as they all need
--- to be liftIO-ed. Because the actual IO side effects are so common (particularly
--- printing to screen) I opt to keep this as IO (Either e s) for now.
-type CmdOutput = IO (Either Text (IntMap Reference, Maybe IntSet))
+type CmdOutput = ExceptT Text IO (IntMap Reference, Maybe IntSet)
 
-
--- | Shortcut to return an error. This is analogous to throwError in ExceptT,
--- but if called more than once, this won't short-circuit the function like how
--- throwError does, but instead requires explicit pattern-matching to be "passed
--- on".
-cmdErr :: Text -> CmdOutput
-cmdErr = pure . Left
--- | The same as `cmdErr` but for String type.
-cmdErrS :: String -> CmdOutput
-cmdErrS = pure . Left . T.pack
-
+-- | The same as `throwErr` but for String type.
+throwErrorS :: String -> CmdOutput
+throwErrorS = throwError . T.pack
 
 -- | Parse a series of reference numbers. The format is:
 -- <NumRange> = <NumLit>-<NumLit>
@@ -115,10 +102,10 @@ pFormats abbrevs = S.fromList <$> do
 -- in a different module (that would lead to a cyclic import).
 runHelp :: ReplArgs -> FilePath -> IntMap Reference -> CmdOutput
 runHelp args _ refs = case runReplParser args of
-  Left  _        -> cmdErr ("help: command '" <> args <> "' not recognised")
+  Left  _        -> throwError ("help: command '" <> args <> "' not recognised")
   Right (cmd, _) -> do
-    TIO.putStrLn (getHelpText cmd)
-    pure (Right (refs, Nothing))
+    liftIO $ TIO.putStrLn (getHelpText cmd)
+    pure (refs, Nothing)
 
 -- | Returns the help text for a particular command.
 getHelpText :: ReplCmd -> Text

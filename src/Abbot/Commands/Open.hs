@@ -4,6 +4,7 @@ module Abbot.Commands.Open
 
 import           Abbot.Commands.Shared
 import           Abbot.Reference
+import           Control.Monad.Except
 -- import qualified Data.IntMap                   as IM
 import           Data.IntMap                    ( IntMap )
 import           Data.IntSet                    ( IntSet )
@@ -22,7 +23,7 @@ data OpenFormat = OpenFullText
                 deriving (Ord, Eq, Show)
 
 runOpen :: ReplArgs -> FilePath -> IntMap Reference -> CmdOutput
-runOpen args cwd refs = cmdErr "open: not yet implemented"
+runOpen args cwd refs = throwError "open: not yet implemented"
 
 pOpen :: Parser (IntSet, Set OpenFormat)
 pOpen = ((,) <$> pRefnos <*> pFormats abbrevs) <* eof

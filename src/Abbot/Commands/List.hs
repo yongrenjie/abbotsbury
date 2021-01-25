@@ -12,6 +12,7 @@ import           Abbot.Style                    ( setBold
                                                 )
 
 import           Control.Applicative            ( (<|>) )
+import           Control.Monad.Except
 import           Data.Char                      ( isAlphaNum
                                                 , isSpace
                                                 )
@@ -33,31 +34,29 @@ import           Text.Megaparsec                ( eof
                                                 )
 
 runList :: ReplArgs -> FilePath -> IntMap Reference -> CmdOutput
-runList args cwd refs = if IM.null refs
-  then cmdErr "list: no references found"
-  else
-    let parsedArgs = parse (pRefnos <* eof) "" args
-        numRefs    = fst $ IM.findMax refs
-    in  case parsedArgs of
-          Left bundle -> cmdErrS ("list: " ++ errorBundlePretty bundle)  -- parse error
-          Right refnos ->
-            -- Some refnos were specified. First, check for out of bounds.
-            case IS.lookupGT numRefs refnos <|> IS.lookupLT 1 refnos of
-              Just x ->
-                cmdErrS ("list: reference " <> show x <> " is out of bounds")
-              -- No out of bounds. If refnos is empty, then print all references, otherwise
-              -- print whatever was specified.
-              Nothing -> do
-                let
-                  refnosToPrint = if IS.null refnos
-                    then IS.fromList [1 .. numRefs]
-                    else refnos
-                result <- prettyFormatRefs cwd (IM.restrictKeys refs refnosToPrint)
-                case result of
-                  Left  errMsg        -> cmdErr errMsg
-                  Right formattedRefs -> do
-                    TIO.putStrLn formattedRefs
-                    pure $ Right (refs, Just refnos)
+runList args cwd refs = do
+  -- If no refs present, error immediately
+  when (IM.null refs) (throwError "list: no references found")
+  let parsedArgs = parse (pRefnos <* eof) "" args
+      numRefs    = fst $ IM.findMax refs
+  case parsedArgs of
+       Left bundle -> throwErrorS ("list: " ++ errorBundlePretty bundle)  -- parse error
+       Right refnos ->
+         -- Some refnos were specified. First, check for out of bounds.
+         case IS.lookupGT numRefs refnos <|> IS.lookupLT 1 refnos of
+           Just x ->
+             throwErrorS ("list: reference " <> show x <> " is out of bounds")
+           -- No out of bounds. If refnos is empty, then print all references, otherwise
+           -- print whatever was specified.
+           Nothing -> do
+             let
+               refnosToPrint = if IS.null refnos
+                 then IS.fromList [1 .. numRefs]
+                 else refnos
+             -- 
+             formattedRefs <- prettyFormatRefs cwd (IM.restrictKeys refs refnosToPrint)
+             liftIO $ TIO.putStrLn formattedRefs
+             pure (refs, Just refnos)
 
 
 -- | The field sizes for pretty-printing. Note that the title field is also
@@ -111,18 +110,17 @@ getFieldSizes refs = do
   pure $ FieldSizes numberF' authorF' yearF' journalF' titleF'
 
 -- | Prettify an IntMap of references.
-prettyFormatRefs :: FilePath -> IntMap Reference -> IO (Either Text Text)
-prettyFormatRefs cwd refs = if IM.null refs
-  then pure $ Left "no references found"
-  else do
-    fss <- getFieldSizes refs
-    let headText = prettyFormatHead fss
-    refsText <- mapM (printRef fss cwd) (IM.assocs refs)
-    let text = headText
-          <> "\n"
-          <> T.intercalate "\n\n" refsText
-          <> "\n"   -- extra blank line looks nice.
-    pure $ Right text
+prettyFormatRefs :: FilePath -> IntMap Reference -> ExceptT Text IO Text
+prettyFormatRefs cwd refs = do
+  when (IM.null refs) (throwError "no references found")
+  fss <- liftIO $ getFieldSizes refs
+  let headText = prettyFormatHead fss
+  refsText <- liftIO $ mapM (printRef fss cwd) (IM.assocs refs)
+  let text = headText
+        <> "\n"
+        <> T.intercalate "\n\n" refsText
+        <> "\n"   -- extra blank line looks nice.
+  pure text
 
 -- | Generate a pretty header for the reference list.
 prettyFormatHead :: FieldSizes -> Text
