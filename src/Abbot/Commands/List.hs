@@ -11,7 +11,6 @@ import           Abbot.Style                    ( setBold
                                                 , setColor
                                                 )
 
-import           Control.Applicative            ( (<|>) )
 import           Control.Monad.Except
 import           Data.Char                      ( isAlphaNum
                                                 , isSpace
@@ -37,26 +36,20 @@ runList :: ReplArgs -> FilePath -> IntMap Reference -> CmdOutput
 runList args cwd refs = do
   -- If no refs present, error immediately
   when (IM.null refs) (throwError "list: no references found")
-  let parsedArgs = parse (pRefnos <* eof) "" args
-      numRefs    = fst $ IM.findMax refs
-  case parsedArgs of
-       Left bundle -> throwErrorS ("list: " ++ errorBundlePretty bundle)  -- parse error
-       Right refnos ->
-         -- Some refnos were specified. First, check for out of bounds.
-         case IS.lookupGT numRefs refnos <|> IS.lookupLT 1 refnos of
-           Just x ->
-             throwErrorS ("list: reference " <> show x <> " is out of bounds")
-           -- No out of bounds. If refnos is empty, then print all references, otherwise
-           -- print whatever was specified.
-           Nothing -> do
-             let
-               refnosToPrint = if IS.null refnos
-                 then IS.fromList [1 .. numRefs]
-                 else refnos
-             -- 
-             formattedRefs <- prettyFormatRefs cwd (IM.restrictKeys refs refnosToPrint)
-             liftIO $ TIO.putStrLn formattedRefs
-             pure (refs, Just refnos)
+  let numRefs = fst $ IM.findMax refs
+  case parse (pRefnos <* eof) "" args of
+    Left  bundle -> throwError $ T.pack ("list: " ++ errorBundlePretty bundle)  -- parse error
+    -- Some refnos were specified.
+    Right refnos -> do
+      -- First, check for anything not in the map
+      let unavailableRefnos = refnos IS.\\ IM.keysSet refs
+      unless (IS.null unavailableRefnos) (throwError $ T.pack ("list: reference " <> show unavailableRefnos <> " is out of bounds"))
+      let refnosToPrint =
+            if IS.null refnos then IS.fromList [1 .. numRefs] else refnos
+      formattedRefs <- prettyFormatRefs cwd
+                                        (IM.restrictKeys refs refnosToPrint)
+      liftIO $ TIO.putStrLn formattedRefs
+      pure (refs, Just refnosToPrint)
 
 
 -- | The field sizes for pretty-printing. Note that the title field is also

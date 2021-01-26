@@ -20,7 +20,7 @@ executable abbot
   main-is:
     Main.hs
   ghc-options:
-    -O0 -Wall -j4 +RTS -A128m -n2m -RTS
+    -O0 -Wall -j4 -threaded +RTS -A128m -n2m -RTS
   build-depends:
     , base ^>=4.14.1.0
     , haskeline
@@ -40,6 +40,7 @@ executable abbot
     , aeson
     , time
     , microlens-platform
+    , process
   hs-source-dirs:
     src
   other-modules:
