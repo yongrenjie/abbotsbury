@@ -46,12 +46,11 @@ runOpen args cwd refs = do
       let unavailableRefnos = refnos IS.\\ IM.keysSet refs
       unless
         (IS.null unavailableRefnos)
-        ( throwError
-        $ T.pack
-            (  "open: reference "
-            <> show unavailableRefnos
-            <> " is out of bounds"
-            )
+        (throwError
+          (  "open: reference(s) "
+          <> (T.intercalate "," . map (T.pack . show) . IS.toList $ refnos)
+          <> " not found"
+          )
         )
       -- Then, check if refnos is empty
       when (IS.null refnos) (throwError "open: no references selected")

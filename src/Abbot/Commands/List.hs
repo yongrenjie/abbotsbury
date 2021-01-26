@@ -41,9 +41,17 @@ runList args cwd refs = do
     Left  bundle -> throwError $ T.pack ("list: " ++ errorBundlePretty bundle)  -- parse error
     -- Some refnos were specified.
     Right refnos -> do
-      -- First, check for anything not in the map
+      -- First, check for any refnos that don't exist
       let unavailableRefnos = refnos IS.\\ IM.keysSet refs
-      unless (IS.null unavailableRefnos) (throwError $ T.pack ("list: reference " <> show unavailableRefnos <> " is out of bounds"))
+      unless
+        (IS.null unavailableRefnos)
+        (throwError
+          (  "list: reference(s) "
+          <> (T.intercalate "," . map (T.pack . show) . IS.toList $ refnos)
+          <> " not found"
+          )
+        )
+      -- If we reached here, everything is good
       let refnosToPrint =
             if IS.null refnos then IS.fromList [1 .. numRefs] else refnos
       formattedRefs <- prettyFormatRefs cwd
