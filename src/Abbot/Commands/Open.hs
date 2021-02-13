@@ -8,16 +8,18 @@ import           Abbot.Path                     ( PDFType(..)
                                                 )
 import           Abbot.Reference
 import           Control.Monad.Except
+import           Data.Bifunctor                 ( bimap )
 import qualified Data.IntMap                   as IM
 import           Data.IntMap                    ( IntMap )
 import           Data.IntSet                    ( IntSet )
 import qualified Data.IntSet                   as IS
+import           Data.List                      ( partition )
 -- import           Data.Map                       ( Map )
 import qualified Data.Map                      as M
 import           Data.Set                       ( Set )
 import qualified Data.Set                      as S
 import           Data.Text                      ( Text )
--- import qualified Data.Text.IO                  as TIO
+import qualified Data.Text.IO                  as TIO
 import qualified Data.Text                     as T
 import           Lens.Micro.Platform
 import           System.Process                 ( proc
@@ -34,6 +36,12 @@ data OpenFormat = OpenFullText
                 | OpenSI
                 | OpenWebURL
                 deriving (Ord, Eq, Show)
+
+showT :: OpenFormat -> Text
+showT OpenFullText = "full text"
+showT OpenSI       = "SI"
+showT OpenWebURL   = "web URL"
+
 
 runOpen :: ReplArgs -> FilePath -> IntMap Reference -> CmdOutput
 runOpen args cwd refs = do
@@ -55,21 +63,40 @@ runOpen args cwd refs = do
       -- Then, check if refnos is empty
       when (IS.null refnos) (throwError "open: no references selected")
       -- Construct the links to be opened.
-      let openLinks =
-            [ getOpenLink fmt (refs IM.! rno) cwd
-            | fmt <- S.toList formats
-            , rno <- IS.toList refnos
-            ]
-          openCommands = map (\x -> proc "open" [T.unpack x]) openLinks
+      let jobs =
+            [ (rno, fmt) | fmt <- S.toList formats, rno <- IS.toList refnos ]
+      let openCommands = do
+            (rno, fmt) <- jobs
+            let openLink = T.unpack $ getOpenLink fmt (refs IM.! rno) cwd
+            pure $ proc "open" [openLink]
+      -- Run the commands.
+      -- TODO: This is not parallelised. How to?
       processReturns <- liftIO
         $ mapM (`readCreateProcessWithExitCode` "") openCommands
       -- Check exit codes and return an error if any of them failed.
-      -- TODO: I would really like if this were smarter, i.e. it told us *exactly*
-      -- which reference failed. We would need to preserve this information in
-      -- openLinks, perhaps as a tuple.
-      let exitCodes = processReturns ^.. each . _1
-      when (any (/= ExitSuccess) exitCodes)
-           (throwError "open: one or more references failed to open")
+      let (successJobs, failedJobs) =
+            bimap (map fst) (map fst)
+              . partition ((== ExitSuccess) . view (_2 . _1))
+              $ zip jobs processReturns
+      let showJob :: (Int, OpenFormat) -> Text
+          showJob (r, f) =
+            mconcat ["       refno ", T.pack (show r), ", ", showT f]
+      -- Print success message. In theory we could also tell the user which ones opened
+      -- successfully, but I think it's too much noise.
+      let successMsg =
+            "open: successfully opened "
+              <> (T.pack . show $ length successJobs)
+              <> " reference(s)"
+      unless (null successJobs) (liftIO $ TIO.putStrLn successMsg)
+      -- Print error message.
+      unless
+        (null failedJobs)
+        (do
+          let errMsg =
+                "open: failed to open the following references:\n"
+                  <> T.intercalate "\n" (map showJob failedJobs)
+          throwError errMsg
+        )
       pure (refs, Nothing)
 
 
