@@ -13,7 +13,10 @@ import qualified Data.IntMap                   as IM
 import           Data.IntMap                    ( IntMap )
 import           Data.IntSet                    ( IntSet )
 import qualified Data.IntSet                   as IS
-import           Data.List                      ( partition )
+import           Data.List                      ( foldl'
+                                                , nub
+                                                , partition
+                                                )
 -- import           Data.Map                       ( Map )
 import qualified Data.Map                      as M
 import           Data.Set                       ( Set )
@@ -21,6 +24,7 @@ import qualified Data.Set                      as S
 import           Data.Text                      ( Text )
 import qualified Data.Text.IO                  as TIO
 import qualified Data.Text                     as T
+import           Data.Time.Clock                ( getCurrentTime )
 import           Lens.Micro.Platform
 import           System.Process                 ( proc
                                                 , readCreateProcessWithExitCode
@@ -88,16 +92,25 @@ runOpen args cwd refs = do
               <> (T.pack . show $ length successJobs)
               <> " reference(s)"
       unless (null successJobs) (liftIO $ TIO.putStrLn successMsg)
-      -- Print error message.
+      -- Deal with failed references if there are any.
       unless
         (null failedJobs)
         (do
           let errMsg =
                 "open: failed to open the following references:\n"
                   <> T.intercalate "\n" (map showJob failedJobs)
-          throwError errMsg
+          unless (null successJobs) (liftIO $ TIO.putStrLn errMsg)
         )
-      pure (refs, Nothing)
+      -- We don't ever want to throwError from within runOpen, because the last
+      -- opened times of the refs always have to be updated, which we do here.
+      currentTime <- liftIO getCurrentTime
+      let updatedRefnos = nub $ map fst successJobs
+          updatedRefs   = foldl'
+            (\rs rno -> set (ix rno . timeOpened) currentTime rs)
+            refs
+            updatedRefnos
+      -- Return the updated refs.
+      pure (updatedRefs, Nothing)
 
 
 pOpen :: Parser (IntSet, Set OpenFormat)
