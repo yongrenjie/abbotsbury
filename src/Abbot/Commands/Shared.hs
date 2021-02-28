@@ -71,6 +71,7 @@ pRepl = do
 -- 2) an optional set of refnos (which can be piped to another command)
 type CmdOutput = ExceptT Text IO (IntMap Reference, Maybe IntSet)
 
+
 -- | Parse a series of reference numbers. The format is:
 -- <NumRange> = <NumLit>-<NumLit>
 -- <Num> = <NumLit> | <NumRange>
@@ -108,7 +109,7 @@ pFormats abbrevs defval = do
 -- | Parse a single object of type a, which is represented by (one or more)
 -- Text values. If there is a default value, it can be passed as the second parameter,
 -- otherwise pass Nothing.
-pOneFormat :: forall a . Ord a => Map Text a -> Maybe a -> Parser a
+pOneFormat :: forall a . Map Text a -> Maybe a -> Parser a
 pOneFormat abbrevs defval =
   let formatParsers :: [Parser a]
       formatParsers = map (\(k, v) -> v <$ try (string' k)) (sortOn (Down . fst) $ M.assocs abbrevs)
@@ -125,6 +126,7 @@ runHelp args _ refs = case runReplParser args of
   Right (cmd, _) -> do
     liftIO $ TIO.putStrLn (getHelpText cmd)
     pure (refs, Nothing)
+
 
 -- | Returns the help text for a particular command.
 getHelpText :: ReplCmd -> Text
