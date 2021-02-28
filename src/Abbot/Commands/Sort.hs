@@ -8,10 +8,12 @@ import           Control.Monad.Except
 import           Data.Char                      ( isUpper )
 import qualified Data.IntMap                   as IM
 import           Data.IntMap                    ( IntMap )
-import           Data.List                      ( sortOn )
+import           Data.List                      ( sortBy )
 import qualified Data.Map                      as M
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
+import           Data.Ord                       ( comparing )
+import           Data.Time.Clock                ( )
 import           Lens.Micro.Platform
 import           Text.Megaparsec                ( eof
                                                 , errorBundlePretty
@@ -36,17 +38,19 @@ runSort args _ refs = do
   when (IM.null refs) (throwError "sort: no references found")
   -- Parse arguments: detect whether reversed order is desired...
   case parse pSort "" args of
-    Left  bundle -> throwError $ T.pack ("open: " ++ errorBundlePretty bundle)  -- parse error
-    Right format -> do
-      let safeThead x = if T.null x then Nothing else Just $ T.head x
-      let reverseFn = maybe id (\x -> if isUpper x then reverse else id) (safeThead args)
-      let originalRefs = IM.elems refs   -- no refnos
-      let sortedRefs = case format of
-            YearJournalAuthor -> sortOn (view year) originalRefs -- TODO this is not fully done
-            TimeOpened        -> sortOn (view timeOpened) originalRefs
-            TimeAdded         -> sortOn (view timeAdded) originalRefs
-      liftIO $ TIO.putStrLn ("sorted references by " <> showT format)
-      pure (IM.fromList $ zip [1..] (reverseFn sortedRefs), Nothing)
+    Left bundle -> throwError $ T.pack ("open: " ++ errorBundlePretty bundle)  -- parse error
+    Right criterion -> do
+      let reversed =
+            not (T.null . T.stripStart $ args)
+              && (isUpper . T.head . T.stripStart $ args)
+      let originalRefs = IM.elems refs        -- no refnos
+      let sortedRefs = sortBy (getSortOrdering criterion reversed) originalRefs
+      liftIO $ TIO.putStrLn
+        ("sorted references by " <> showT criterion <> if reversed
+          then " (reversed)"
+          else ""
+        )
+      pure (IM.fromList $ zip [1 ..] sortedRefs, Nothing)
 
 
 pSort :: Parser SortCriterion
@@ -60,3 +64,14 @@ pSort = pOneFormat abbrevs (Just TimeAdded) <* eof
     , ("added", TimeAdded)
     , ("a", TimeAdded)
     ]
+
+getSortOrdering :: SortCriterion -> Bool -> Reference -> Reference -> Ordering
+getSortOrdering crit reversed x y =
+  let flipOrder :: Ordering -> Ordering
+      flipOrder LT = GT
+      flipOrder GT = LT
+      flipOrder EQ = EQ
+  in  (if reversed then flipOrder else id) $ case crit of
+        TimeOpened        -> comparing (view timeOpened) x y
+        TimeAdded         -> comparing (view timeAdded) x y
+        YearJournalAuthor -> comparing ((,,) <$> view year <*> view journalLong <*> view (authors . _head . family)) x y
