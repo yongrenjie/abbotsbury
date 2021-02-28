@@ -47,3 +47,8 @@ styleText :: Text -> Text -> Text
 styleText code text =
   let endsWithReset = T.takeEnd 4 text == resetCode
   in  if endsWithReset then code <> text else code <> text <> resetCode
+
+-- | Make an error message.
+makeError :: Text -> Text
+makeError errMsg = setColor "red" "error: "
+                   <> setColor "coral" errMsg

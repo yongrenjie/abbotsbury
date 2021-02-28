@@ -163,8 +163,7 @@ prompt fp = mGetInputLine . T.unpack $ mconcat
 
 -- | Prints an error in the main loop.
 printErr :: Text -> MInputT (StateT LoopState IO) ()
-printErr errMsg = mOutputStrLn . T.unpack $ mconcat
-  [setColor "red" "error: ", setColor "coral" errMsg]
+printErr = mOutputStrLn . T.unpack . makeError
 
 
 -- | Copies to clipboard. Not done yet (obviously.)

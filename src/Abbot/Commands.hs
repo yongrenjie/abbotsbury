@@ -8,6 +8,7 @@ module Abbot.Commands
 import           Abbot.Commands.List
 import           Abbot.Commands.Open
 import           Abbot.Commands.Shared
+import           Abbot.Commands.Sort
 import           Abbot.Reference
 
 import           Data.IntMap                    ( IntMap )
@@ -24,4 +25,5 @@ runCommand
 runCommand Help = runHelp
 runCommand List = runList
 runCommand Open = runOpen
+runCommand Sort = runSort
 runCommand _    = undefined

@@ -27,7 +27,7 @@ import qualified Text.Megaparsec.Char.Lexer    as L
 -- | We don't want to hardcode the types of the arguments, because they will
 -- be different for each command. Each command, when run, will parse their
 -- arguments using a particular parser.
-data ReplCmd = Nop | Quit | Help | Cd | List | Cite | Open
+data ReplCmd = Nop | Quit | Help | Cd | List | Cite | Open | Sort
              deriving (Ord, Eq, Show)
 type ReplArgs = Text
 
@@ -58,6 +58,7 @@ pRepl = do
     , Quit <$ string' "quit"
     , List <$ choice (map string' ["list", "ls", "l"])
     , Open <$ choice (map string' ["open", "op", "o"])
+    , Sort <$ choice (map string' ["sort", "so"])
     ]
   args <- replLexeme $ takeWhileP Nothing isPrint
   eof
@@ -92,8 +93,6 @@ pRefnos = IS.unions <$> many (pNum <* pSeparator)
 -- | Parse a series of objects of type a, which are represented by (one or more)
 -- Text values. If there is a default value, it can be passed as the second parameter,
 -- otherwise pass Nothing.
--- Implementation detail: Even with ScopedTypeVariables enabled, the explicit forall
--- is needed so that the type 'a' in the let block is correctly understood.
 pFormats :: forall a . Ord a => Map Text a -> Maybe a -> Parser (Set a)
 pFormats abbrevs defval = do
   let parsers :: [Parser a]
@@ -104,6 +103,18 @@ pFormats abbrevs defval = do
        [] -> pure $ maybe S.empty S.singleton defval
        -- Formats parsed; convert it to a set and return it
        _  -> pure $ S.fromList fs
+
+
+-- | Parse a single object of type a, which is represented by (one or more)
+-- Text values. If there is a default value, it can be passed as the second parameter,
+-- otherwise pass Nothing.
+pOneFormat :: forall a . Ord a => Map Text a -> Maybe a -> Parser a
+pOneFormat abbrevs defval =
+  let formatParsers :: [Parser a]
+      formatParsers = map (\(k, v) -> v <$ try (string' k)) (sortOn (Down . fst) $ M.assocs abbrevs)
+      defaultParser :: [Parser a]
+      defaultParser = maybe [] (pure . pure) defval  -- one pure for [], one for Parser
+      in choice (formatParsers ++ defaultParser)
 
 
 -- | Because the help command requires runReplParser itself, we can't stick it
@@ -125,3 +136,4 @@ getHelpText = \case
   Cite -> "Cite some references."
   Open -> "Open some references."
   List -> "List selected or all references."
+  Sort -> "Sort references."

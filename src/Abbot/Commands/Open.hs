@@ -7,6 +7,7 @@ import           Abbot.Path                     ( PDFType(..)
                                                 , getPDFPath
                                                 )
 import           Abbot.Reference
+import           Abbot.Style                    ( makeError )
 import           Control.Monad.Except
 import           Data.Bifunctor                 ( bimap )
 import qualified Data.IntMap                   as IM
@@ -96,10 +97,9 @@ runOpen args cwd refs = do
       unless
         (null failedJobs)
         (do
-          let errMsg =
-                "open: failed to open the following references:\n"
-                  <> T.intercalate "\n" (map showJob failedJobs)
-          unless (null successJobs) (liftIO $ TIO.putStrLn errMsg)
+          let errMsg = makeError $ "open: failed to open the following references:\n"
+                                   <> T.intercalate "\n" (map showJob failedJobs)
+          liftIO $ TIO.putStrLn errMsg
         )
       -- We don't ever want to throwError from within runOpen, because the last
       -- opened times of the refs always have to be updated, which we do here.

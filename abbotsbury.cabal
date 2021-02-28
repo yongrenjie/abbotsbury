@@ -48,6 +48,7 @@ executable abbot
     Abbot.Commands.List
     Abbot.Commands.Open
     Abbot.Commands.Shared
+    Abbot.Commands.Sort
     Abbot.Path
     Abbot.Reference
     Abbot.Style
