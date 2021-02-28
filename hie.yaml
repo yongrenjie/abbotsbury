@@ -1,0 +1,25 @@
+cradle:
+  cabal:
+    - path: "src"
+      component: "abbotsbury:exe:abbot"
+
+    - path: "src/Abbot/Commands.hs"
+      component: "abbotsbury:exe:abbot"
+
+    - path: "src/Abbot/Commands/List.hs"
+      component: "abbotsbury:exe:abbot"
+
+    - path: "src/Abbot/Commands/Open.hs"
+      component: "abbotsbury:exe:abbot"
+
+    - path: "src/Abbot/Commands/Shared.hs"
+      component: "abbotsbury:exe:abbot"
+
+    - path: "src/Abbot/Path.hs"
+      component: "abbotsbury:exe:abbot"
+
+    - path: "src/Abbot/Reference.hs"
+      component: "abbotsbury:exe:abbot"
+
+    - path: "src/Abbot/Style.hs"
+      component: "abbotsbury:exe:abbot"
