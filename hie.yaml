@@ -3,6 +3,9 @@ cradle:
     - path: "src"
       component: "abbotsbury:exe:abbot"
 
+    - path: "src/Main.hs"
+      component: "abbotsbury:exe:abbot"
+
     - path: "src/Abbot/Commands.hs"
       component: "abbotsbury:exe:abbot"
 
@@ -13,6 +16,9 @@ cradle:
       component: "abbotsbury:exe:abbot"
 
     - path: "src/Abbot/Commands/Shared.hs"
+      component: "abbotsbury:exe:abbot"
+
+    - path: "src/Abbot/Commands/Sort.hs"
       component: "abbotsbury:exe:abbot"
 
     - path: "src/Abbot/Path.hs"
