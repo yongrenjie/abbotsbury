@@ -24,13 +24,46 @@ import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer    as L
 
 
+-- | Quit and Cd are separate from the rest because we don't want them to be 'pipeable'.
+-- They are dealt with by the main loop.
+data ReplCmd = Nop
+             | Quit
+             | Cd Text
+             | Single AbbotCmd                 -- Just one command.
+             | Composed AbbotCmd AbbotCmd      -- Two commands joined by a pipe.
+             deriving Show
+
+data AbbotCmd = AbbotCmd { cbase :: BaseCommand, cargs :: Text }
+              deriving Show
+data BaseCommand = Help | List | Cite | Open | Sort
+                 deriving (Ord, Eq, Show)
+
+-- | A command takes several sources of input:
+--  1) varin: 'variable input', i.e. 'stdin' piped from a previous command. If there
+--       is no previous command or if the previous command returns no input, then
+--       this is Nothing.
+--  2) cwdin: the current working directory
+--  3) refsin: the current reference list
+data CmdInput = CmdInput { varin  :: Maybe IntSet
+                         , cwdin  :: FilePath
+                         , refsin :: IntMap Reference
+                         }
+              deriving Show
+
+-- | A command can perform several IO actions, which ultimately return either
+-- an error message (Left), OR a successful return with SCmdOutput, comprising
+-- 1) the final state of the reference list, plus
+-- 2) an optional set of refnos (which can be piped to another command)
+type CmdOutput = ExceptT Text IO SCmdOutput
+data SCmdOutput = SCmdOutput { outrefs :: IntMap Reference
+                             , varout :: Maybe IntSet
+                             }
+                deriving Show
+
 -- | We don't want to hardcode the types of the arguments, because they will
 -- be different for each command. Each command, when run, will parse their
 -- arguments using a particular parser.
-data ReplCmd = Nop | Quit | Help | Cd | List | Cite | Open | Sort
-             deriving (Ord, Eq, Show)
-type ReplArgs = Text
-
+type Args = Text
 
 -- | Setup for command-line parsing.
 type Parser = Parsec Void Text
@@ -39,37 +72,48 @@ replSpace = L.space space1 (L.skipLineComment "--") empty
 replLexeme :: Parser a -> Parser a
 replLexeme = L.lexeme replSpace
 runReplParser
-  :: Text -> Either (ParseErrorBundle Text Void) (ReplCmd, ReplArgs)
+  :: Text -> Either (ParseErrorBundle Text Void) ReplCmd
 runReplParser = runParser pRepl ""
 
 
 -- | Parser for the abbotsbury command line.
--- TODO: This has slightly inconsistent behaviour in that spaces are not
--- required *after* the first command. This is OK for commands like `cite`
--- and `list`, but is quite odd for `help`: for example, both `help quit`
--- and `helpquit` are parsed as (Help, "quit").
-pRepl :: Parser (ReplCmd, ReplArgs)
+pRepl :: Parser ReplCmd
 pRepl = do
-  void $ replLexeme space        -- consume leading space
+  let pArgs = replLexeme $ takeWhileP (Just "arguments") isPrint
+  void space          -- consume leading space
+  -- It's very awkward that 'cd' must come before the rest, because otherwise
+  -- the 'c' is parsed as being a cite command.
   cmd <- replLexeme $ choice
-    [ Nop <$ eof
-    , Cd <$ string' "cd"
-    , Help <$ string' "help"
-    , Quit <$ string' "quit"
+    [ Cd <$> (replLexeme (string' "cd") >> pArgs)
+    , try pComposedCmd
+    , Single <$> pSingleCmd
+    , Quit <$ choice (map string' ["quit", "q"])
+    , Nop <$ eof
+    ]
+  eof
+  return cmd
+
+pSingleCmd :: Parser AbbotCmd
+pSingleCmd = do
+  base <- replLexeme $ choice
+    [ Help <$ string' "help"
     , List <$ choice (map string' ["list", "ls", "l"])
     , Open <$ choice (map string' ["open", "op", "o"])
     , Sort <$ choice (map string' ["sort", "so"])
+    , Cite <$ choice (map string' ["cite", "c"])
     ]
-  args <- replLexeme $ takeWhileP Nothing isPrint
-  eof
-  return (cmd, args)
+  -- For a single command, the arguments cannot include the character '|', 
+  -- because it is exclusively used in pipes. We need to have a better way
+  -- to deal with this, to be honest.
+  args <- replLexeme $ takeWhileP (Just "arguments") (\c -> isPrint c && c /= '|')
+  pure $ AbbotCmd base args
 
-
--- | A command can perform several IO actions, which ultimately return either
--- an error message (Left), OR a successful return with
--- 1) the final state of the reference list, plus
--- 2) an optional set of refnos (which can be piped to another command)
-type CmdOutput = ExceptT Text IO (IntMap Reference, Maybe IntSet)
+pComposedCmd :: Parser ReplCmd
+pComposedCmd = do
+  cmd1 <- replLexeme pSingleCmd
+  void $ replLexeme (char '|')
+  cmd2 <- replLexeme pSingleCmd
+  pure $ Composed cmd1 cmd2
 
 
 -- | Parse a series of reference numbers. The format is:
@@ -120,22 +164,22 @@ pOneFormat abbrevs defval =
 
 -- | Because the help command requires runReplParser itself, we can't stick it
 -- in a different module (that would lead to a cyclic import).
-runHelp :: ReplArgs -> FilePath -> IntMap Reference -> CmdOutput
-runHelp args _ refs = case runReplParser args of
-  Left  _        -> throwError ("help: command '" <> args <> "' not recognised")
-  Right (cmd, _) -> do
-    liftIO $ TIO.putStrLn (getHelpText cmd)
-    pure (refs, Nothing)
-
-
--- | Returns the help text for a particular command.
-getHelpText :: ReplCmd -> Text
-getHelpText = \case
-  Nop  -> "Welcome to abbotsbury! The help hasn't been written yet."
-  Quit -> "Exit the program."
-  Help -> "Print help."
-  Cd   -> "Change the working directory."
-  Cite -> "Cite some references."
-  Open -> "Open some references."
-  List -> "List selected or all references."
-  Sort -> "Sort references."
+runHelp :: Text -> ExceptT Text IO ()
+runHelp args = case runReplParser args of
+  Left _ -> throwError ("help: command '" <> args <> "' not recognised")
+  Right repl -> liftIO $ case repl of
+    Nop ->
+      TIO.putStrLn "Welcome to abbotsbury! The help hasn't been written yet."
+    Quit           -> TIO.putStrLn "Exit the programme."
+    (Cd     _    ) -> TIO.putStrLn "Change the working directory."
+    (Single acmd ) -> TIO.putStrLn (getHelpText $ cbase acmd)
+    (Composed _ _) -> TIO.putStrLn
+      "That's a composed command, but it hasn't been implemented yet!"
+  where
+    getHelpText :: BaseCommand -> Text
+    getHelpText = \case
+      Help -> "Print help."
+      Cite -> "Cite some references."
+      Open -> "Open some references."
+      List -> "List selected or all references."
+      Sort -> "Sort references."

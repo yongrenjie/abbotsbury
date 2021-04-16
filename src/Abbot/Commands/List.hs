@@ -32,11 +32,13 @@ import           Text.Megaparsec                ( eof
                                                 , parse
                                                 )
 
-runList :: ReplArgs -> FilePath -> IntMap Reference -> CmdOutput
-runList args cwd refs = do
+runList :: Args -> CmdInput -> CmdOutput
+runList args input = do
   -- If no refs present, error immediately
-  when (IM.null refs) (throwError "list: no references found")
-  let numRefs = fst $ IM.findMax refs
+  when (IM.null $ refsin input) (throwError "list: no references found")
+  let cwd = cwdin input
+      refs = refsin input
+      numRefs = fst $ IM.findMax refs
   case parse (pRefnos <* eof) "" args of
     Left  bundle -> throwError $ T.pack ("list: " ++ errorBundlePretty bundle)  -- parse error
     -- Some refnos were specified.
@@ -57,7 +59,7 @@ runList args cwd refs = do
       formattedRefs <- prettyFormatRefs cwd
                                         (IM.restrictKeys refs refnosToPrint)
       liftIO $ TIO.putStrLn formattedRefs
-      pure (refs, Just refnosToPrint)
+      pure $ SCmdOutput refs (Just refnosToPrint)
 
 
 -- | The field sizes for pretty-printing. Note that the title field is also

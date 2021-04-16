@@ -4,6 +4,7 @@
 module Main where
 
 import           Abbot.Commands
+import           Abbot.Commands.Shared
 import           Abbot.Path
 import           Abbot.Reference
 import           Abbot.Style
@@ -24,6 +25,25 @@ import           Lens.Micro.Platform
 import           Options.Applicative     hiding ( Parser )
 import qualified Options.Applicative           as O
 import           System.Console.Haskeline      as HL
+
+
+-- | All information needed for the main loop.
+data LoopState = LoopState
+  { _curDir     :: FilePath         -- Current working directory ('wd').
+  , _oldDir     :: FilePath         -- The last wd. Analogous to bash $OLDPWD.
+  , _dirChanged :: Bool             -- Flag to indicate that the working directory was
+                                    --  changed by the last command, which means that we
+                                    --  should save and reread the references.
+  , _references :: IntMap Reference -- The references.
+  }
+-- Template Haskell is cool, but slows down compilation, so we manually generate lenses.
+curDir, oldDir :: Lens' LoopState FilePath
+curDir = lens _curDir (\ls dir -> ls { _curDir = dir })
+oldDir = lens _oldDir (\ls dir -> ls { _oldDir = dir })
+dirChanged :: Lens' LoopState Bool
+dirChanged = lens _dirChanged (\ls dir -> ls { _dirChanged = dir })
+references :: Lens' LoopState (IntMap Reference)
+references = lens _references (\ls dir -> ls { _references = dir })
 
 
 -- InputT doesn't provide instances of MTL classes, so we need to do it ourselves
@@ -51,25 +71,6 @@ mOutputStr :: MonadIO m => String -> MInputT m ()
 mOutputStr = MInputT . HL.outputStr
 mOutputStrLn :: MonadIO m => String -> MInputT m ()
 mOutputStrLn = MInputT . HL.outputStrLn
-
-
--- | All information needed for the main loop.
-data LoopState = LoopState
-  { _curDir     :: FilePath         -- Current working directory ('wd').
-  , _oldDir     :: FilePath         -- The last wd. Analogous to bash $OLDPWD.
-  , _dirChanged :: Bool             -- Flag to indicate that the working directory was
-                                    --  changed by the last command, which means that we
-                                    --  should save and reread the references.
-  , _references :: IntMap Reference -- The references.
-  }
--- Template Haskell is cool, but slows down compilation a bit.
-curDir, oldDir :: Lens' LoopState FilePath
-curDir = lens _curDir (\ls dir -> ls { _curDir = dir })
-oldDir = lens _oldDir (\ls dir -> ls { _oldDir = dir })
-dirChanged :: Lens' LoopState Bool
-dirChanged = lens _dirChanged (\ls dir -> ls { _dirChanged = dir })
-references :: Lens' LoopState (IntMap Reference)
-references = lens _references (\ls dir -> ls { _references = dir })
 
 
 -- | Entry point.
@@ -121,9 +122,9 @@ loop =
             Left _ ->
               printErr ("command '" <> cmdArgs <> "' not recognised") >> loop
             -- Special commands that we need to handle in main loop
-            Right (Nop , _ ) -> loop
-            Right (Quit, _ ) -> mOutputStrLn "quitting..." >> save >> exit
-            Right (Cd  , fp) -> do
+            Right Nop -> loop
+            Right Quit -> mOutputStrLn "quitting..." >> save >> exit
+            Right (Cd fp) -> do
               -- Check for 'cd -'
               newD <- if fp == "-"
                 then use oldDir
@@ -140,18 +141,20 @@ loop =
                 (\_ -> printErr (T.pack newD <> ": no such directory"))
               loop
             -- All other commands
-            Right (cmd, args) -> do
+            Right otherCmd -> do
               currentDir  <- use curDir
               currentRefs <- use references
+              let cmdInput = CmdInput Nothing currentDir currentRefs
               -- TODO: In principle, all IO exceptions should be caught here, as
               -- they are not exhaustively encoded in the ExceptT error type.
-              cmdOutput   <- liftIO . runExceptT $ runCommand cmd args currentDir currentRefs
+              cmdOutput   <- liftIO . runExceptT $ runCmdWith otherCmd cmdInput
               case cmdOutput of
                 Left  err          -> printErr err >> loop
-                Right (newRefs, _) -> do
+                Right (SCmdOutput newRefs _) -> do
                   references .= newRefs
                   save
                   loop
+
 
 -- | Generates the prompt for the main loop.
 prompt :: FilePath -> MInputT (StateT LoopState IO) (Maybe String)

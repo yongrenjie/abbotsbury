@@ -1,7 +1,5 @@
 module Abbot.Commands
   ( module Abbot.Commands
-  , Abbot.Commands.Shared.ReplCmd(..)
-  , Abbot.Commands.Shared.runReplParser
   ) where
 -- The other two exports are needed for the Main.hs file.
 
@@ -9,21 +7,26 @@ import           Abbot.Commands.List
 import           Abbot.Commands.Open
 import           Abbot.Commands.Shared
 import           Abbot.Commands.Sort
-import           Abbot.Reference
 
-import           Data.IntMap                    ( IntMap )
+import           Control.Monad.Except
 
 
--- | Run a command. This is just a helper function which delegates to the
--- individual command runners.
-runCommand
-  :: ReplCmd          -- The command to be run.
-  -> ReplArgs         -- The arguments passed to the command.
-  -> FilePath         -- The current working directory
-  -> IntMap Reference -- The current state of the reference list.
-  -> CmdOutput        -- The output of the command.
-runCommand Help = runHelp
-runCommand List = runList
-runCommand Open = runOpen
-runCommand Sort = runSort
-runCommand _    = undefined
+-- | Execute a command given an input.
+-- Note that this only handles effects *outside* the main loop, i.e.
+-- Nop, Quit, and Cd should all do nothing.
+runCmdWith :: ReplCmd -> CmdInput -> CmdOutput
+runCmdWith cmd input = 
+  let nop = SCmdOutput (refsin input) Nothing
+  in case cmd of
+      Nop -> pure nop
+      Quit -> pure nop
+      (Cd _) -> pure nop
+      -- Just one command...
+      Single (AbbotCmd base args) -> case base of
+        Help -> runHelp args >> pure nop
+        List -> runList args input
+        Cite -> throwError "cite not implemented yet"
+        Open -> runOpen args input
+        Sort -> runSort args input
+      -- Composed commands.
+      Composed _ _ -> throwError "pipes not implemented yet"

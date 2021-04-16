@@ -87,21 +87,21 @@ where @criterion@ is one of the following:
 To sort by descending order, capitalise the first letter.
 If no criterion is specified, then defaults to @year@ in ascending order.
 -}
-runSort :: ReplArgs          -- ^ Arguments passed to the 'sort' command.
-        -> FilePath          -- ^ The current working directory (not used here).
-        -> IntMap Reference  -- ^ The currently active references.
+runSort :: Args              -- ^ Arguments passed to the 'sort' command.
+        -> CmdInput          -- ^ The inputs to the 'sort' command.
         -> CmdOutput
-runSort args _ refs = do
+runSort args input = do
+  let refs = refsin input
   -- If no refs present, error immediately
   when (IM.null refs) (throwError "sort: no references found")
   -- Parse arguments: detect whether reversed order is desired...
   case parse pSort "" args of
     Left bundle -> throwError $ T.pack ("open: " ++ errorBundlePretty bundle)  -- parse error
     Right criterion -> do
-      let originalRefs = IM.elems refs        -- no refnos
+      let originalRefs = IM.elems refs       -- no refnos
       let sortedRefs = sortBy (getComparisonFn criterion) originalRefs
       liftIO $ TIO.putStrLn ("sorted references by " <> showT criterion)
-      pure (IM.fromList $ zip [1 ..] sortedRefs, Nothing)
+      pure $ SCmdOutput (IM.fromList $ zip [1 ..] sortedRefs) Nothing
 
 
 {-|

@@ -11,7 +11,7 @@ import           Abbot.Style                    ( makeError )
 import           Control.Monad.Except
 import           Data.Bifunctor                 ( bimap )
 import qualified Data.IntMap                   as IM
-import           Data.IntMap                    ( IntMap )
+-- import           Data.IntMap                    ( IntMap )
 import           Data.IntSet                    ( IntSet )
 import qualified Data.IntSet                   as IS
 import           Data.List                      ( foldl'
@@ -48,8 +48,10 @@ showT OpenSI       = "SI"
 showT OpenWebURL   = "web URL"
 
 
-runOpen :: ReplArgs -> FilePath -> IntMap Reference -> CmdOutput
-runOpen args cwd refs = do
+runOpen :: Args -> CmdInput -> CmdOutput
+runOpen args input = do
+  let cwd = cwdin input
+      refs = refsin input
   -- If no refs present, error immediately
   when (IM.null refs) (throwError "open: no references found")
   case parse pOpen "" args of
@@ -110,7 +112,7 @@ runOpen args cwd refs = do
             refs
             updatedRefnos
       -- Return the updated refs.
-      pure (updatedRefs, Nothing)
+      pure $ SCmdOutput updatedRefs Nothing
 
 
 pOpen :: Parser (IntSet, Set OpenFormat)
