@@ -29,6 +29,7 @@ data Reference = Article
   deriving (Generic, Show)
 
 type DOI = Text
+
 data Author = Author
   { _given  :: Maybe Text  -- Not everyone has a given name.
   , _family :: Text
@@ -53,10 +54,10 @@ data AuthorFormatting = ListCmd  -- For the list command.
 
 -- | Formats an Author according to the specified AuthorFormatting mode.
 formatAuthor :: AuthorFormatting -> Author -> Text
-formatAuthor fmt auth = case auth ^. given of
-  Nothing  -> auth ^. family
+formatAuthor fmt auth = case _given auth of
+  Nothing  -> _family auth
   Just gvn -> case fmt of
     ListCmd ->
       T.pack (map T.head (T.split (\c -> isSpace c || c == '-') gvn))
         <> " "
-        <> auth ^. family
+        <> _family auth

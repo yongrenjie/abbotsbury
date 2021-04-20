@@ -1,31 +1,34 @@
 cradle:
   cabal:
     - path: "src"
-      component: "abbotsbury:exe:abbot"
+      component: "abbotsbury:lib:abbot-internal"
 
     - path: "src/Main.hs"
       component: "abbotsbury:exe:abbot"
 
     - path: "src/Abbot/Commands.hs"
-      component: "abbotsbury:exe:abbot"
+      component: "abbotsbury:lib:abbot-internal"
 
     - path: "src/Abbot/Commands/List.hs"
-      component: "abbotsbury:exe:abbot"
+      component: "abbotsbury:lib:abbot-internal"
 
     - path: "src/Abbot/Commands/Open.hs"
-      component: "abbotsbury:exe:abbot"
+      component: "abbotsbury:lib:abbot-internal"
 
     - path: "src/Abbot/Commands/Shared.hs"
-      component: "abbotsbury:exe:abbot"
+      component: "abbotsbury:lib:abbot-internal"
 
     - path: "src/Abbot/Commands/Sort.hs"
-      component: "abbotsbury:exe:abbot"
+      component: "abbotsbury:lib:abbot-internal"
 
     - path: "src/Abbot/Path.hs"
-      component: "abbotsbury:exe:abbot"
+      component: "abbotsbury:lib:abbot-internal"
 
     - path: "src/Abbot/Reference.hs"
-      component: "abbotsbury:exe:abbot"
+      component: "abbotsbury:lib:abbot-internal"
 
     - path: "src/Abbot/Style.hs"
-      component: "abbotsbury:exe:abbot"
+      component: "abbotsbury:lib:abbot-internal"
+
+    - path: "tests/Main.hs"
+      component: "abbotsbury:test:tests"
