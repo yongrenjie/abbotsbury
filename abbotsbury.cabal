@@ -62,7 +62,7 @@ library abbot-internal
     Abbot.Reference
     Abbot.Style
   ghc-options:
-    -O0 -Wall -j4 +RTS -A128m -n2m -RTS
+    -Wall -j4 +RTS -A128m -n2m -RTS
 
 
 executable abbot

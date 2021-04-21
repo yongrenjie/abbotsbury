@@ -1,3 +1,5 @@
 packages: *.cabal
 
 executable-dynamic: True
+
+optimization: 0
