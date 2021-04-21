@@ -146,7 +146,7 @@ getComparisonFn (SortCriterion key order) ref1 ref2 =
         SKTimeOpened        -> comparing (view timeOpened) ref1 ref2
         SKTimeAdded         -> comparing (view timeAdded) ref1 ref2
         SKYearJournalAuthor -> comparing (liftA3 (,,)
-                                                 (view year)
-                                                 (view journalLong)
-                                                 (view $ authors . _head . family)
+                                                 (view $ work . year)
+                                                 (view $ work . journalLong)
+                                                 (view $ work . authors . _head . family)
                                          ) ref1 ref2

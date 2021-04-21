@@ -97,4 +97,5 @@ getPDFPath pdfType cwd ref = cwd </> dirName </> fileName
     dirName = case pdfType of
                    FullText -> "pdf-abbot"
                    SI       -> "si-abbot"
-    fileName = T.unpack . flip T.append ".pdf" . T.replace "/" "#" $ ref ^. doi
+    -- TODO: The 'doi' getter will only work with articles. Books should use ISBN.
+    fileName = T.unpack . flip T.append ".pdf" . T.replace "/" "#" $ ref ^. (work . doi)

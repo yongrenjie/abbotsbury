@@ -13,7 +13,14 @@ import           Data.Time.Clock
 import           GHC.Generics
 import           Lens.Micro.Platform
 
-data Reference = Article
+data Reference = Reference
+  { _work       :: Work
+  , _timeAdded  :: UTCTime
+  , _timeOpened :: UTCTime
+  }
+  deriving (Generic, Show)
+
+data Work = Article
   { _title        :: Text
   , _authors      :: [Author]
   , _journalLong  :: Text
@@ -23,8 +30,6 @@ data Reference = Article
   , _issue        :: Text
   , _pages        :: Text
   , _doi          :: DOI
-  , _timeAdded    :: UTCTime
-  , _timeOpened   :: UTCTime
   }
   deriving (Generic, Show)
 
@@ -37,12 +42,16 @@ data Author = Author
   deriving (Generic, Show)
 
 makeLenses ''Reference
+makeLenses ''Work
 makeLenses ''Author
 
 -- | Instances which allow references to be serialised as YAML.
 instance ToJSON Reference where
   toEncoding = genericToEncoding defaultOptions
 instance FromJSON Reference
+instance ToJSON Work where
+  toEncoding = genericToEncoding defaultOptions
+instance FromJSON Work
 instance ToJSON Author where
   toEncoding = genericToEncoding defaultOptions
 instance FromJSON Author
