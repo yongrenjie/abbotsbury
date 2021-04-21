@@ -17,24 +17,13 @@ extra-source-files:  README.md
 common abbot-deps
   build-depends:
     , base ^>=4.14.1.0
-    , haskeline
-    , ansi-terminal
-    , colour
-    , terminal-size
-    , optparse-applicative
-    , directory
-    , filepath >=1.3.0.0
-    , exceptions
-    , transformers
-    , mtl
-    , megaparsec
-    , containers
-    , text
-    , yaml
-    , aeson
-    , time
+    , containers , text
+    , haskeline , ansi-terminal , colour , terminal-size , optparse-applicative
     , microlens-platform
-    , process
+    , megaparsec
+    , directory , filepath >=1.3.0.0 , process , time
+    , exceptions , transformers , mtl
+    , yaml , aeson
   default-language:
     Haskell2010
   default-extensions:
