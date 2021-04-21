@@ -10,7 +10,6 @@ import           Control.Applicative            ( (<|>)
 import           Control.Monad.Except
 import           Data.Char                      ( isUpper )
 import qualified Data.IntMap                   as IM
-import           Data.IntMap                    ( IntMap )
 import           Data.List                      ( sortBy )
 import qualified Data.Map                      as M
 import qualified Data.Text                     as T
