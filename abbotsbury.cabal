@@ -61,6 +61,8 @@ library abbot-internal
     Abbot.Path
     Abbot.Reference
     Abbot.Style
+  ghc-options:
+    -O0 -Wall -j4 +RTS -A128m -n2m -RTS
 
 
 executable abbot
@@ -68,11 +70,11 @@ executable abbot
     abbot-deps
   main-is:
     src/Main.hs
-  ghc-options:
-    -O0 -Wall -j4 -threaded +RTS -A128m -n2m -RTS
   build-depends:
     base ^>=4.14.1.0
     , abbot-internal
+  ghc-options:
+    -threaded
 
 
 test-suite tests
