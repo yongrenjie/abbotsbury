@@ -1,3 +1,5 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 module Reference
   ( tests
   ) where
@@ -17,6 +19,7 @@ import           Test.Tasty                     ( TestTree
 import           Test.Tasty.HUnit               ( (@?=)
                                                 , testCase
                                                 )
+import           Text.RawString.QQ
 
 
 -- Define all possible inputs
@@ -67,7 +70,7 @@ expectedOutputsBibLaTeX = M.fromList
   , (authTim, "Claridge, Tim D.\\ W.")
   , (authAli, "Foroozandeh, Mohammadali")
   , (authJB , "Verstraete, Jean-Baptiste")
-  , (authEriks, "Kupče, Ēriks")
+  , (authEriks, [r|Kup{\v{c}}e, {\=E}riks|])
   ]
 
 allExpectedOutputs :: Map AuthorFormatting (Map Author Text)

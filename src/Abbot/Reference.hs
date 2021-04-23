@@ -5,6 +5,8 @@ module Abbot.Reference
   ( module Abbot.Reference
   ) where
 
+import           Abbot.LatexEscapes
+
 import           Data.Aeson
 import           Data.Char                      ( isSpace )
 import           Data.List.NonEmpty             ( NonEmpty )
@@ -80,7 +82,7 @@ formatAuthor fmt auth =
             <> fam
         FamilyInitials -> fam <> ", " <> makeInitials gvn
         InitialsFamily -> makeInitials gvn <> " " <> fam
-        BibLaTeX -> T.replace ". " ".\\ " (fam <> ", " <> gvn)
+        BibLaTeX -> latexify (fam <> ", " <> gvn)
 
 
 -- | Extracts the initials from a given name.

@@ -24,6 +24,7 @@ common abbot-deps
     , directory , filepath >=1.3.0.0 , process , time
     , exceptions , transformers , mtl
     , yaml , aeson
+    , raw-strings-qq
   default-language:
     Haskell2010
   default-extensions:
@@ -47,6 +48,7 @@ library abbot-internal
     Abbot.Commands.Open
     Abbot.Commands.Shared
     Abbot.Commands.Sort
+    Abbot.LatexEscapes
     Abbot.Path
     Abbot.Reference
     Abbot.Style
