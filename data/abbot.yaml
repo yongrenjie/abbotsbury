@@ -1,26 +1,4 @@
 - _timeOpened: 2021-04-21T23:56:07.836988Z
-  _timeAdded: 2021-01-21T00:54:23.677431Z
-  _work:
-    _volume: '21'
-    _pages: 2918-2922
-    _journalLong: Organic Letters
-    _journalShort: Org. Lett.
-    _title: A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides
-    _authors:
-    - _given: Steven J.
-      _family: Mansfield
-    - _given: Russell C.
-      _family: Smith
-    - _given: Jonathan R. J.
-      _family: Yong
-    - _given: Olivia L.
-      _family: Garry
-    - _given: Edward A.
-      _family: Anderson
-    _issue: '8'
-    _year: 2019
-    _doi: 10.1021/acs.orglett.9b00971
-- _timeOpened: 2021-04-21T23:56:07.836988Z
   _timeAdded: 2021-01-21T00:55:37.115905Z
   _work:
     _volume: '42'
@@ -50,3 +28,25 @@
     _issue: '8'
     _year: 2012
     _doi: 10.1021/ed200673w
+- _timeOpened: 2021-04-21T23:56:07.836988Z
+  _timeAdded: 2021-01-21T00:54:23.677431Z
+  _work:
+    _volume: '21'
+    _pages: 2918-2922
+    _journalLong: Organic Letters
+    _journalShort: Org. Lett.
+    _title: A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides
+    _authors:
+    - _given: Steven J.
+      _family: Mansfield
+    - _given: Russell C.
+      _family: Smith
+    - _given: Jonathan R. J.
+      _family: Yong
+    - _given: Olivia L.
+      _family: Garry
+    - _given: Edward A.
+      _family: Anderson
+    _issue: '8'
+    _year: 2019
+    _doi: 10.1021/acs.orglett.9b00971

@@ -20,11 +20,18 @@ import           Test.Tasty.HUnit               ( (@?=)
 
 
 -- Define all possible inputs
-authJon, authTim, authAli, authJB :: Author
+authJon, authTim, authAli, authJB, authEriks :: Author
 authJon = Author (Just "Jonathan Ren Jie") "Yong"
 authTim = Author (Just "Tim D. W.") "Claridge"
 authAli = Author (Just "Mohammadali") "Foroozandeh"
 authJB = Author (Just "Jean-Baptiste") "Verstraete"   -- useful for hyphens. Thanks JB
+authEriks = Author (Just "Ēriks") "Kupče"             -- test Unicode
+
+allAuthors :: [Author]
+allAuthors = [authJon, authTim, authAli, authJB, authEriks]
+
+allFormats :: [AuthorFormatting]
+allFormats = [minBound .. maxBound]
 
 -- Define all possible (input, output) pairs
 expectedOutputsListCmd :: Map Author Text
@@ -33,6 +40,7 @@ expectedOutputsListCmd = M.fromList
   , (authTim, "TDW Claridge")
   , (authAli, "M Foroozandeh")
   , (authJB , "JB Verstraete")
+  , (authEriks, "Ē Kupče")
   ]
 
 expectedOutputsFamilyInitials :: Map Author Text
@@ -41,6 +49,7 @@ expectedOutputsFamilyInitials = M.fromList
   , (authTim, "Claridge, T. D. W.")
   , (authAli, "Foroozandeh, M.")
   , (authJB , "Verstraete, J.-B.")
+  , (authEriks, "Kupče, Ē.")
   ]
 
 expectedOutputsInitialsFamily :: Map Author Text
@@ -49,6 +58,7 @@ expectedOutputsInitialsFamily = M.fromList
   , (authTim, "T. D. W. Claridge")
   , (authAli, "M. Foroozandeh")
   , (authJB , "J.-B. Verstraete")
+  , (authEriks, "Ē. Kupče")
   ]
 
 expectedOutputsBibLaTeX :: Map Author Text
@@ -57,6 +67,7 @@ expectedOutputsBibLaTeX = M.fromList
   , (authTim, "Claridge, Tim D.\\ W.")
   , (authAli, "Foroozandeh, Mohammadali")
   , (authJB , "Verstraete, Jean-Baptiste")
+  , (authEriks, "Kupče, Ēriks")
   ]
 
 allExpectedOutputs :: Map AuthorFormatting (Map Author Text)
@@ -79,6 +90,3 @@ tests :: TestTree
 tests = testGroup
   "Abbot.Reference.formatAuthor"
   [ mkTestCase fmt auth | fmt <- allFormats, auth <- allAuthors ]
- where
-  allFormats = [ListCmd, FamilyInitials, InitialsFamily, BibLaTeX]
-  allAuthors = [authJon, authTim, authAli, authJB]
