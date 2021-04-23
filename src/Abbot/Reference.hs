@@ -6,7 +6,8 @@ module Abbot.Reference
   ) where
 
 import           Data.Aeson
-import Data.Char (isSpace)
+import           Data.Char                      ( isSpace )
+import           Data.List.NonEmpty             ( NonEmpty )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import           Data.Time.Clock
@@ -22,7 +23,7 @@ data Reference = Reference
 
 data Work = Article
   { _title        :: Text
-  , _authors      :: [Author]
+  , _authors      :: NonEmpty Author
   , _journalLong  :: Text
   , _journalShort :: Text
   , _year         :: Int
@@ -62,7 +63,8 @@ data AuthorFormatting = ListCmd          -- For the list command.
                       | FamilyInitials   -- ACS style.
                       | InitialsFamily   -- ACIE style.
                       | BibLaTeX         -- For .bib files.
-                      deriving (Ord, Eq, Show)
+                      deriving (Ord, Eq, Show, Enum, Bounded)
+
 
 -- | Formats an Author according to the specified AuthorFormatting mode.
 formatAuthor :: AuthorFormatting -> Author -> Text

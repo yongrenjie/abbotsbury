@@ -148,5 +148,5 @@ getComparisonFn (SortCriterion key order) ref1 ref2 =
         SKYearJournalAuthor -> comparing (liftA3 (,,)
                                                  (view $ work . year)
                                                  (view $ work . journalLong)
-                                                 (view $ work . authors . _head . family)
+                                                 (view $ work . authors . ix 0 . family)
                                          ) ref1 ref2

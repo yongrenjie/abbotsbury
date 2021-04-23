@@ -31,6 +31,7 @@ import           Text.Megaparsec                ( eof
                                                 , errorBundlePretty
                                                 , parse
                                                 )
+import qualified Data.List.NonEmpty            as NE
 
 runList :: Args -> CmdInput -> CmdOutput
 runList args input = do
@@ -90,7 +91,7 @@ getFieldSizes refs = do
   let
     getMaxAuthorLength :: Reference -> Int
     getMaxAuthorLength =
-      maximum . map (T.length . formatAuthor ListCmd) . (^. (work.authors))
+      maximum . fmap (T.length . formatAuthor ListCmd) . (^. (work.authors))
     authorF' = fieldPadding + maximum (map getMaxAuthorLength (IM.elems refs))
   -- Year field.
   let yearF' = fieldPadding + 4
@@ -139,7 +140,7 @@ printRef fss cwd (index, ref) = do
   availString <- getAvailString cwd ref
   -- Build up the columns first.
   let numberColumn  = [T.pack $ show index]
-      authorColumn1 = map (formatAuthor ListCmd) (ref ^. (work.authors))
+      authorColumn1 = NE.toList $ fmap (formatAuthor ListCmd) (ref ^. (work.authors))
       authorColumn  = if length authorColumn1 <= 5
                          then authorColumn1
                          -- Inefficient but probably not important.
