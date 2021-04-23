@@ -39,7 +39,7 @@ data Author = Author
   { _given  :: Maybe Text  -- Not everyone has a given name.
   , _family :: Text
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, Ord, Eq)
 
 makeLenses ''Reference
 makeLenses ''Work
