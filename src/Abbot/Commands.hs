@@ -3,6 +3,7 @@ module Abbot.Commands
   ) where
 -- The other two exports are needed for the Main.hs file.
 
+import           Abbot.Commands.Cite
 import           Abbot.Commands.List
 import           Abbot.Commands.Open
 import           Abbot.Commands.Shared
@@ -25,7 +26,7 @@ runCmdWith cmd input =
       Single (AbbotCmd base args) -> case base of
         Help -> runHelp args >> pure nop
         List -> runList args input
-        Cite -> throwError "cite not implemented yet"
+        Cite -> runCite args input
         Open -> runOpen args input
         Sort -> runSort args input
       -- Composed commands.

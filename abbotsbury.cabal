@@ -44,6 +44,7 @@ library abbot-internal
     src
   exposed-modules:
     Abbot.Commands
+    Abbot.Commands.Cite
     Abbot.Commands.List
     Abbot.Commands.Open
     Abbot.Commands.Shared
