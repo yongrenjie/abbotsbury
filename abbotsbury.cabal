@@ -49,6 +49,7 @@ library abbot-internal
     Abbot.Commands.Open
     Abbot.Commands.Shared
     Abbot.Commands.Sort
+    Abbot.Format.Author
     Abbot.LatexEscapes
     Abbot.Path
     Abbot.Reference

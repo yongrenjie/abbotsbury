@@ -7,6 +7,7 @@ import           Abbot.Path                     ( PDFType(..)
                                                 , getPDFPath
                                                 )
 import           Abbot.Reference
+import           Abbot.Format.Author
 import           Abbot.Style                    ( setBold
                                                 , setColor
                                                 )
