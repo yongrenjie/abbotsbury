@@ -3,6 +3,7 @@ module Abbot.Commands.Shared
   ) where
 
 import           Abbot.Reference
+import           Abbot.Style                    ( makeError )
 
 import           Control.Monad.Except
 import           Data.Char
@@ -171,6 +172,21 @@ pOneFormat abbrevs defval =
   in  choice (formatParsers ++ defaultParser)
 
 
+-- | Parse a single object of type a, which is represented by (one or more)
+-- Text values. If there is a default value, it can be passed as the second parameter,
+-- otherwise pass Nothing.
+-- This code duplication isn't great, but I'm too lazy to fix it for now.
+pOneFormatCaseSens :: forall a . Map Text a -> Maybe a -> Parser a
+pOneFormatCaseSens abbrevs defval =
+  let formatParsers :: [Parser a]
+      formatParsers = map (\(k, v) -> v <$ try (string k))
+                          (sortOn (Down . fst) $ M.assocs abbrevs)
+      defaultParser :: [Parser a]
+      defaultParser = maybe [] (pure . pure) defval  -- one pure for [], one for Parser
+  in  choice (formatParsers ++ defaultParser)
+
+
+
 -- | Because the help command requires runReplParser itself, we can't stick it
 -- in a different module (that would lead to a cyclic import).
 runHelp :: Text -> ExceptT Text IO ()
@@ -197,3 +213,8 @@ runHelp args = case runReplParser args of
 -- | Make a Text containing a comma-separated list of refnos. Useful for error messages.
 intercalateCommas :: IntSet -> Text
 intercalateCommas = T.intercalate "," . map (T.pack . show) . IS.toList
+
+
+-- | A handy wrapper.
+printError :: Text -> ExceptT Text IO ()
+printError text = liftIO $ TIO.putStrLn (makeError text)
