@@ -1,6 +1,6 @@
 module Abbot.Commands.Open
   ( module Abbot.Commands.Open
-    ) where
+  ) where
 
 import           Abbot.Commands.Shared
 import           Abbot.Path                     ( PDFType(..)
@@ -23,10 +23,11 @@ import qualified Data.Map                      as M
 import           Data.Set                       ( Set )
 import qualified Data.Set                      as S
 import           Data.Text                      ( Text )
-import qualified Data.Text.IO                  as TIO
 import qualified Data.Text                     as T
+import qualified Data.Text.IO                  as TIO
 import           Data.Time.Clock                ( getCurrentTime )
 import           Lens.Micro.Platform
+import           System.Exit                    ( ExitCode(..) )
 import           System.Process                 ( proc
                                                 , readCreateProcessWithExitCode
                                                 )
@@ -34,7 +35,6 @@ import           Text.Megaparsec                ( eof
                                                 , errorBundlePretty
                                                 , parse
                                                 )
-import           System.Exit                    ( ExitCode(..) )
 
 
 data OpenFormat = OpenFullText
@@ -50,7 +50,7 @@ showT OpenWebURL   = "web URL"
 
 runOpen :: Args -> CmdInput -> CmdOutput
 runOpen args input = do
-  let cwd = cwdin input
+  let cwd  = cwdin input
       refs = refsin input
   -- If no refs present, error immediately
   when (IM.null refs) (throwError "open: no references found")
@@ -58,14 +58,11 @@ runOpen args input = do
     Left bundle -> throwError $ T.pack ("open: " ++ errorBundlePretty bundle)  -- parse error
     Right (refnos, formats) -> do
       -- First, check for any refnos that don't exist
-      let unavailableRefnos = refnos IS.\\ IM.keysSet refs
+      let badRefnos = refnos IS.\\ IM.keysSet refs
       unless
-        (IS.null unavailableRefnos)
+        (IS.null badRefnos)
         (throwError
-          (  "open: reference(s) "
-          <> (T.intercalate "," . map (T.pack . show) . IS.toList $ refnos)
-          <> " not found"
-          )
+          ("open: reference(s) " <> intercalateCommas badRefnos <> " not found")
         )
       -- Then, check if refnos is empty
       when (IS.null refnos) (throwError "open: no references selected")
@@ -99,8 +96,10 @@ runOpen args input = do
       unless
         (null failedJobs)
         (do
-          let errMsg = makeError $ "open: failed to open the following references:\n"
-                                   <> T.intercalate "\n" (map showJob failedJobs)
+          let errMsg =
+                makeError
+                  $  "open: failed to open the following references:\n"
+                  <> T.intercalate "\n" (map showJob failedJobs)
           liftIO $ TIO.putStrLn errMsg
         )
       -- We don't ever want to throwError from within runOpen, because the last
@@ -136,4 +135,4 @@ getOpenLink
 getOpenLink fmt ref cwd = case fmt of
   OpenFullText -> T.pack $ getPDFPath FullText cwd ref
   OpenSI       -> T.pack $ getPDFPath SI cwd ref
-  OpenWebURL   -> "https://doi.org/" <> ref ^. (work.doi)
+  OpenWebURL   -> "https://doi.org/" <> ref ^. (work . doi)

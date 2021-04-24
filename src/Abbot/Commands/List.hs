@@ -21,6 +21,7 @@ import qualified Data.IntSet                   as IS
 import           Data.List                      ( foldl'
                                                 , zip5
                                                 )
+import qualified Data.List.NonEmpty            as NE
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
@@ -31,34 +32,29 @@ import           Text.Megaparsec                ( eof
                                                 , errorBundlePretty
                                                 , parse
                                                 )
-import qualified Data.List.NonEmpty            as NE
 
 runList :: Args -> CmdInput -> CmdOutput
 runList args input = do
   -- If no refs present, error immediately
   when (IM.null $ refsin input) (throwError "list: no references found")
-  let cwd = cwdin input
-      refs = refsin input
+  let cwd     = cwdin input
+      refs    = refsin input
       numRefs = fst $ IM.findMax refs
   case parse (pRefnos <* eof) "" args of
     Left  bundle -> throwError $ T.pack ("list: " ++ errorBundlePretty bundle)  -- parse error
     -- Some refnos were specified.
     Right refnos -> do
       -- First, check for any refnos that don't exist
-      let unavailableRefnos = refnos IS.\\ IM.keysSet refs
+      let badRefnos = refnos IS.\\ IM.keysSet refs
       unless
-        (IS.null unavailableRefnos)
+        (IS.null badRefnos)
         (throwError
-          (  "list: reference(s) "
-          <> (T.intercalate "," . map (T.pack . show) . IS.toList $ refnos)
-          <> " not found"
-          )
+          ("list: reference(s) " <> intercalateCommas badRefnos <> " not found")
         )
       -- If we reached here, everything is good
       let refnosToPrint =
             if IS.null refnos then IS.fromList [1 .. numRefs] else refnos
-      formattedRefs <- prettyFormatRefs cwd
-                                        (IM.restrictKeys refs refnosToPrint)
+      formattedRefs <- prettyFormatRefs cwd (IM.restrictKeys refs refnosToPrint)
       liftIO $ TIO.putStrLn formattedRefs
       pure $ SCmdOutput refs (Just refnosToPrint)
 
@@ -66,12 +62,13 @@ runList args input = do
 -- | The field sizes for pretty-printing. Note that the title field is also
 -- responsible for the DOI, as well as the availability columns.
 -- Note that the first four field sizes include the padding.
-data FieldSizes = FieldSizes { numberF  :: Int
-                             , authorF  :: Int
-                             , yearF    :: Int
-                             , journalF :: Int
-                             , titleF   :: Int
-                             }
+data FieldSizes = FieldSizes
+  { numberF  :: Int
+  , authorF  :: Int
+  , yearF    :: Int
+  , journalF :: Int
+  , titleF   :: Int
+  }
 
 -- | The amount of columns acting as padding between adjacent fields.
 fieldPadding :: Int
@@ -91,23 +88,25 @@ getFieldSizes refs = do
   let
     getMaxAuthorLength :: Reference -> Int
     getMaxAuthorLength =
-      maximum . fmap (T.length . formatAuthor ListCmd) . (^. (work.authors))
+      maximum . fmap (T.length . formatAuthor ListCmd) . (^. (work . authors))
     authorF' = fieldPadding + maximum (map getMaxAuthorLength (IM.elems refs))
   -- Year field.
   let yearF' = fieldPadding + 4
   -- Journal field.
-  let longestJName = maximum (map (T.length . getShortestJournalName) (IM.elems refs))
+  let longestJName =
+        maximum (map (T.length . getShortestJournalName) (IM.elems refs))
       longestJInfo = maximum (map (T.length . getVolInfo) (IM.elems refs))
-      journalF' = fieldPadding + max longestJName longestJInfo
+      journalF'    = fieldPadding + max longestJName longestJInfo
   -- Title field. Our first guess is to just use up the remaining space.
   Just (_, ncols) <- getTerminalSize
-  let titleF1      = ncols - numberF' - authorF' - yearF' - journalF'
+  let titleF1 = ncols - numberF' - authorF' - yearF' - journalF'
   -- We enforce an upper limit, which is the longest title / DOI / availability string.
-      longestTitle = maximum $ map (T.length . (^. (work.title))) (IM.elems refs)
-      longestDOI   = maximum $ map (T.length . (^. (work.doi))) (IM.elems refs)
-      availLength  = 40
-      upperLimit   = maximum [longestTitle, longestDOI, availLength]
-      titleF2      = min titleF1 upperLimit
+      longestTitle =
+        maximum $ map (T.length . (^. (work . title))) (IM.elems refs)
+      longestDOI  = maximum $ map (T.length . (^. (work . doi))) (IM.elems refs)
+      availLength = 40
+      upperLimit  = maximum [longestTitle, longestDOI, availLength]
+      titleF2     = min titleF1 upperLimit
   -- We also enforce a lower limit, which is the availability string itself: or else
   -- the ANSI escape sequences tend to get messed up.
   let titleF' = max availLength titleF2
@@ -120,10 +119,7 @@ prettyFormatRefs cwd refs = do
   fss <- liftIO $ getFieldSizes refs
   let headText = prettyFormatHead fss
   refsText <- liftIO $ mapM (printRef fss cwd) (IM.assocs refs)
-  let text = headText
-        <> "\n"
-        <> T.intercalate "\n\n" refsText
-        <> "\n"   -- extra blank line looks nice.
+  let text = headText <> "\n" <> T.intercalate "\n\n" refsText <> "\n"   -- extra blank line looks nice.
   pure text
 
 -- | Generate a pretty header for the reference list.
@@ -139,16 +135,18 @@ printRef fss cwd (index, ref) = do
   -- This line is the only thing that requires IO. So annoying.
   availString <- getAvailString cwd ref
   -- Build up the columns first.
-  let numberColumn  = [T.pack $ show index]
-      authorColumn1 = NE.toList $ fmap (formatAuthor ListCmd) (ref ^. (work.authors))
-      authorColumn  = if length authorColumn1 <= 5
-                         then authorColumn1
-                         -- Inefficient but probably not important.
-                         else take 3 authorColumn1 ++ ["...", last authorColumn1]
-      yearColumn    = [T.pack . show $ ref ^. (work.year)]
+  let numberColumn = [T.pack $ show index]
+      authorColumn1 =
+        NE.toList $ fmap (formatAuthor ListCmd) (ref ^. (work . authors))
+      authorColumn = if length authorColumn1 <= 5
+        then authorColumn1
+                        -- Inefficient but probably not important.
+        else take 3 authorColumn1 ++ ["...", last authorColumn1]
+      yearColumn    = [T.pack . show $ ref ^. (work . year)]
       journalColumn = [getShortestJournalName ref, getVolInfo ref]
       titleColumn =
-        T.chunksOf (titleF fss) (ref ^. (work.title)) ++ [ref ^. (work.doi), availString]
+        T.chunksOf (titleF fss) (ref ^. (work . title))
+          ++ [ref ^. (work . doi), availString]
       -- Clone of Python's itertools.zip_longest(fillvalue="").
       zipLongest5
         :: [Text]  -- unpadded number column
@@ -171,11 +169,11 @@ printRef fss cwd (index, ref) = do
 -- and the text to be placed there.
 formatLine :: FieldSizes -> (Text, Text, Text, Text, Text) -> Text
 formatLine fss texts = mconcat
-  [ T.justifyLeft (numberF fss)  ' ' (texts ^. _1)
-  , T.justifyLeft (authorF fss)  ' ' (texts ^. _2)
-  , T.justifyLeft (yearF fss)    ' ' (texts ^. _3)
+  [ T.justifyLeft (numberF fss) ' ' (texts ^. _1)
+  , T.justifyLeft (authorF fss) ' ' (texts ^. _2)
+  , T.justifyLeft (yearF fss) ' ' (texts ^. _3)
   , T.justifyLeft (journalF fss) ' ' (texts ^. _4)
-  , T.justifyLeft (titleF fss)   ' ' (texts ^. _5)
+  , T.justifyLeft (titleF fss) ' ' (texts ^. _5)
   ]
 
 -- | Produce as short a journal name as possible, by removing special characters
@@ -184,10 +182,8 @@ formatLine fss texts = mconcat
 -- so we can keep it here.
 getShortestJournalName :: Reference -> Text
 getShortestJournalName =
-  replaceAcronyms
-    . T.strip
-    . T.filter ((||) <$> isAlphaNum <*> isSpace)
-    . view (work.journalShort)
+  replaceAcronyms . T.strip . T.filter ((||) <$> isAlphaNum <*> isSpace) . view
+    (work . journalShort)
  where
   acronyms = [("Nucl Magn Reson", "NMR")]
   replaceAcronyms startText =
@@ -198,9 +194,9 @@ getShortestJournalName =
 -- This output is only meant for list printing, hence is placed here.
 getVolInfo :: Reference -> Text
 getVolInfo ref =
-  let theVolume = ref ^. (work.volume)
-      theIssue  = ref ^. (work.issue)
-      thePages  = ref ^. (work.pages)
+  let theVolume = ref ^. (work . volume)
+      theIssue  = ref ^. (work . issue)
+      thePages  = ref ^. (work . pages)
   in  if T.null theIssue
         then mconcat [theVolume, ", ", thePages]
         else mconcat [theVolume, " (", theIssue, "), ", thePages]
@@ -210,7 +206,9 @@ getVolInfo ref =
 getAvailString :: FilePath -> Reference -> IO Text
 getAvailString cwd ref = do
   fullTextAvail <- doesFileExist $ getPDFPath FullText cwd ref
-  siAvail <- doesFileExist $ getPDFPath SI cwd ref
+  siAvail       <- doesFileExist $ getPDFPath SI cwd ref
   let makeSymbol :: Bool -> Text
-      makeSymbol x = if x then setColor "seagreen" "\x2714" else setColor "crimson" "\x2718"
+      makeSymbol x = if x
+        then setColor "seagreen" "\x2714"
+        else setColor "crimson" "\x2718"
   pure $ mconcat [makeSymbol fullTextAvail, " pdf ", makeSymbol siAvail, " si"]

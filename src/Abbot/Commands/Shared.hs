@@ -16,6 +16,7 @@ import           Data.Ord                       ( Down(..) )
 import           Data.Set                       ( Set )
 import qualified Data.Set                      as S
 import           Data.Text                      ( Text )
+import qualified Data.Text                     as T
 -- import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           Data.Void                      ( Void )
@@ -33,8 +34,12 @@ data ReplCmd = Nop
              | Composed AbbotCmd AbbotCmd      -- Two commands joined by a pipe.
              deriving Show
 
-data AbbotCmd = AbbotCmd { cbase :: BaseCommand, cargs :: Text }
-              deriving Show
+data AbbotCmd = AbbotCmd
+  { cbase :: BaseCommand
+  , cargs :: Text
+  }
+  deriving Show
+
 data BaseCommand = Help | List | Cite | Open | Sort
                  deriving (Ord, Eq, Show)
 
@@ -44,21 +49,23 @@ data BaseCommand = Help | List | Cite | Open | Sort
 --       this is Nothing.
 --  2) cwdin: the current working directory
 --  3) refsin: the current reference list
-data CmdInput = CmdInput { varin  :: Maybe IntSet
-                         , cwdin  :: FilePath
-                         , refsin :: IntMap Reference
-                         }
-              deriving Show
+data CmdInput = CmdInput
+  { varin  :: Maybe IntSet
+  , cwdin  :: FilePath
+  , refsin :: IntMap Reference
+  }
+  deriving Show
 
 -- | A command can perform several IO actions, which ultimately return either
 -- an error message (Left), OR a successful return with SCmdOutput, comprising
 -- 1) the final state of the reference list, plus
 -- 2) an optional set of refnos (which can be piped to another command)
 type CmdOutput = ExceptT Text IO SCmdOutput
-data SCmdOutput = SCmdOutput { outrefs :: IntMap Reference
-                             , varout :: Maybe IntSet
-                             }
-                deriving Show
+data SCmdOutput = SCmdOutput
+  { outrefs :: IntMap Reference
+  , varout  :: Maybe IntSet
+  }
+  deriving Show
 
 -- | We don't want to hardcode the types of the arguments, because they will
 -- be different for each command. Each command, when run, will parse their
@@ -71,8 +78,7 @@ replSpace :: Parser ()
 replSpace = L.space space1 (L.skipLineComment "--") empty
 replLexeme :: Parser a -> Parser a
 replLexeme = L.lexeme replSpace
-runReplParser
-  :: Text -> Either (ParseErrorBundle Text Void) ReplCmd
+runReplParser :: Text -> Either (ParseErrorBundle Text Void) ReplCmd
 runReplParser = runParser pRepl ""
 
 
@@ -105,7 +111,8 @@ pSingleCmd = do
   -- For a single command, the arguments cannot include the character '|', 
   -- because it is exclusively used in pipes. We need to have a better way
   -- to deal with this, to be honest.
-  args <- replLexeme $ takeWhileP (Just "arguments") (\c -> isPrint c && c /= '|')
+  args <- replLexeme
+    $ takeWhileP (Just "arguments") (\c -> isPrint c && c /= '|')
   pure $ AbbotCmd base args
 
 pComposedCmd :: Parser ReplCmd
@@ -141,13 +148,14 @@ pRefnos = IS.unions <$> many (pNum <* pSeparator)
 pFormats :: forall a . Ord a => Map Text a -> Maybe a -> Parser (Set a)
 pFormats abbrevs defval = do
   let parsers :: [Parser a]
-      parsers = map (\(k, v) -> v <$ try (string' k)) (sortOn (Down . fst) $ M.assocs abbrevs)
+      parsers = map (\(k, v) -> v <$ try (string' k))
+                    (sortOn (Down . fst) $ M.assocs abbrevs)
   fs <- many $ choice parsers
   case fs of
        -- No formats parsed; look at the default value to see if we should return something
-       [] -> pure $ maybe S.empty S.singleton defval
-       -- Formats parsed; convert it to a set and return it
-       _  -> pure $ S.fromList fs
+    [] -> pure $ maybe S.empty S.singleton defval
+    -- Formats parsed; convert it to a set and return it
+    _  -> pure $ S.fromList fs
 
 
 -- | Parse a single object of type a, which is represented by (one or more)
@@ -156,17 +164,18 @@ pFormats abbrevs defval = do
 pOneFormat :: forall a . Map Text a -> Maybe a -> Parser a
 pOneFormat abbrevs defval =
   let formatParsers :: [Parser a]
-      formatParsers = map (\(k, v) -> v <$ try (string' k)) (sortOn (Down . fst) $ M.assocs abbrevs)
+      formatParsers = map (\(k, v) -> v <$ try (string' k))
+                          (sortOn (Down . fst) $ M.assocs abbrevs)
       defaultParser :: [Parser a]
       defaultParser = maybe [] (pure . pure) defval  -- one pure for [], one for Parser
-      in choice (formatParsers ++ defaultParser)
+  in  choice (formatParsers ++ defaultParser)
 
 
 -- | Because the help command requires runReplParser itself, we can't stick it
 -- in a different module (that would lead to a cyclic import).
 runHelp :: Text -> ExceptT Text IO ()
 runHelp args = case runReplParser args of
-  Left _ -> throwError ("help: command '" <> args <> "' not recognised")
+  Left  _    -> throwError ("help: command '" <> args <> "' not recognised")
   Right repl -> liftIO $ case repl of
     Nop ->
       TIO.putStrLn "Welcome to abbotsbury! The help hasn't been written yet."
@@ -175,11 +184,16 @@ runHelp args = case runReplParser args of
     (Single acmd ) -> TIO.putStrLn (getHelpText $ cbase acmd)
     (Composed _ _) -> TIO.putStrLn
       "That's a composed command, but it hasn't been implemented yet!"
-  where
-    getHelpText :: BaseCommand -> Text
-    getHelpText = \case
-      Help -> "Print help."
-      Cite -> "Cite some references."
-      Open -> "Open some references."
-      List -> "List selected or all references."
-      Sort -> "Sort references."
+ where
+  getHelpText :: BaseCommand -> Text
+  getHelpText = \case
+    Help -> "Print help."
+    Cite -> "Cite some references."
+    Open -> "Open some references."
+    List -> "List selected or all references."
+    Sort -> "Sort references."
+
+
+-- | Make a Text containing a comma-separated list of refnos. Useful for error messages.
+intercalateCommas :: IntSet -> Text
+intercalateCommas = T.intercalate "," . map (T.pack . show) . IS.toList
