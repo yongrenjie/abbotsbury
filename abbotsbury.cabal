@@ -80,7 +80,7 @@ test-suite tests
   main-is:
     Main.hs
   other-modules:
-    Reference
+    Format.Author
   build-depends:
     base ^>=4.14.1.0
     , abbot-internal

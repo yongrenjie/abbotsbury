@@ -1,12 +1,9 @@
-import qualified Reference
+import qualified Format.Author
 
 import           Test.Tasty
 
 allTests :: TestTree
-allTests = testGroup "Reference" [Reference.tests]
-
-h :: Int
-h = (1)
+allTests = testGroup "Format" [Format.Author.tests]
 
 main :: IO ()
 main = defaultMain allTests

@@ -1,13 +1,11 @@
 {-# LANGUAGE QuasiQuotes #-}
 
-module Reference
+module Format.Author
   ( tests
   ) where
 
-import           Abbot.Reference                ( Author(Author, _family)
-                                                , AuthorFormatting(..)
-                                                , formatAuthor
-                                                )
+import           Abbot.Format.Author
+import           Abbot.Reference
 
 import           Data.Map                       ( Map )
 import qualified Data.Map                      as M
@@ -91,5 +89,5 @@ mkTestCase fmt auth = testCase label (actual @?= expected)
 
 tests :: TestTree
 tests = testGroup
-  "Abbot.Reference.formatAuthor"
+  "Format.Author"
   [ mkTestCase fmt auth | fmt <- allFormats, auth <- allAuthors ]
