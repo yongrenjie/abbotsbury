@@ -18,6 +18,7 @@ import           Lens.Micro.Platform
 
 data Reference = Reference
   { _work       :: Work
+  , _tags       :: [Tag]
   , _timeAdded  :: UTCTime
   , _timeOpened :: UTCTime
   }
@@ -37,6 +38,8 @@ data Work = Article
   deriving (Generic, Show)
 
 type DOI = Text
+
+type Tag = Text
 
 data Author = Author
   { _given  :: Maybe Text  -- Not everyone has a given name.
@@ -71,9 +74,9 @@ data AuthorFormatting = ListCmd          -- For the list command.
 -- | Formats an Author according to the specified AuthorFormatting mode.
 formatAuthor :: AuthorFormatting -> Author -> Text
 formatAuthor fmt auth =
-  let fam = _family auth
+  let fam = auth ^. family
   in
-    case _given auth of
+    case auth ^. given of
       Nothing  -> fam
       Just gvn -> case fmt of
         ListCmd ->

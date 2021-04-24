@@ -14,6 +14,11 @@
     _issue: '33'
     _year: 2003
     _doi: 10.1002/anie.200351947
+  _tags:
+  - nmr
+  - some_extremely_long_thing
+  - some_extremely_long_thing2
+  - some_extremely_long_thing3
 - _timeOpened: 2021-01-21T00:56:46.676734Z
   _timeAdded: 2021-01-21T00:56:46.676731Z
   _work:
@@ -28,6 +33,8 @@
     _issue: '8'
     _year: 2012
     _doi: 10.1021/ed200673w
+  _tags:
+  - nmr
 - _timeOpened: 2021-04-21T23:56:07.836988Z
   _timeAdded: 2021-01-21T00:54:23.677431Z
   _work:
@@ -50,3 +57,5 @@
     _issue: '8'
     _year: 2019
     _doi: 10.1021/acs.orglett.9b00971
+  _tags:
+  - nmr

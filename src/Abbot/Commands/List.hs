@@ -54,8 +54,7 @@ runList args input = do
       -- If we reached here, everything is good
       let refnosToPrint =
             if IS.null refnos then IS.fromList [1 .. numRefs] else refnos
-      formattedRefs <- prettyFormatRefs cwd (IM.restrictKeys refs refnosToPrint)
-      liftIO $ TIO.putStrLn formattedRefs
+      liftIO $ TIO.putStrLn =<< prettifyRefs cwd (IM.restrictKeys refs refnosToPrint)
       pure $ SCmdOutput refs (Just refnosToPrint)
 
 
@@ -112,26 +111,42 @@ getFieldSizes refs = do
   let titleF' = max availLength titleF2
   pure $ FieldSizes numberF' authorF' yearF' journalF' titleF'
 
--- | Prettify an IntMap of references.
-prettyFormatRefs :: FilePath -> IntMap Reference -> ExceptT Text IO Text
-prettyFormatRefs cwd refs = do
-  when (IM.null refs) (throwError "no references found")
-  fss <- liftIO $ getFieldSizes refs
-  let headText = prettyFormatHead fss
-  refsText <- liftIO $ mapM (printRef fss cwd) (IM.assocs refs)
-  let text = headText <> "\n" <> T.intercalate "\n\n" refsText <> "\n"   -- extra blank line looks nice.
-  pure text
+-- | Construct pretty-printed text from a set of references to be displayed on the screen.
+-- The output of this text can be directly passed to (the Text version of) putStrLn.
+prettifyRefs
+  :: FilePath -- ^ Current working directory.
+  -> IntMap Reference -- ^ The references to be printed.
+  -> IO Text
+prettifyRefs cwd refs = if IM.null refs
+  then pure ""
+  else do
+    fss <- liftIO $ getFieldSizes refs
+    let headText = prettifyHead fss
+    refsText <- liftIO $ mapM (prettifyOneRef fss cwd) (IM.assocs refs)
+    let text = headText <> "\n" <> T.intercalate "\n\n" refsText <> "\n"   -- extra blank line looks nice.
+    pure text
 
--- | Generate a pretty header for the reference list.
-prettyFormatHead :: FieldSizes -> Text
-prettyFormatHead fss =
+-- | Generate a pretty header for the reference list. This function should only ever be called by
+-- prettifyRefs.
+prettifyHead
+  :: FieldSizes -- ^ The sizes of each field in the output. Must be precalculated using getFieldSizes.
+  -> Text
+prettifyHead fss =
   setBold (formatLine fss ("#", "Authors", "Year", "Journal", "Title and DOI"))
     <> "\n"
     <> setBold (T.replicate (totalSizes fss) "-")
 
--- | Generate pretty output for one particular reference in an IntMap.
-printRef :: FieldSizes -> FilePath -> (Int, Reference) -> IO Text
-printRef fss cwd (index, ref) = do
+-- | Generate a pretty header for one single reference. This function should only ever be called by
+-- prettifyRefs.
+prettifyOneRef
+  :: FieldSizes -- ^ The sizes of each field in the output. Must be precalculated using getFieldSizes.
+  -> FilePath -- ^ Current working directory.
+  -> (Int, Reference) -- ^ The refno and the reference to be printed. Most easily generated using IM.assocs.
+  -> IO Text
+prettifyOneRef fss cwd (index, ref) = do
+  let tagString = case ref ^. tags of
+        [] -> ""
+        ts -> "[" <> T.intercalate ", " ts <> "]"
   -- This line is the only thing that requires IO. So annoying.
   availString <- getAvailString cwd ref
   -- Build up the columns first.
@@ -146,7 +161,9 @@ printRef fss cwd (index, ref) = do
       journalColumn = [getShortestJournalName ref, getVolInfo ref]
       titleColumn =
         T.chunksOf (titleF fss) (ref ^. (work . title))
-          ++ [ref ^. (work . doi), availString]
+          ++ [ref ^. (work . doi)]
+          ++ [availString]
+          ++ T.chunksOf (titleF fss) tagString
       -- Clone of Python's itertools.zip_longest(fillvalue="").
       zipLongest5
         :: [Text]  -- unpadded number column
@@ -189,7 +206,6 @@ getShortestJournalName =
   replaceAcronyms startText =
     foldl' (flip (uncurry T.replace)) startText acronyms
 
-
 -- | Produce information about the volume, issue, and page numbers of a reference.
 -- This output is only meant for list printing, hence is placed here.
 getVolInfo :: Reference -> Text
@@ -200,7 +216,6 @@ getVolInfo ref =
   in  if T.null theIssue
         then mconcat [theVolume, ", ", thePages]
         else mconcat [theVolume, " (", theIssue, "), ", thePages]
-
 
 -- | Get availability string for a reference.
 getAvailString :: FilePath -> Reference -> IO Text
