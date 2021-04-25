@@ -1,9 +1,9 @@
-import qualified Cite.Author
+import qualified Cite.Helpers.Author
 
 import           Test.Tasty
 
 allTests :: TestTree
-allTests = testGroup "Cite" [Cite.Author.tests]
+allTests = testGroup "Cite" [Cite.Helpers.Author.tests]
 
 main :: IO ()
 main = defaultMain allTests

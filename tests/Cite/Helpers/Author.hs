@@ -1,10 +1,10 @@
 {-# LANGUAGE QuasiQuotes #-}
 
-module Cite.Author
+module Cite.Helpers.Author
   ( tests
   ) where
 
-import           Abbot.Cite.Author
+import           Abbot.Cite.Helpers.Author
 import           Abbot.Work
 
 import           Data.Map                       ( Map )
@@ -33,16 +33,6 @@ allAuthors = [authJon, authTim, authAli, authJB, authEriks]
 
 allFormats :: [AuthorStyle]
 allFormats = [minBound .. maxBound]
-
--- Define all possible (input, output) pairs
-expectedOutputsListCmd :: Map Author Text
-expectedOutputsListCmd = M.fromList
-  [ (authJon, "JRJ Yong")
-  , (authTim, "TDW Claridge")
-  , (authAli, "M Foroozandeh")
-  , (authJB , "JB Verstraete")
-  , (authEriks, "Ē Kupče")
-  ]
 
 expectedOutputsFamilyInitials :: Map Author Text
 expectedOutputsFamilyInitials = M.fromList
@@ -73,8 +63,7 @@ expectedOutputsBibLaTeX = M.fromList
 
 allExpectedOutputs :: Map AuthorStyle (Map Author Text)
 allExpectedOutputs = M.fromList
-  [ (ListCmd       , expectedOutputsListCmd)
-  , (FamilyInitials, expectedOutputsFamilyInitials)
+  [ (FamilyInitials, expectedOutputsFamilyInitials)
   , (InitialsFamily, expectedOutputsInitialsFamily)
   , (BibLaTeX      , expectedOutputsBibLaTeX)
   ]

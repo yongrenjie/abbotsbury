@@ -2,16 +2,15 @@ module Commands.List
   ( module Commands.List
   ) where
 
+import           Abbot.Cite.Helpers.Author
 import           Commands.Shared
 import           Path                           ( PDFType(..)
                                                 , getPDFPath
                                                 )
 import           Reference
-import           Abbot.Cite.Author
 import           Style                          ( setBold
                                                 , setColor
                                                 )
-
 import           Control.Monad.Except
 import           Data.Char                      ( isAlphaNum
                                                 , isSpace
@@ -33,6 +32,7 @@ import           Text.Megaparsec                ( eof
                                                 , errorBundlePretty
                                                 , parse
                                                 )
+
 
 runList :: Args -> CmdInput -> CmdOutput
 runList args input = do
@@ -70,13 +70,16 @@ data FieldSizes = FieldSizes
   , titleF   :: Int
   }
 
+
 -- | The amount of columns acting as padding between adjacent fields.
 fieldPadding :: Int
 fieldPadding = 2
 
+
 -- | Count the total of field sizes.
 totalSizes :: FieldSizes -> Int
 totalSizes fss = sum $ map ($ fss) [numberF, authorF, yearF, journalF, titleF]
+
 
 -- | Calculate the correct field sizes based on the terminal size.
 getFieldSizes :: IntMap Reference -> IO FieldSizes
@@ -88,7 +91,7 @@ getFieldSizes refs = do
   let
     getMaxAuthorLength :: Reference -> Int
     getMaxAuthorLength =
-      maximum . fmap (T.length . formatAuthor ListCmd) . (^. (work . authors))
+      maximum . fmap (T.length . formatAuthorForList) . (^. (work . authors))
     authorF' = fieldPadding + maximum (map getMaxAuthorLength (IM.elems refs))
   -- Year field.
   let yearF' = fieldPadding + 4
@@ -112,6 +115,7 @@ getFieldSizes refs = do
   let titleF' = max availLength titleF2
   pure $ FieldSizes numberF' authorF' yearF' journalF' titleF'
 
+
 -- | Construct pretty-printed text from a set of references to be displayed on the screen.
 -- The output of this text can be directly passed to (the Text version of) putStrLn.
 prettifyRefs
@@ -127,6 +131,7 @@ prettifyRefs cwd refs = if IM.null refs
     let text = headText <> "\n" <> T.intercalate "\n\n" refsText <> "\n"   -- extra blank line looks nice.
     pure text
 
+
 -- | Generate a pretty header for the reference list. This function should only ever be called by
 -- prettifyRefs.
 prettifyHead
@@ -136,6 +141,7 @@ prettifyHead fss =
   setBold (formatLine fss ("#", "Authors", "Year", "Journal", "Title and DOI"))
     <> "\n"
     <> setBold (T.replicate (totalSizes fss) "-")
+
 
 -- | Generate a pretty header for one single reference. This function should only ever be called by
 -- prettifyRefs.
@@ -153,7 +159,7 @@ prettifyOneRef fss cwd (index, ref) = do
   -- Build up the columns first.
   let numberColumn = [T.pack $ show index]
       authorColumn1 =
-        NE.toList $ fmap (formatAuthor ListCmd) (ref ^. (work . authors))
+        NE.toList $ fmap formatAuthorForList (ref ^. (work . authors))
       authorColumn = if length authorColumn1 <= 5
         then authorColumn1
                         -- Inefficient but probably not important.
@@ -183,6 +189,16 @@ prettifyOneRef fss cwd (index, ref) = do
                                                                  journalColumn
                                                                  titleColumn
 
+
+-- | In the 'list' command, we display authors as (e.g.) JRJ Yong.
+formatAuthorForList :: Author -> Text
+formatAuthorForList auth =
+  let fam = auth ^. family
+  in  case auth ^. given of
+        Nothing  -> fam
+        Just gvn -> (joinInitialsWith "" "" "" . getInitials $ gvn) <> " " <> fam
+
+
 -- | Utility function to generate one line of output according to the field sizes
 -- and the text to be placed there.
 formatLine :: FieldSizes -> (Text, Text, Text, Text, Text) -> Text
@@ -193,6 +209,7 @@ formatLine fss texts = mconcat
   , T.justifyLeft (journalF fss) ' ' (texts ^. _4)
   , T.justifyLeft (titleF fss) ' ' (texts ^. _5)
   ]
+
 
 -- | Produce as short a journal name as possible, by removing special characters
 -- (only alphanumeric characters and spaces are retained), as well as using some
@@ -207,6 +224,7 @@ getShortestJournalName =
   replaceAcronyms startText =
     foldl' (flip (uncurry T.replace)) startText acronyms
 
+
 -- | Produce information about the volume, issue, and page numbers of a reference.
 -- This output is only meant for list printing, hence is placed here.
 getVolInfo :: Reference -> Text
@@ -217,6 +235,7 @@ getVolInfo ref =
   in  if T.null theIssue
         then mconcat [theVolume, ", ", thePages]
         else mconcat [theVolume, " (", theIssue, "), ", thePages]
+
 
 -- | Get availability string for a reference.
 getAvailString :: FilePath -> Reference -> IO Text

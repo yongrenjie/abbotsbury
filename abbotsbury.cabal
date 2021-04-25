@@ -39,13 +39,13 @@ library
   hs-source-dirs:
     src
   exposed-modules:
-    Abbot.Cite.Author
-    Abbot.Cite.Format
-    Abbot.Cite.Part
-    Abbot.Cite.Rules
-    Abbot.Cite.JInfo
+    Abbot.Cite
     Abbot.LatexEscapes
     Abbot.Work
+    Abbot.Cite.Helpers.Author
+  other-modules:
+    Abbot.Cite.Formats
+    Abbot.Cite.Internal
   ghc-options:
     -Wall -j4 +RTS -A128m -n2m -RTS
 
@@ -89,7 +89,7 @@ test-suite tests
   main-is:
     Main.hs
   other-modules:
-    Cite.Author
+    Cite.Helpers.Author
   build-depends:
     base ^>=4.14.1.0
     , abbotsbury

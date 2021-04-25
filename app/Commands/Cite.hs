@@ -5,8 +5,6 @@ module Commands.Cite
 
 import           Commands.Shared
 import           Reference
-import           Abbot.Cite.Author
-import           Abbot.Cite.JInfo
 
 import           Control.Monad.Except
 import           Data.Either                    ( isLeft )

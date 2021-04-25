@@ -27,6 +27,9 @@ cradle:
     - path: "app/Path.hs"
       component: "abbotsbury:exe:abbot"
 
+    - path: "app/Reference.hs"
+      component: "abbotsbury:exe:abbot"
+
     - path: "app/Style.hs"
       component: "abbotsbury:exe:abbot"
 

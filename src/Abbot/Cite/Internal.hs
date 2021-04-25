@@ -1,8 +1,7 @@
-module Abbot.Cite.Rules where
+module Abbot.Cite.Internal where
 
 
 import           Abbot.Work
-import           Abbot.Cite.Part
 import           Data.Text                      ( Text )
 
 
@@ -22,22 +21,24 @@ data Style = Style
 -- result. Note that the formatting is entirely orthogonal to the citation style (which is encoded
 -- as Style). For example, an ACS-style citation (Style = ACS) can be formatted in plain text (for
 -- use in Word), in RST (for use in Sphinx etc.) and so on.
+--
+-- A Format can be specified completely by providing four functions which describe how plain text,
+-- bolded text, italic text, and hyperlinks are to be rendered.
 -- 
 -- Once the full list of CitationParts has been generated (by applying the various Style rules), we
 -- can then convert all the CitationParts into Text using the correct formatter.
-data Format = PlainText
-                | Markdown
-                | Restructured
-                | HTML
-                deriving (Ord, Eq, Show, Enum, Bounded)
+data Format = Format {
+  plainFormatter  :: Text -> Text,
+  boldFormatter   :: Text -> Text,
+  italicFormatter :: Text -> Text,
+  linkFormatter   :: Text -> Text -> Text  -- ^ The first argument is the URL, the second the displayed text.
+}
 
 
-makeCitationParts :: Style -> Work -> [CitationPart]
-makeCitationParts style work = undefined
-
-
-cite :: Rules -> Work -> Text
-cite (Rules style format) work = formatParts format cParts
-  where
-    formatParts = undefined
-    cParts = makeCitationParts style work
+-- | "Formatted" parts of a citation, which can later be converted to real Text objects based on the
+-- CiteFormat used.
+data CitationPart = CText Text
+                  | Bold CitationPart
+                  | Italic CitationPart
+                  | Link Text CitationPart
+                  deriving (Eq, Show)
