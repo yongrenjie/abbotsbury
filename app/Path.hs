@@ -3,7 +3,7 @@ module Path
   , System.Directory.setCurrentDirectory
   ) where
 
-import           Abbot.Reference
+import           Reference
 
 import           Control.Monad.Except
 import           Data.IntMap                    ( IntMap )

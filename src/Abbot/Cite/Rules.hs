@@ -1,7 +1,7 @@
 module Abbot.Cite.Rules where
 
 
-import           Abbot.Reference         hiding ( work )
+import           Abbot.Work
 import           Abbot.Cite.Author
 import           Abbot.Cite.JInfo
 import           Abbot.Cite.Part

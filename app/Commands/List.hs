@@ -6,7 +6,7 @@ import           Commands.Shared
 import           Path                           ( PDFType(..)
                                                 , getPDFPath
                                                 )
-import           Abbot.Reference
+import           Reference
 import           Abbot.Cite.Author
 import           Style                          ( setBold
                                                 , setColor

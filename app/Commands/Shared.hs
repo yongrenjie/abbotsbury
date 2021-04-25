@@ -2,7 +2,7 @@ module Commands.Shared
   ( module Commands.Shared
   ) where
 
-import           Abbot.Reference
+import           Reference
 import           Style                          ( makeError )
 
 import           Control.Monad.Except

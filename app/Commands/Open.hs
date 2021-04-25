@@ -6,7 +6,7 @@ import           Commands.Shared
 import           Path                           ( PDFType(..)
                                                 , getPDFPath
                                                 )
-import           Abbot.Reference
+import           Reference
 import           Control.Monad.Except
 import           Data.Bifunctor                 ( bimap )
 import qualified Data.IntMap                   as IM

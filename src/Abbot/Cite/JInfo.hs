@@ -2,7 +2,7 @@ module Abbot.Cite.JInfo where
 
 
 import           Abbot.Cite.Part
-import           Abbot.Reference         hiding ( work )
+import           Abbot.Work
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import           Lens.Micro.Platform

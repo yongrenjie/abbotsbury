@@ -6,7 +6,7 @@ module Main where
 import           Commands
 import           Commands.Shared
 import           Path
-import           Abbot.Reference
+import           Reference
 import           Style
 
 import           Control.Monad.Catch            ( MonadCatch

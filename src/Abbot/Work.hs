@@ -1,28 +1,17 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Abbot.Reference
-  ( module Abbot.Reference
+module Abbot.Work
+  ( module Abbot.Work
   ) where
 
 import           Data.Aeson
 import           Data.List.NonEmpty             ( NonEmpty )
 import           Data.Text                      ( Text )
-import           Data.Time.Clock
 import           GHC.Generics
 import           Lens.Micro.Platform
 
 type DOI = Text
-
-type Tag = Text
-
-data Reference = Reference
-  { _work       :: Work
-  , _tags       :: [Tag]
-  , _timeAdded  :: UTCTime
-  , _timeOpened :: UTCTime
-  }
-  deriving (Generic, Show)
 
 data Work = Article
   { _title        :: Text
@@ -43,14 +32,9 @@ data Author = Author
   }
   deriving (Generic, Show, Ord, Eq)
 
-makeLenses ''Reference
 makeLenses ''Work
 makeLenses ''Author
 
--- | Instances which allow references to be serialised as YAML.
-instance ToJSON Reference where
-  toEncoding = genericToEncoding defaultOptions
-instance FromJSON Reference
 instance ToJSON Work where
   toEncoding = genericToEncoding defaultOptions
 instance FromJSON Work

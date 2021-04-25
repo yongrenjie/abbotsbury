@@ -1,17 +1,34 @@
 cradle:
-  multi:
-    - path: "./src"
-      config:
-        cradle:
-          cabal:
-            component: "lib:abbot-internal"
-    - path: "./src/Main.hs"
-      config:
-        cradle:
-          cabal:
-            component: "exe:abbot"
-    - path: "./tests"
-      config:
-        cradle:
-          cabal:
-            component: "test:tests"
+  cabal:
+    - path: "src"
+      component: "lib:abbotsbury"
+
+    - path: "app"
+      component: "abbotsbury:exe:abbot"
+
+    - path: "app/Commands.hs"
+      component: "abbotsbury:exe:abbot"
+
+    - path: "app/Commands/Cite.hs"
+      component: "abbotsbury:exe:abbot"
+
+    - path: "app/Commands/List.hs"
+      component: "abbotsbury:exe:abbot"
+
+    - path: "app/Commands/Open.hs"
+      component: "abbotsbury:exe:abbot"
+
+    - path: "app/Commands/Shared.hs"
+      component: "abbotsbury:exe:abbot"
+
+    - path: "app/Commands/Sort.hs"
+      component: "abbotsbury:exe:abbot"
+
+    - path: "app/Path.hs"
+      component: "abbotsbury:exe:abbot"
+
+    - path: "app/Style.hs"
+      component: "abbotsbury:exe:abbot"
+
+    - path: "tests"
+      component: "abbotsbury:test:tests"

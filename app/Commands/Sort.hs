@@ -3,7 +3,7 @@ module Commands.Sort
     ) where
 
 import           Commands.Shared
-import           Abbot.Reference
+import           Reference
 import           Control.Applicative            ( (<|>)
                                                 , liftA3
                                                 )

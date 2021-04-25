@@ -2,7 +2,7 @@ module Abbot.Cite.Author where
 
 
 import           Abbot.LatexEscapes
-import           Abbot.Reference
+import           Abbot.Work
 import           Abbot.Cite.Part
 import           Data.Char                      ( isSpace )
 import           Data.Text                      ( Text )

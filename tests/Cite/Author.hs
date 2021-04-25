@@ -5,7 +5,7 @@ module Cite.Author
   ) where
 
 import           Abbot.Cite.Author
-import           Abbot.Reference
+import           Abbot.Work
 
 import           Data.Map                       ( Map )
 import qualified Data.Map                      as M
