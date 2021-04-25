@@ -10,6 +10,11 @@ import qualified Data.Text                     as T
 import           Lens.Micro.Platform
 
 
+-- Note that these AuthorStyles are merely helper functions. We can't and shouldn't hard code them
+-- into a set of Rules or Style, because it won't be extensible by other people. The same is true of
+-- JInfoStyles.
+
+
 -- | Methods of formatting author names.
 data AuthorStyle = ListCmd          -- For the list command.
                  | FamilyInitials   -- ACS style.

@@ -19,7 +19,7 @@ surroundBothWith :: Text -> Text -> Text
 surroundBothWith x y = x <> y <> x
 
 
-formatBold :: CiteFormat -> Text -> Text
+formatBold :: Format -> Text -> Text
 formatBold fmt = case fmt of
   PlainText    -> id
   Markdown     -> surroundBothWith "**"
@@ -27,7 +27,7 @@ formatBold fmt = case fmt of
   HTML         -> surroundWith "<b>" "</b>"
 
 
-formatItalic :: CiteFormat -> Text -> Text
+formatItalic :: Format -> Text -> Text
 formatItalic fmt = case fmt of
   PlainText    -> id
   Markdown     -> surroundBothWith "*"
@@ -35,7 +35,7 @@ formatItalic fmt = case fmt of
   HTML         -> surroundWith "<i>" "</i>"
 
 
-formatLink :: CiteFormat -> Text -> Text -> Text
+formatLink :: Format -> Text -> Text -> Text
 formatLink fmt url displayText = case fmt of
   PlainText    -> displayText
   Markdown     -> "[" <> displayText <> "](" <> url <> ")"
