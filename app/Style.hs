@@ -1,5 +1,5 @@
-module Abbot.Style
-  ( module Abbot.Style,
+module Style
+  ( module Style,
   ) where
 
 import           Data.Maybe                     ( fromJust )

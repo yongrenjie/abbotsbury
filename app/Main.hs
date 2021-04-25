@@ -5,9 +5,9 @@ module Main where
 
 import           Commands
 import           Commands.Shared
-import           Abbot.Path
+import           Path
 import           Abbot.Reference
-import           Abbot.Style
+import           Style
 
 import           Control.Monad.Catch            ( MonadCatch
                                                 , MonadMask

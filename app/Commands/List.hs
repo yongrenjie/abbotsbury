@@ -3,12 +3,12 @@ module Commands.List
   ) where
 
 import           Commands.Shared
-import           Abbot.Path                     ( PDFType(..)
+import           Path                           ( PDFType(..)
                                                 , getPDFPath
                                                 )
 import           Abbot.Reference
 import           Abbot.Cite.Author
-import           Abbot.Style                    ( setBold
+import           Style                          ( setBold
                                                 , setColor
                                                 )
 

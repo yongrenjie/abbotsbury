@@ -1,5 +1,5 @@
-module Abbot.Path
-  ( module Abbot.Path
+module Path
+  ( module Path
   , System.Directory.setCurrentDirectory
   ) where
 
