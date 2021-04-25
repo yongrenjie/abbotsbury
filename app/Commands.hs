@@ -1,13 +1,13 @@
-module Abbot.Commands
-  ( module Abbot.Commands
+module Commands
+  ( module Commands
   ) where
 -- The other two exports are needed for the Main.hs file.
 
-import           Abbot.Commands.Cite
-import           Abbot.Commands.List
-import           Abbot.Commands.Open
-import           Abbot.Commands.Shared
-import           Abbot.Commands.Sort
+import           Commands.Cite
+import           Commands.List
+import           Commands.Open
+import           Commands.Shared
+import           Commands.Sort
 
 import           Control.Monad.Except
 

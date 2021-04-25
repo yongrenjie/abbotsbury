@@ -1,8 +1,8 @@
-module Abbot.Commands.Open
-  ( module Abbot.Commands.Open
+module Commands.Open
+  ( module Commands.Open
   ) where
 
-import           Abbot.Commands.Shared
+import           Commands.Shared
 import           Abbot.Path                     ( PDFType(..)
                                                 , getPDFPath
                                                 )

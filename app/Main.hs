@@ -3,8 +3,8 @@
 
 module Main where
 
-import           Abbot.Commands
-import           Abbot.Commands.Shared
+import           Commands
+import           Commands.Shared
 import           Abbot.Path
 import           Abbot.Reference
 import           Abbot.Style

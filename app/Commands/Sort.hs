@@ -1,8 +1,8 @@
-module Abbot.Commands.Sort
-  ( module Abbot.Commands.Sort
+module Commands.Sort
+  ( module Commands.Sort
     ) where
 
-import           Abbot.Commands.Shared
+import           Commands.Shared
 import           Abbot.Reference
 import           Control.Applicative            ( (<|>)
                                                 , liftA3

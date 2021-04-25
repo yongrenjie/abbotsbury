@@ -36,20 +36,17 @@ common abbot-deps
     ScopedTypeVariables
 
 
--- see https://cabal.readthedocs.io/en/3.4/cabal-package.html#sublibs
-library abbot-internal
+library
   import:
     abbot-deps
   hs-source-dirs:
     src
   exposed-modules:
-    Abbot.Commands
-    Abbot.Commands.Cite
-    Abbot.Commands.List
-    Abbot.Commands.Open
-    Abbot.Commands.Shared
-    Abbot.Commands.Sort
-    Abbot.Format.Author
+    Abbot.Cite.Author
+    Abbot.Cite.Format
+    Abbot.Cite.Part
+    Abbot.Cite.Rules
+    Abbot.Cite.JInfo
     Abbot.LatexEscapes
     Abbot.Path
     Abbot.Reference
@@ -61,11 +58,20 @@ library abbot-internal
 executable abbot
   import:
     abbot-deps
+  hs-source-dirs:
+    app
   main-is:
-    src/Main.hs
+    Main.hs
+  other-modules:
+    Commands
+    Commands.Cite
+    Commands.List
+    Commands.Open
+    Commands.Shared
+    Commands.Sort
   build-depends:
     base ^>=4.14.1.0
-    , abbot-internal
+    , abbotsbury
   ghc-options:
     -threaded
 
@@ -80,10 +86,10 @@ test-suite tests
   main-is:
     Main.hs
   other-modules:
-    Format.Author
+    Cite.Author
   build-depends:
     base ^>=4.14.1.0
-    , abbot-internal
+    , abbotsbury
     , tasty
     , tasty-hunit
 

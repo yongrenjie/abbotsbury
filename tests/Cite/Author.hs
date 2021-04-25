@@ -1,10 +1,10 @@
 {-# LANGUAGE QuasiQuotes #-}
 
-module Format.Author
+module Cite.Author
   ( tests
   ) where
 
-import           Abbot.Format.Author
+import           Abbot.Cite.Author
 import           Abbot.Reference
 
 import           Data.Map                       ( Map )
@@ -31,7 +31,7 @@ authEriks = Author (Just "Ēriks") "Kupče"             -- test Unicode
 allAuthors :: [Author]
 allAuthors = [authJon, authTim, authAli, authJB, authEriks]
 
-allFormats :: [AuthorFormatting]
+allFormats :: [AuthorStyle]
 allFormats = [minBound .. maxBound]
 
 -- Define all possible (input, output) pairs
@@ -71,7 +71,7 @@ expectedOutputsBibLaTeX = M.fromList
   , (authEriks, [r|Kup{\v{c}}e, {\=E}riks|])
   ]
 
-allExpectedOutputs :: Map AuthorFormatting (Map Author Text)
+allExpectedOutputs :: Map AuthorStyle (Map Author Text)
 allExpectedOutputs = M.fromList
   [ (ListCmd       , expectedOutputsListCmd)
   , (FamilyInitials, expectedOutputsFamilyInitials)
@@ -80,7 +80,7 @@ allExpectedOutputs = M.fromList
   ]
 
 -- Helper function to make tests from the expected outputs
-mkTestCase :: AuthorFormatting -> Author -> TestTree
+mkTestCase :: AuthorStyle -> Author -> TestTree
 mkTestCase fmt auth = testCase label (actual @?= expected)
  where
   actual   = formatAuthor fmt auth

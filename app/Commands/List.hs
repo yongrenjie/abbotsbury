@@ -1,13 +1,13 @@
-module Abbot.Commands.List
-  ( module Abbot.Commands.List
+module Commands.List
+  ( module Commands.List
   ) where
 
-import           Abbot.Commands.Shared
+import           Commands.Shared
 import           Abbot.Path                     ( PDFType(..)
                                                 , getPDFPath
                                                 )
 import           Abbot.Reference
-import           Abbot.Format.Author
+import           Abbot.Cite.Author
 import           Abbot.Style                    ( setBold
                                                 , setColor
                                                 )

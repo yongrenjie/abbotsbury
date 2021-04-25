@@ -1,5 +1,5 @@
-module Abbot.Commands.Shared
-  ( module Abbot.Commands.Shared
+module Commands.Shared
+  ( module Commands.Shared
   ) where
 
 import           Abbot.Reference
