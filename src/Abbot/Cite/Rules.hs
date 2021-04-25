@@ -5,19 +5,14 @@ import           Abbot.Work
 import           Abbot.Cite.Author
 import           Abbot.Cite.JInfo
 import           Abbot.Cite.Part
-import           Data.Text                      ( Text )
-import           Lens.Micro.Platform
 
 
 -- | A set of CiteRules fully specifies how a citation (in the form of Text) is to be generated
 -- from a Work. For information about the individual fields, please see the documentation of the
 -- relevant type constructor.
 data CiteRules = CiteRules
-  { cStyle    :: CiteStyle  -- ^ The citation style to be used, i.e. ACS or ACIE or so on.
-  , showTitle :: Bool       -- ^ Whether to include the article title in the citation.
-  , showDOI   :: DOIRule    -- ^ Whether to include the DOI in the citation.
-  , etalLimit :: Int        -- ^ Maximum number of authors to display before using "et al."
-  , cFormat   :: CiteFormat -- ^ The way to format the citation, i.e. plain text or a markup language.
+  { cStyle  :: CiteStyle  -- ^ The citation style to be used, i.e. ACS or ACIE or so on.
+  , cFormat :: CiteFormat -- ^ The way to format the citation, i.e. plain text or a markup language.
   }
 
 
@@ -25,16 +20,31 @@ data CiteRules = CiteRules
 -- citation style is itself defined by several components, which tell us how to generate the
 -- individual parts of the citation.
 data CiteStyle = CiteStyle
-               { authorStyle :: AuthorStyle
-               , jinfoStyle  :: JInfoStyle
-               , glue        :: GlueFunction
+               {
+                   -- | How to style each individual author.
+                   authorStyle :: AuthorStyle
+               ,
+                   -- | A function which joins the individual authors into a list.
+                   authorGlue  :: [CitationPart] -> CitationPart
+               ,
+                   -- | How to style the journal information (name, year volume, issue, pages).
+                   jinfoStyle  :: JInfoStyle
+               ,
+                   -- | Whether to include the article title in the citation.
+                   showTitle   :: Bool
+               ,
+                   -- | Whether to include the DOI in the citation.
+                   showDOI     :: DOIRule
+               ,
+                   -- | See below.
+                   glue        :: GlueFunction
                }
 
 
 -- | All of the Style instructions tell us how to generate individual components of the citation.
 -- The last thing to do is to string them together with appropriate punctuation, etc. between them:
 -- this is accomplished by the "glue" function.
-type GlueFunction = CitationPart   -- ^ Author list
+type GlueFunction = CitationPart   -- ^ Authors (already joined with authorGlue)
                  -> CitationPart   -- ^ Title
                  -> CitationPart   -- ^ Journal name
                  -> CitationPart   -- ^ Journal info
