@@ -21,6 +21,7 @@ common abbot-deps
     , text
     , microlens-platform
     , aeson
+    , req, modern-uri
     , raw-strings-qq
   default-language:
     Haskell2010
@@ -40,9 +41,10 @@ library
     src
   exposed-modules:
     Abbot.Cite
+    Abbot.Cite.Helpers.Author
+    Abbot.Crossref
     Abbot.LatexEscapes
     Abbot.Work
-    Abbot.Cite.Helpers.Author
   other-modules:
     Abbot.Cite.Formats
     Abbot.Cite.Internal

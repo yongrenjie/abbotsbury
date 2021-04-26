@@ -5,6 +5,7 @@ module Abbot.Cite.Formats
 import           Abbot.Cite.Internal
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
+import           Text.URI                       ( render )
 
 
 -- | surroundWith2 x1 x2 y surrounds the Text y with the specified ends.
@@ -47,7 +48,7 @@ mdFormat = Format
   { plainFormatter  = id
   , boldFormatter   = surroundWith "**"
   , italicFormatter = surroundWith "*"
-  , linkFormatter   = \url disp -> "[" <> disp <> "](" <> url <> ")"
+  , linkFormatter   = \url disp -> "[" <> disp <> "](" <> render url <> ")"
   }
 
 
@@ -57,7 +58,7 @@ rstFormat = Format
   { plainFormatter  = id
   , boldFormatter   = surroundWith "**"
   , italicFormatter = surroundWith "*"
-  , linkFormatter   = \url disp -> "`" <> disp <> " <" <> url <> ">`_"
+  , linkFormatter   = \url disp -> "`" <> disp <> " <" <> render url <> ">`_"
   }
 
 
@@ -67,5 +68,5 @@ htmlFormat = Format
   { plainFormatter  = id
   , boldFormatter   = surroundWithTag "b" []
   , italicFormatter = surroundWithTag "i" []
-  , linkFormatter   = \url -> surroundWithTag "a" [("href", Just url)]
+  , linkFormatter   = \url -> surroundWithTag "a" [("href", Just (render url))]
   }

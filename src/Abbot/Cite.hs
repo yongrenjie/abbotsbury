@@ -30,7 +30,7 @@ formatOnePart fmt@(Format pFr bFr iFr lFr) part
          (CText t) -> pFr t
          (Bold part') -> bFr (formatOnePart fmt part')
          (Italic part') -> iFr (formatOnePart fmt part')
-         (Link url part') -> lFr url (formatOnePart fmt part')
+         (Link uri part') -> lFr uri (formatOnePart fmt part')
 
 
 makeParts :: Style -> Work -> [CitationPart]

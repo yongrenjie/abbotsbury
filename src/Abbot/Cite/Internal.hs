@@ -3,6 +3,8 @@ module Abbot.Cite.Internal where
 
 import           Abbot.Work
 import           Data.Text                      ( Text )
+import           Text.URI                       ( URI )
+-- Note that the URI imported here is from the `modern-uri` package.
 
 
 -- | A set of Rules fully specifies how a citation (in the form of Text) is to be generated from
@@ -31,7 +33,7 @@ data Format = Format {
   plainFormatter  :: Text -> Text,
   boldFormatter   :: Text -> Text,
   italicFormatter :: Text -> Text,
-  linkFormatter   :: Text -> Text -> Text  -- ^ The first argument is the URL, the second the displayed text.
+  linkFormatter   :: URI  -> Text -> Text  -- ^ The second argument is the displayed text.
 }
 
 
@@ -40,5 +42,5 @@ data Format = Format {
 data CitationPart = CText Text
                   | Bold CitationPart
                   | Italic CitationPart
-                  | Link Text CitationPart
+                  | Link URI CitationPart
                   deriving (Eq, Show)
