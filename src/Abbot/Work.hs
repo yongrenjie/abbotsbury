@@ -24,7 +24,7 @@ data Work = Article
   , _pages        :: Text
   , _doi          :: DOI
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, Eq)
 
 data Author = Author
   { _given  :: Maybe Text  -- Not everyone has a given name.

@@ -78,5 +78,5 @@ mkTestCase fmt auth = testCase label (actual @?= expected)
 
 tests :: TestTree
 tests = testGroup
-  "Format.Author"
+  "Author"
   [ mkTestCase fmt auth | fmt <- allFormats, auth <- allAuthors ]
