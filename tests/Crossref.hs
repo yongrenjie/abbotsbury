@@ -16,7 +16,12 @@ import           Abbot.Work
 -- Note that these are cached, i.e. the JSON is obtained from a file rather than dynamically via the
 -- Internet. This is to make tests quicker and more reliable.
 tests :: TestTree
-tests = testGroup "Crossref" [testOL, testNRMP, testfixJShortNRMP]
+tests = testGroup "Crossref" [ testOL
+                             , testNRMP
+                             , testNoFirstName
+                             , testNoJournalShort
+                             , testfixJShortNRMP
+                             ]
 
 
 auth :: (Text, Text) -> Author
@@ -24,7 +29,7 @@ auth (gvn, fmy) = Author (Just gvn) fmy
 
 
 testOL :: TestTree
-testOL = testCase "parseCrossrefValue_2019OL" checkOLJSON
+testOL = testCase "parseCrossrefValue - 2019 OL" checkOLJSON
  where
   checkOLJSON :: Assertion  --- equivalent to IO ()
   checkOLJSON = do
@@ -50,7 +55,7 @@ testOL = testCase "parseCrossrefValue_2019OL" checkOLJSON
 
 
 testNRMP :: TestTree
-testNRMP = testCase "parseCrossrefValue_2021NRMP" checkNRMPJSON
+testNRMP = testCase "parseCrossrefValue - 2021 NRMP" checkNRMPJSON
  where
   checkNRMPJSON :: Assertion  --- equivalent to IO ()
   checkNRMPJSON = do
@@ -74,11 +79,55 @@ testNRMP = testCase "parseCrossrefValue_2021NRMP" checkNRMPJSON
   claridge = auth ("Tim D. W.", "Claridge")
 
 
+testNoFirstName :: TestTree
+testNoFirstName = testCase "parseCrossrefValue - author without first name" checkNFNJSON
+ where
+  checkNFNJSON :: Assertion  --- equivalent to IO ()
+  checkNFNJSON = do
+    olJSON <- fromJust . Aeson.decode <$> BL.readFile
+      "tests/test-data/nofirstname.json"
+    let Right (Article t a jL jS y v i p d) = parseCrossrefValue olJSON
+    t
+      @?= "Attention science: some people have only one name"
+    a @?= NE.fromList [sheherazade, ardiantiono]
+    jL @?= "Nature"
+    jS @?= "Nature"
+    y @?= 2020
+    v @?= ""
+    i @?= ""
+    p @?= ""
+    d @?= "10.1038/d41586-020-02761-z"
+  sheherazade, ardiantiono :: Author
+  sheherazade = Author Nothing "Sheherazade"
+  ardiantiono = Author Nothing "Ardiantiono"
+
+
+testNoJournalShort :: TestTree
+testNoJournalShort =
+  testCase "parseCrossrefValue - no short journal name" checkNoJournalShortJSON
+  where
+    checkNoJournalShortJSON :: Assertion
+    checkNoJournalShortJSON = do
+      scienceJSON <- fromJust . Aeson.decode <$> BL.readFile
+        "tests/test-data/science_oct.json"
+      let Right (Article t a jL jS y v i p d) = parseCrossrefValue scienceJSON
+      t @?= "Unitary Control in Quantum Ensembles: Maximizing Signal Intensity in Coherent Spectroscopy"
+      NE.length a @?= 1  -- Crossref gives entirely wrong data for this. It has 7 authors.
+      NE.head a @?= auth ("S. J.", "Glaser")
+      jL @?= "Science"
+      jS @?= "Science"   -- not inside the Crossref JSON, so defaults to long name
+      y @?= 1998
+      v @?= "280"
+      i @?= "5362"
+      p @?= "421-424"
+      d @?= "10.1126/science.280.5362.421"
+
+
 testfixJShortNRMP :: TestTree
-testfixJShortNRMP = testCase "fixJournalShortInWork_2021NRMP"
+testfixJShortNRMP = testCase "fixJournalShortInWork - 2021 NRMP"
                              checkFixedNRMPJSON
  where
-  checkFixedNRMPJSON :: Assertion  --- equivalent to IO ()
+  checkFixedNRMPJSON :: Assertion
   checkFixedNRMPJSON = do
     nrmpJSON <- fromJust . Aeson.decode <$> BL.readFile
       "tests/test-data/nrmp.json"
