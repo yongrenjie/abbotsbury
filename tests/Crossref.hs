@@ -28,14 +28,18 @@ auth :: (Text, Text) -> Author
 auth (gvn, fmy) = Author (Just gvn) fmy
 
 
+parseCrossrefJsonFromFile :: FilePath -> IO (Either CrossrefException Work)
+parseCrossrefJsonFromFile fp = do
+  jsonValue <- fromJust . Aeson.decode <$> BL.readFile fp
+  pure $ getJsonMessage jsonValue >>= parseCrossrefMessage
+
+
 testOL :: TestTree
-testOL = testCase "parseCrossrefValue - 2019 OL" checkOLJSON
+testOL = testCase "parseCrossrefMessage - 2019 OL" checkOLJSON
  where
   checkOLJSON :: Assertion  --- equivalent to IO ()
   checkOLJSON = do
-    olJSON <- fromJust . Aeson.decode <$> BL.readFile
-      "tests/test-data/orglett.json"
-    let Right (Article t a jL jS y v i p d) = parseCrossrefValue olJSON
+    Right (Article t a jL jS y v i p d) <- parseCrossrefJsonFromFile "tests/test-data/orglett.json"
     t
       @?= "A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides"
     a @?= NE.fromList [mansfield, smith, yong, garry, anderson]
@@ -55,13 +59,11 @@ testOL = testCase "parseCrossrefValue - 2019 OL" checkOLJSON
 
 
 testNRMP :: TestTree
-testNRMP = testCase "parseCrossrefValue - 2021 NRMP" checkNRMPJSON
+testNRMP = testCase "parseCrossrefMessage - 2021 NRMP" checkNRMPJSON
  where
   checkNRMPJSON :: Assertion  --- equivalent to IO ()
   checkNRMPJSON = do
-    nrmpJSON <- fromJust . Aeson.decode <$> BL.readFile
-      "tests/test-data/nrmp.json"
-    let Right (Article t a jL jS y v i p d) = parseCrossrefValue nrmpJSON
+    Right (Article t a jL jS y v i p d) <- parseCrossrefJsonFromFile "tests/test-data/nrmp.json"
     t @?= "Parallel nuclear magnetic resonance spectroscopy"
     a @?= NE.fromList [kupce, frydman, webb, yong, claridge]
     jL @?= "Nature Reviews Methods Primers"
@@ -80,13 +82,11 @@ testNRMP = testCase "parseCrossrefValue - 2021 NRMP" checkNRMPJSON
 
 
 testNoFirstName :: TestTree
-testNoFirstName = testCase "parseCrossrefValue - author without first name" checkNFNJSON
+testNoFirstName = testCase "parseCrossrefMessage - author without first name" checkNFNJSON
  where
   checkNFNJSON :: Assertion  --- equivalent to IO ()
   checkNFNJSON = do
-    olJSON <- fromJust . Aeson.decode <$> BL.readFile
-      "tests/test-data/nofirstname.json"
-    let Right (Article t a jL jS y v i p d) = parseCrossrefValue olJSON
+    Right (Article t a jL jS y v i p d) <- parseCrossrefJsonFromFile "tests/test-data/nofirstname.json"
     t
       @?= "Attention science: some people have only one name"
     a @?= NE.fromList [sheherazade, ardiantiono]
@@ -104,13 +104,11 @@ testNoFirstName = testCase "parseCrossrefValue - author without first name" chec
 
 testNoJournalShort :: TestTree
 testNoJournalShort =
-  testCase "parseCrossrefValue - no short journal name" checkNoJournalShortJSON
+  testCase "parseCrossrefMessage - no short journal name" checkNoJournalShortJSON
   where
     checkNoJournalShortJSON :: Assertion
     checkNoJournalShortJSON = do
-      scienceJSON <- fromJust . Aeson.decode <$> BL.readFile
-        "tests/test-data/science_oct.json"
-      let Right (Article t a jL jS y v i p d) = parseCrossrefValue scienceJSON
+      Right (Article t a jL jS y v i p d) <- parseCrossrefJsonFromFile "tests/test-data/science_oct.json"
       t @?= "Unitary Control in Quantum Ensembles: Maximizing Signal Intensity in Coherent Spectroscopy"
       NE.length a @?= 1  -- Crossref gives entirely wrong data for this. It has 7 authors.
       NE.head a @?= auth ("S. J.", "Glaser")
@@ -129,11 +127,8 @@ testfixJShortNRMP = testCase "fixJournalShortInWork - 2021 NRMP"
  where
   checkFixedNRMPJSON :: Assertion
   checkFixedNRMPJSON = do
-    nrmpJSON <- fromJust . Aeson.decode <$> BL.readFile
-      "tests/test-data/nrmp.json"
-    let Right (Article t a jL jS y v i p d) =
-          fixJournalShortInWork defaultJournalShortMap
-            <$> parseCrossrefValue nrmpJSON
+    article <- parseCrossrefJsonFromFile "tests/test-data/nrmp.json"
+    let Right (Article t a jL jS y v i p d) = fixJournalShortInWork defaultJournalShortMap <$> article
     t @?= "Parallel nuclear magnetic resonance spectroscopy"
     a @?= NE.fromList [kupce, frydman, webb, yong, claridge]
     jL @?= "Nature Reviews Methods Primers"
