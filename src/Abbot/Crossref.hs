@@ -93,7 +93,7 @@ identifyWorkType messageVal = do
   case parsedWorkType of
     Left failedParseMessage ->
       Left (CRJsonException (T.pack failedParseMessage))
-    Right workType -> case workType of
+    Right wType -> case wType of
       "book-section"        -> Right BookSection
       "monograph"           -> Right Monograph
       "report"              -> Right Report
@@ -125,7 +125,7 @@ identifyWorkType messageVal = do
       _                     -> Left
         (  CRJsonException
         $  "work type '"
-        <> T.pack workType
+        <> T.pack wType
         <> "' not found in Crossref schema. "
         <> "This should probably be reported to the Crossref maintainers."
         )
@@ -138,10 +138,10 @@ parseCrossrefMessage
   -> Either CrossrefException Work  -- Either an error message or the Work.
 parseCrossrefMessage messageVal = do
   -- Figure out which parser to use.
-  workType <- identifyWorkType messageVal
-  parser <- case workType of
+  wType <- identifyWorkType messageVal
+  parser <- case wType of
                  JournalArticle -> Right parseJournalArticle
-                 _ -> Left (CRUnknownWorkException workType)
+                 _ -> Left (CRUnknownWorkException wType)
   -- Run the appropriate parser on the message Value.
   let parsedWork = DAT.parseEither (withObject "Crossref response" parser) messageVal
   first (CRJsonException . T.pack) parsedWork
@@ -151,6 +151,7 @@ parseCrossrefMessage messageVal = do
 parseJournalArticle :: Object -> DAT.Parser Work
 parseJournalArticle messageObj = do
   -- Title
+  let _workType = JournalArticle
   _title       <- safeHead "could not get title" $ messageObj .: "title"
   -- Authors
   _authorArray <- messageObj .: "author"
@@ -176,7 +177,7 @@ parseJournalArticle messageObj = do
   _issue  <- (messageObj .: "journal-issue" >>= (.: "issue")) <|> pure ""
   _pages  <- messageObj .:? "page" .!= ""
   _doi    <- messageObj .:? "DOI" .!= ""
-  pure $ Work JournalArticle (Metadata { .. })
+  pure $ Work { .. }
 
 
 safeHead
@@ -240,10 +241,9 @@ fixJournalShort m wrong = fromMaybe wrong (m M.!? wrong)
 -- | The same as fixJournalShort, but can be applied to an entire Work. This simply returns the
 -- original Work if the Work does not have a _journalShort attribute.
 fixJournalShortInWork :: Map Text Text -> Work -> Work
-fixJournalShortInWork m (Work workType metadata) = 
-  Work workType (metadata { _journalShort = right_journalShort })
+fixJournalShortInWork m work = work { _journalShort = right_journalShort }
  where
-  wrong_journalShort = _journalShort metadata
+  wrong_journalShort = _journalShort work
   right_journalShort = fixJournalShort m wrong_journalShort
 
 
@@ -251,25 +251,29 @@ fixJournalShortInWork m (Work workType metadata) =
 -- to fixJournalShort and fixJournalShortInWork. These come up in my own work.
 defaultJournalShortMap :: Map Text Text
 defaultJournalShortMap = M.fromList
-  [ ("Proceedings of the National Academy of Sciences", "Proc. Natl. Acad. Sci. U. S. A.")
-  , ("The Journal of Chemical Physics", "J. Chem. Phys.")
-  , ("Journal of Magnetic Resonance", "J. Magn. Reson.")
+  [ ( "Proceedings of the National Academy of Sciences"
+    , "Proc. Natl. Acad. Sci. U. S. A."
+    )
+  , ("The Journal of Chemical Physics"     , "J. Chem. Phys.")
+  , ("Journal of Magnetic Resonance"       , "J. Magn. Reson.")
   , ("Journal of Magnetic Resonance (1969)", "J. Magn. Reson.")
-  , ("Progress in Nuclear Magnetic Resonance Spectroscopy", "Prog. Nucl. Magn. Reson. Spectrosc.")
-  , ("Magn Reson Chem", "Magn. Reson. Chem.")
-  , ("Chemical Physics Letters", "Chem. Phys. Lett.")
-  , ("Biochemistry Journal", "Biochem. J.")
+  , ( "Progress in Nuclear Magnetic Resonance Spectroscopy"
+    , "Prog. Nucl. Magn. Reson. Spectrosc."
+    )
+  , ("Magn Reson Chem"                   , "Magn. Reson. Chem.")
+  , ("Chemical Physics Letters"          , "Chem. Phys. Lett.")
+  , ("Biochemistry Journal"              , "Biochem. J.")
   , ("Journal of Magnetic Resonance, Series A", "J. Magn. Reson., Ser. A")
   , ("Journal of Magnetic Resonance, Series B", "J. Magn. Reson., Ser. B")
-  , ("J Biomol NMR", "J. Biomol. NMR")
+  , ("J Biomol NMR"                      , "J. Biomol. NMR")
   , ("Annual Reports on NMR Spectroscopy", "Annu. Rep. NMR Spectrosc.")
   , ("Angewandte Chemie International Edition", "Angew. Chem. Int. Ed.")
-  , ("Nat Commun", "Nat. Commun.")
-  , ("Sci Rep", "Sci. Rep.")
-  , ("Nucleic Acids Research", "Nucleic Acids Res.")
-  , ("Journal of Molecular Biology", "J. Mol. Biol.")
+  , ("Nat Commun"                        , "Nat. Commun.")
+  , ("Sci Rep"                           , "Sci. Rep.")
+  , ("Nucleic Acids Research"            , "Nucleic Acids Res.")
+  , ("Journal of Molecular Biology"      , "J. Mol. Biol.")
   , ("Journal of Chemical Informatics and Modeling", "J. Chem. Inf. Model.")
   , ("Journal of Computational Chemistry", "J. Comp. Chem.")
-  , ("Nat Rev Methods Primers", "Nat. Rev. Methods Primers")
+  , ("Nat Rev Methods Primers"           , "Nat. Rev. Methods Primers")
   ]
 

@@ -1,11 +1,11 @@
-- _timeOpened: 2021-04-25T01:11:12.818886Z
+- _timeOpened: 2021-05-04T18:39:57.965503Z
   _timeAdded: 2021-01-21T00:55:37.115905Z
   _work:
-  - JournalArticle
-  - _volume: '42'
+    _volume: '42'
     _pages: 3938-3941
     _journalLong: Angewandte Chemie International Edition
     _journalShort: Angew. Chem. Int. Ed.
+    _workType: JournalArticle
     _title: Elimination of Zero-Quantum Interference in Two-Dimensional NMR Spectra
     _authors:
     - _given: Michael J.
@@ -23,11 +23,11 @@
 - _timeOpened: 2021-01-21T00:56:46.676734Z
   _timeAdded: 2021-01-21T00:56:46.676731Z
   _work:
-  - JournalArticle
-  - _volume: '89'
+    _volume: '89'
     _pages: 1032-1040
     _journalLong: Journal of Chemical Education
     _journalShort: J. Chem. Educ.
+    _workType: JournalArticle
     _title: 'Orbitals: Some Fiction and Some Facts'
     _authors:
     - _given: Jochen
@@ -40,11 +40,11 @@
 - _timeOpened: 2021-04-21T23:56:07.836988Z
   _timeAdded: 2021-01-21T00:54:23.677431Z
   _work:
-  - JournalArticle
-  - _volume: '21'
+    _volume: '21'
     _pages: 2918-2922
     _journalLong: Organic Letters
     _journalShort: Org. Lett.
+    _workType: JournalArticle
     _title: A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides
     _authors:
     - _given: Steven J.
