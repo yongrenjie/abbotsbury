@@ -91,7 +91,7 @@ getFieldSizes refs = do
   let
     getMaxAuthorLength :: Reference -> Int
     getMaxAuthorLength =
-      maximum . fmap (T.length . formatAuthorForList) . (^. (work . authors))
+      maximum . fmap (T.length . formatAuthorForList) . (^. (work . metadata . authors))
     authorF' = fieldPadding + maximum (map getMaxAuthorLength (IM.elems refs))
   -- Year field.
   let yearF' = fieldPadding + 4
@@ -105,8 +105,8 @@ getFieldSizes refs = do
   let titleF1 = ncols - numberF' - authorF' - yearF' - journalF'
   -- We enforce an upper limit, which is the longest title / DOI / availability string.
       longestTitle =
-        maximum $ map (T.length . (^. (work . title))) (IM.elems refs)
-      longestDOI  = maximum $ map (T.length . (^. (work . doi))) (IM.elems refs)
+        maximum $ map (T.length . (^. (work . metadata . title))) (IM.elems refs)
+      longestDOI  = maximum $ map (T.length . (^. (work . metadata . doi))) (IM.elems refs)
       availLength = 40
       upperLimit  = maximum [longestTitle, longestDOI, availLength]
       titleF2     = min titleF1 upperLimit
@@ -159,16 +159,16 @@ prettifyOneRef fss cwd (index, ref) = do
   -- Build up the columns first.
   let numberColumn = [T.pack $ show index]
       authorColumn1 =
-        NE.toList $ fmap formatAuthorForList (ref ^. (work . authors))
+        NE.toList $ fmap formatAuthorForList (ref ^. (work . metadata . authors))
       authorColumn = if length authorColumn1 <= 5
         then authorColumn1
                         -- Inefficient but probably not important.
         else take 3 authorColumn1 ++ ["...", last authorColumn1]
-      yearColumn    = [T.pack . show $ ref ^. (work . year)]
+      yearColumn    = [T.pack . show $ ref ^. (work . metadata . year)]
       journalColumn = [getShortestJournalName ref, getVolInfo ref]
       titleColumn =
-        T.chunksOf (titleF fss) (ref ^. (work . title))
-          ++ [ref ^. (work . doi)]
+        T.chunksOf (titleF fss) (ref ^. (work . metadata . title))
+          ++ [ref ^. (work . metadata . doi)]
           ++ [availString]
           ++ T.chunksOf (titleF fss) tagString
       -- Clone of Python's itertools.zip_longest(fillvalue="").
@@ -218,7 +218,7 @@ formatLine fss texts = mconcat
 getShortestJournalName :: Reference -> Text
 getShortestJournalName =
   replaceAcronyms . T.strip . T.filter ((||) <$> isAlphaNum <*> isSpace) . view
-    (work . journalShort)
+    (work . metadata . journalShort)
  where
   acronyms = [("Nucl Magn Reson", "NMR")]
   replaceAcronyms startText =
@@ -229,9 +229,9 @@ getShortestJournalName =
 -- This output is only meant for list printing, hence is placed here.
 getVolInfo :: Reference -> Text
 getVolInfo ref =
-  let theVolume = ref ^. (work . volume)
-      theIssue  = ref ^. (work . issue)
-      thePages  = ref ^. (work . pages)
+  let theVolume = ref ^. (work . metadata . volume)
+      theIssue  = ref ^. (work . metadata . issue)
+      thePages  = ref ^. (work . metadata . pages)
   in  if T.null theIssue
         then mconcat [theVolume, ", ", thePages]
         else mconcat [theVolume, " (", theIssue, "), ", thePages]

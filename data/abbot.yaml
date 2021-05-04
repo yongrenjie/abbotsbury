@@ -1,7 +1,8 @@
 - _timeOpened: 2021-04-25T01:11:12.818886Z
   _timeAdded: 2021-01-21T00:55:37.115905Z
   _work:
-    _volume: '42'
+  - JournalArticle
+  - _volume: '42'
     _pages: 3938-3941
     _journalLong: Angewandte Chemie International Edition
     _journalShort: Angew. Chem. Int. Ed.
@@ -22,7 +23,8 @@
 - _timeOpened: 2021-01-21T00:56:46.676734Z
   _timeAdded: 2021-01-21T00:56:46.676731Z
   _work:
-    _volume: '89'
+  - JournalArticle
+  - _volume: '89'
     _pages: 1032-1040
     _journalLong: Journal of Chemical Education
     _journalShort: J. Chem. Educ.
@@ -38,7 +40,8 @@
 - _timeOpened: 2021-04-21T23:56:07.836988Z
   _timeAdded: 2021-01-21T00:54:23.677431Z
   _work:
-    _volume: '21'
+  - JournalArticle
+  - _volume: '21'
     _pages: 2918-2922
     _journalLong: Organic Letters
     _journalShort: Org. Lett.

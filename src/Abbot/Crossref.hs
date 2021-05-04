@@ -29,7 +29,7 @@ import           Network.HTTP.Req
 data CrossrefException
   = CRHttpException HttpC.HttpException  -- HTTP errors, e.g. no Internet connection.
   | CRJsonException Text                 -- Got the JSON from Crossref, but it was not valid JSON. The Text is from Aeson and says what went wrong.
-  | CRUnknownWorkException Text          -- Abbot right now only parses journal articles. If you request metadata about a book (for example) this error will be returned.
+  | CRUnknownWorkException WorkType      -- Abbot right now only parses journal articles. If you request metadata about a book (for example) this error will be returned.
   | CROtherException Text                -- Something else went wrong.
   deriving Show
 instance CE.Exception CrossrefException
@@ -83,12 +83,6 @@ getJsonMessage val = do
   first (CRJsonException . T.pack) aesonParseResult
 
 
--- TODO: Ideally, what we really want is to reuse the data constructor Article from Abbot.Work. Is
--- this possible? How can we do it when we want to extend it to other types of works? Might be worth
--- asking a question about this somewhere. There must be some kind of type-level magic.
-data WorkType = IsArticle deriving (Eq, Show)
-
-
 -- | Step 3a is to identify the type of work. This basically gives a CRUnknownWorkException if it's
 -- not an article, which is technically a bug, but I don't know when I'll be able to work on adding
 -- new types of works (e.g. books).
@@ -100,8 +94,41 @@ identifyWorkType messageVal = do
     Left failedParseMessage ->
       Left (CRJsonException (T.pack failedParseMessage))
     Right workType -> case workType of
-      "journal-article" -> Right IsArticle
-      _                 -> Left (CRUnknownWorkException (T.pack workType))
+      "book-section"        -> Right BookSection
+      "monograph"           -> Right Monograph
+      "report"              -> Right Report
+      "peer-review"         -> Right PeerReview
+      "book-track"          -> Right BookTrack
+      "journal-article"     -> Right JournalArticle
+      "book-part"           -> Right Part
+      "other"               -> Right Other
+      "book"                -> Right Book
+      "journal-volume"      -> Right JournalVolume
+      "book-set"            -> Right BookSet
+      "reference-entry"     -> Right ReferenceEntry
+      "proceedings-article" -> Right ProceedingsArticle
+      "journal"             -> Right Journal
+      "component"           -> Right Component
+      "book-chapter"        -> Right BookChapter
+      "proceedings-series"  -> Right ProceedingsSeries
+      "report-series"       -> Right ReportSeries
+      "proceedings"         -> Right Proceedings
+      "standard"            -> Right Standard
+      "reference-book"      -> Right ReferenceBook
+      "posted-content"      -> Right PostedContent
+      "journal-issue"       -> Right JournalIssue
+      "dissertation"        -> Right Dissertation
+      "dataset"             -> Right Dataset
+      "book-series"         -> Right BookSeries
+      "edited-book"         -> Right EditedBook
+      "standard-series"     -> Right StandardSeries
+      _                     -> Left
+        (  CRJsonException
+        $  "work type '"
+        <> T.pack workType
+        <> "' not found in Crossref schema. "
+        <> "This should probably be reported to the Crossref maintainers."
+        )
 
 
 -- | Step 3b is to parse the 'message' component into the Abbot data types, depending on which type
@@ -112,17 +139,17 @@ parseCrossrefMessage
 parseCrossrefMessage messageVal = do
   -- Figure out which parser to use.
   workType <- identifyWorkType messageVal
-  let parser :: Object -> DAT.Parser Work
-      parser = case workType of
-                    IsArticle -> parseArticle
+  parser <- case workType of
+                 JournalArticle -> Right parseJournalArticle
+                 _ -> Left (CRUnknownWorkException workType)
   -- Run the appropriate parser on the message Value.
   let parsedWork = DAT.parseEither (withObject "Crossref response" parser) messageVal
   first (CRJsonException . T.pack) parsedWork
 
 
--- | The parser which parses Articles.
-parseArticle :: Object -> DAT.Parser Work
-parseArticle messageObj = do
+-- | The parser which parses JournalArticles.
+parseJournalArticle :: Object -> DAT.Parser Work
+parseJournalArticle messageObj = do
   -- Title
   _title       <- safeHead "could not get title" $ messageObj .: "title"
   -- Authors
@@ -149,7 +176,7 @@ parseArticle messageObj = do
   _issue  <- (messageObj .: "journal-issue" >>= (.: "issue")) <|> pure ""
   _pages  <- messageObj .:? "page" .!= ""
   _doi    <- messageObj .:? "DOI" .!= ""
-  pure Article { .. }
+  pure $ Work JournalArticle (Metadata { .. })
 
 
 safeHead
@@ -213,11 +240,10 @@ fixJournalShort m wrong = fromMaybe wrong (m M.!? wrong)
 -- | The same as fixJournalShort, but can be applied to an entire Work. This simply returns the
 -- original Work if the Work does not have a _journalShort attribute.
 fixJournalShortInWork :: Map Text Text -> Work -> Work
-fixJournalShortInWork m work = case work of
-  Article{} -> work { _journalShort = right_journalShort }
-  -- _         -> work  -- uncomment when we have more types
+fixJournalShortInWork m (Work workType metadata) = 
+  Work workType (metadata { _journalShort = right_journalShort })
  where
-  wrong_journalShort = _journalShort work
+  wrong_journalShort = _journalShort metadata
   right_journalShort = fixJournalShort m wrong_journalShort
 
 

@@ -39,9 +39,9 @@ testOL = testCase "parseCrossrefMessage - 2019 OL" checkOLJSON
  where
   checkOLJSON :: Assertion  --- equivalent to IO ()
   checkOLJSON = do
-    Right (Article t a jL jS y v i p d) <- parseCrossrefJsonFromFile "tests/test-data/orglett.json"
-    t
-      @?= "A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides"
+    Right (Work wt (Metadata t a jL jS y v i p d)) <- parseCrossrefJsonFromFile "tests/test-data/orglett.json"
+    wt @?= JournalArticle
+    t @?= "A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides"
     a @?= NE.fromList [mansfield, smith, yong, garry, anderson]
     jL @?= "Organic Letters"
     jS @?= "Org. Lett."
@@ -63,7 +63,8 @@ testNRMP = testCase "parseCrossrefMessage - 2021 NRMP" checkNRMPJSON
  where
   checkNRMPJSON :: Assertion  --- equivalent to IO ()
   checkNRMPJSON = do
-    Right (Article t a jL jS y v i p d) <- parseCrossrefJsonFromFile "tests/test-data/nrmp.json"
+    Right (Work wt (Metadata t a jL jS y v i p d)) <- parseCrossrefJsonFromFile "tests/test-data/nrmp.json"
+    wt @?= JournalArticle
     t @?= "Parallel nuclear magnetic resonance spectroscopy"
     a @?= NE.fromList [kupce, frydman, webb, yong, claridge]
     jL @?= "Nature Reviews Methods Primers"
@@ -86,9 +87,9 @@ testNoFirstName = testCase "parseCrossrefMessage - author without first name" ch
  where
   checkNFNJSON :: Assertion  --- equivalent to IO ()
   checkNFNJSON = do
-    Right (Article t a jL jS y v i p d) <- parseCrossrefJsonFromFile "tests/test-data/nofirstname.json"
-    t
-      @?= "Attention science: some people have only one name"
+    Right (Work wt (Metadata t a jL jS y v i p d)) <- parseCrossrefJsonFromFile "tests/test-data/nofirstname.json"
+    wt @?= JournalArticle
+    t @?= "Attention science: some people have only one name"
     a @?= NE.fromList [sheherazade, ardiantiono]
     jL @?= "Nature"
     jS @?= "Nature"
@@ -108,7 +109,8 @@ testNoJournalShort =
   where
     checkNoJournalShortJSON :: Assertion
     checkNoJournalShortJSON = do
-      Right (Article t a jL jS y v i p d) <- parseCrossrefJsonFromFile "tests/test-data/science_oct.json"
+      Right (Work wt (Metadata t a jL jS y v i p d)) <- parseCrossrefJsonFromFile "tests/test-data/science_oct.json"
+      wt @?= JournalArticle
       t @?= "Unitary Control in Quantum Ensembles: Maximizing Signal Intensity in Coherent Spectroscopy"
       NE.length a @?= 1  -- Crossref gives entirely wrong data for this. It has 7 authors.
       NE.head a @?= auth ("S. J.", "Glaser")
@@ -127,8 +129,9 @@ testfixJShortNRMP = testCase "fixJournalShortInWork - 2021 NRMP"
  where
   checkFixedNRMPJSON :: Assertion
   checkFixedNRMPJSON = do
-    article <- parseCrossrefJsonFromFile "tests/test-data/nrmp.json"
-    let Right (Article t a jL jS y v i p d) = fixJournalShortInWork defaultJournalShortMap <$> article
+    work <- parseCrossrefJsonFromFile "tests/test-data/nrmp.json"
+    let Right (Work wt (Metadata t a jL jS y v i p d)) = fixJournalShortInWork defaultJournalShortMap <$> work
+    wt @?= JournalArticle
     t @?= "Parallel nuclear magnetic resonance spectroscopy"
     a @?= NE.fromList [kupce, frydman, webb, yong, claridge]
     jL @?= "Nature Reviews Methods Primers"

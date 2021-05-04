@@ -131,4 +131,4 @@ getOpenLink
 getOpenLink fmt ref cwd = case fmt of
   OpenFullText -> T.pack $ getPDFPath FullText cwd ref
   OpenSI       -> T.pack $ getPDFPath SI cwd ref
-  OpenWebURL   -> "https://doi.org/" <> ref ^. (work . doi)
+  OpenWebURL   -> "https://doi.org/" <> ref ^. (work . metadata . doi)
