@@ -3,11 +3,14 @@
 
 module Main where
 
+import           Abbotsbury
 import           Commands
 import           Commands.Shared
+import           Options
 import           Path
 import           Reference
 import           Style
+
 
 import           Control.Monad.Catch            ( MonadCatch
                                                 , MonadMask
@@ -22,8 +25,7 @@ import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           Lens.Micro.Platform
-import           Options.Applicative     hiding ( Parser )
-import qualified Options.Applicative           as O
+import           Options.Applicative            ( execParser )
 import           System.Console.Haskeline      as HL
 
 
@@ -76,10 +78,18 @@ mOutputStrLn = MInputT . HL.outputStrLn
 -- | Entry point.
 main :: IO ()
 main = do
-  options  <- execParser replOptionInfo
-  startDir <- expandDirectory (startingDirectory options)
-  let startState = LoopState startDir startDir True IM.empty
-  evalStateT (mRunInputT defaultSettings $ mWithInterrupt loop) startState
+  options <- execParser parserInfo
+  case options of
+    AbbotMain mainOptions -> do
+      startDir <- expandDirectory (startingDirectory mainOptions)
+      let startState = LoopState startDir startDir True IM.empty
+      evalStateT (mRunInputT defaultSettings $ mWithInterrupt loop) startState
+    AbbotCite citeOptions -> do
+      let AbbotCiteOptions doi' style' format' = citeOptions
+      eitherWork <- fetchWork "yongrenjie@gmail.com" doi'
+      case eitherWork of
+           Left exception -> TIO.putStrLn ("failed to get Crossref metadata for DOI '" <> doi' <> "'")
+           Right work -> TIO.putStrLn $ cite style' format' work
 
 
 -- | The main REPL loop of abbot. The `quit` and `cd` functions are implemented
@@ -172,25 +182,3 @@ printErr = mOutputStrLn . T.unpack . makeError
 -- | Copies to clipboard. Not done yet (obviously.)
 copyToClipboard :: Text -> IO ()
 copyToClipboard = TIO.putStrLn
-
-
--- | Command-line option parsing for the executable itself. At the moment, the
--- only option available is the starting directory, which is essentially argv[1].
-newtype ReplOptions = ReplOptions
-             { startingDirectory :: FilePath
-             }
-             deriving (Show)
-
-replOptionInfo :: ParserInfo ReplOptions
-replOptionInfo = info
-  (helper <*> replOptionParser)
-  (fullDesc <> progDesc "Minimalistic command-line reference manager")
-
-replOptionParser :: O.Parser ReplOptions
-replOptionParser = ReplOptions <$> strOption
-  (  short 'd'
-  <> long "directory"
-  <> help "Directory to start in"
-  <> value "."
-  <> showDefaultWith (const "current working directory")
-  )

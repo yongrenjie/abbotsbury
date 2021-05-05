@@ -73,6 +73,7 @@ executable abbot
     Commands.Open
     Commands.Shared
     Commands.Sort
+    Options
     Path
     Reference
     Style
