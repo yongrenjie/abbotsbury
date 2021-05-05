@@ -1,7 +1,7 @@
-module Abbot.Cite.Formats.Text where
+module Abbotsbury.Cite.Formats.Text where
 
 
-import           Abbot.Cite.Internal            ( Format(..) )
+import           Abbotsbury.Cite.Internal       ( Format(..) )
 
 
 -- | Plain text, i.e. no formatting whatsoever.

@@ -1,6 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 
-module Abbot.LatexEscapes where
+module Abbotsbury.LatexEscapes where
 
 
 import           Data.Char                      ( isAscii )

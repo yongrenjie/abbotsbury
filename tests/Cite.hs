@@ -3,9 +3,9 @@ module Cite (tests) where
 import qualified TestWorks                     as TW
 
 
-import Abbot.Cite
-import Test.Tasty
-import Test.Tasty.HUnit
+import           Abbotsbury
+import           Test.Tasty
+import           Test.Tasty.HUnit
 
 
 -- | This is the only test for which we will exhaustively check all formats. For other tests we can

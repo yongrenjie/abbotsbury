@@ -1,7 +1,7 @@
-module Abbot.Cite.Internal where
+module Abbotsbury.Cite.Internal where
 
 
-import           Abbot.Work
+import           Abbotsbury.Work
 import           Data.Text                      ( Text )
 import           Text.URI                       ( URI )
 -- Note that the URI imported here is from the `modern-uri` package.
@@ -14,9 +14,8 @@ data Rules = Rules Style Format
 
 -- | A Style refers to the citation style, i.e. ACS, Wiley (here called ACIE), RSC, etc.
 data Style = Style
-           {
-               articleConstructor :: Work -> [CitationPart]
-           }
+  { articleConstructor :: Work -> [CitationPart]
+  }
 
 
 -- | A Format refers to the output file format, i.e. what kind of markup is to be applied to the
@@ -29,12 +28,12 @@ data Style = Style
 -- 
 -- Once the full list of CitationParts has been generated (by applying the various Style rules), we
 -- can then convert all the CitationParts into Text using the correct formatter.
-data Format = Format {
-  plainFormatter  :: Text -> Text,
-  boldFormatter   :: Text -> Text,
-  italicFormatter :: Text -> Text,
-  linkFormatter   :: URI  -> Text -> Text  -- ^ The second argument is the displayed text.
-}
+data Format = Format
+  { plainFormatter  :: Text -> Text
+  , boldFormatter   :: Text -> Text
+  , italicFormatter :: Text -> Text
+  , linkFormatter   :: URI -> Text -> Text  -- ^ The second argument is the displayed text.
+  }
 
 
 -- | "Formatted" parts of a citation, which can later be converted to real Text objects based on the

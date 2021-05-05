@@ -1,37 +1,28 @@
-module Abbot.Cite
+module Abbotsbury.Cite
   ( cite
   , makeParts
   , formatParts
   , formatOnePart
-  , Abbot.Cite.Formats.Text.textFormat
-  , Abbot.Cite.Formats.Markdown.markdownFormat
-  , Abbot.Cite.Formats.Restructured.restructuredFormat
-  , Abbot.Cite.Formats.HTML.htmlFormat
-  , Abbot.Cite.Styles.ACS.acsStyle
-  , Abbot.Cite.Internal.Rules(..)
+  , Abbotsbury.Cite.Internal.Rules(..)
   ) where
 
 
-import           Abbot.Cite.Internal
-import           Abbot.Cite.Formats.Text
-import           Abbot.Cite.Formats.Markdown
-import           Abbot.Cite.Formats.Restructured
-import           Abbot.Cite.Formats.HTML
-import           Abbot.Cite.Styles.ACS
-import           Abbot.Work
+import           Abbotsbury.Cite.Internal
+import           Abbotsbury.Work
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import           Lens.Micro.Platform
 
 
 -- | Generate a citation for a work.
-cite :: Rules -- ^ Citation rules to use.
+cite
+  :: Rules -- ^ Citation rules to use.
   -> Work -- ^ The work to cite.
   -> Text -- ^ The citation.
 cite (Rules style format) = formatParts format . makeParts style
 
 
--- | Using a citation style (part of the Rules), generate a list of CitationParts (i.e. Abbot's
+-- | Using a citation style (part of the Rules), generate a list of CitationParts (i.e. Abbotsbury's
 -- internal abstract representation of formatted text).
 makeParts :: Style -> Work -> [CitationPart]
 makeParts style work = case wt of
@@ -56,7 +47,7 @@ formatOnePart
   -> Text
 formatOnePart fmt@(Format plainFormatter boldFormatter italicFormatter linkFormatter) part
   = case part of
-         (CText t) -> plainFormatter t
-         (Bold part') -> boldFormatter (formatOnePart fmt part')
-         (Italic part') -> italicFormatter (formatOnePart fmt part')
-         (Link uri part') -> linkFormatter uri (formatOnePart fmt part')
+    (CText  t      ) -> plainFormatter t
+    (Bold   part'  ) -> boldFormatter (formatOnePart fmt part')
+    (Italic part'  ) -> italicFormatter (formatOnePart fmt part')
+    (Link uri part') -> linkFormatter uri (formatOnePart fmt part')

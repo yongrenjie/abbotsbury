@@ -2,7 +2,7 @@ module Commands.List
   ( module Commands.List
   ) where
 
-import           Abbot.Cite.Helpers.Author
+import           Abbotsbury.Cite.Helpers.Author
 import           Commands.Shared
 import           Path                           ( PDFType(..)
                                                 , getPDFPath

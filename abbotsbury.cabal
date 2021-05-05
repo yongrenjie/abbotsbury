@@ -41,19 +41,20 @@ library
   hs-source-dirs:
     src
   exposed-modules:
-    Abbot.Cite
-    Abbot.Cite.Internal
-    Abbot.Cite.Helpers.Author
-    Abbot.Crossref
-    Abbot.LatexEscapes
-    Abbot.Work
+    Abbotsbury
+    Abbotsbury.Cite
+    Abbotsbury.Cite.Internal
+    Abbotsbury.Cite.Helpers.Author
+    Abbotsbury.Crossref
+    Abbotsbury.LatexEscapes
+    Abbotsbury.Work
   other-modules:
-    Abbot.Cite.Styles.ACS
-    Abbot.Cite.Formats.Internal
-    Abbot.Cite.Formats.Text
-    Abbot.Cite.Formats.Markdown
-    Abbot.Cite.Formats.Restructured
-    Abbot.Cite.Formats.HTML
+    Abbotsbury.Cite.Styles.ACS
+    Abbotsbury.Cite.Formats.Internal
+    Abbotsbury.Cite.Formats.Text
+    Abbotsbury.Cite.Formats.Markdown
+    Abbotsbury.Cite.Formats.Restructured
+    Abbotsbury.Cite.Formats.HTML
   ghc-options:
     -Wall -j4 +RTS -A128m -n2m -RTS
 

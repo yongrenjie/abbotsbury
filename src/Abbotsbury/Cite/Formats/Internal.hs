@@ -1,4 +1,4 @@
-module Abbot.Cite.Formats.Internal
+module Abbotsbury.Cite.Formats.Internal
   ( surroundWith2
   , surroundWith
   , surroundWithTag
@@ -28,9 +28,9 @@ surroundWith x y = x <> y <> x
 -- | surroundWithTag surrounds a Text with a HTML tag.
 surroundWithTag :: Text -> [(Text, Maybe Text)] -> Text -> Text
 surroundWithTag tagName tagArgs x = openingTag <> x <> closingTag
-  where
-    openingTag = "<" <> tagName <> (T.concat $ map makeArgs tagArgs) <> ">"
-    closingTag = "</" <> tagName <> ">"
-    makeArgs :: (Text, Maybe Text) -> Text
-    makeArgs (key, Just val) = " " <> key <> "=\"" <> val <> "\""
-    makeArgs (key, Nothing)  = " " <> key
+ where
+  openingTag = "<" <> tagName <> (T.concat $ map makeArgs tagArgs) <> ">"
+  closingTag = "</" <> tagName <> ">"
+  makeArgs :: (Text, Maybe Text) -> Text
+  makeArgs (key, Just val) = " " <> key <> "=\"" <> val <> "\""
+  makeArgs (key, Nothing ) = " " <> key

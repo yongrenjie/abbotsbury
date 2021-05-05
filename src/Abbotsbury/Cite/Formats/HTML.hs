@@ -1,10 +1,11 @@
-module Abbot.Cite.Formats.HTML where
+module Abbotsbury.Cite.Formats.HTML where
 
 
-import           Abbot.Cite.Formats.Internal    ( render
+import           Abbotsbury.Cite.Formats.Internal
+                                                ( render
                                                 , surroundWithTag
                                                 )
-import           Abbot.Cite.Internal            ( Format(..) )
+import           Abbotsbury.Cite.Internal       ( Format(..) )
 
 
 -- | HTML formatter.

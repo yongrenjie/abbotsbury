@@ -1,9 +1,9 @@
-module Abbot.Cite.Helpers.Author where
+module Abbotsbury.Cite.Helpers.Author where
 
 
-import           Abbot.LatexEscapes
-import           Abbot.Work
-import           Abbot.Cite.Internal
+import           Abbotsbury.Cite.Internal
+import           Abbotsbury.LatexEscapes
+import           Abbotsbury.Work
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import           Lens.Micro.Platform
@@ -24,15 +24,14 @@ data AuthorStyle = FamilyInitials   -- ACS style.
 -- | Formats an Author according to the specified AuthorFormat mode.
 formatAuthor :: AuthorStyle -> Author -> CitationPart
 formatAuthor fmt auth =
-  let fam = auth ^. family
+  let fam          = auth ^. family
       makeInitials = joinInitialsWith " " "-" "." . getInitials
-  in
-    CText $ case auth ^. given of
-      Nothing  -> fam
-      Just gvn -> case fmt of
-        FamilyInitials -> fam <> ", " <> makeInitials gvn
-        InitialsFamily -> makeInitials gvn <> " " <> fam
-        BibLaTeX -> latexify (fam <> ", " <> gvn)
+  in  CText $ case auth ^. given of
+        Nothing  -> fam
+        Just gvn -> case fmt of
+          FamilyInitials -> fam <> ", " <> makeInitials gvn
+          InitialsFamily -> makeInitials gvn <> " " <> fam
+          BibLaTeX       -> latexify (fam <> ", " <> gvn)
 
 
 -- | Extracts the initials from a given name. The elements of the outermost list are separated by
@@ -43,13 +42,13 @@ formatAuthor fmt auth =
 -- >>> getInitials "Jean-Baptiste Simon"
 -- [['J', 'B'], ['S']]
 getInitials :: Text -> [[Char]]
-getInitials = (fmap . fmap) T.head     -- extract first character
-            . map (T.split (== '-'))   -- form inner lists by splitting on hyphens
-            . T.words                  -- form outer lists by splitting on spaces
+getInitials =
+  (fmap . fmap) T.head     -- extract first character
+    . map (T.split (== '-'))   -- form inner lists by splitting on hyphens
+    . T.words                  -- form outer lists by splitting on spaces
 
 
 joinInitialsWith :: Text -> Text -> Text -> [[Char]] -> Text
-joinInitialsWith spaceReplace hyphenReplace dotReplace
- = T.intercalate spaceReplace
- . map (T.intercalate hyphenReplace)
- . (fmap . fmap) (`T.cons` dotReplace)
+joinInitialsWith spaceReplace hyphenReplace dotReplace =
+  T.intercalate spaceReplace . map (T.intercalate hyphenReplace) . (fmap . fmap)
+    (`T.cons` dotReplace)

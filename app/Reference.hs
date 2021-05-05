@@ -3,10 +3,10 @@
 
 module Reference
   ( module Reference
-  , module Abbot.Work
+  , module Abbotsbury.Work
   ) where
 
-import           Abbot.Work
+import           Abbotsbury.Work
 import           Data.Aeson
 import           Data.Text                      ( Text )
 import           Data.Time.Clock

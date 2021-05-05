@@ -1,18 +1,18 @@
-module Abbot.Crossref where
+module Abbotsbury.Crossref where
 
 
-import Abbot.Work
+import           Abbotsbury.Work
 
 
 import           Control.Applicative            ( (<|>) )
 import qualified Control.Exception             as CE
+import           Data.Aeson
+import qualified Data.Aeson.Types              as DAT
 import           Data.Bifunctor                 ( first )
+import qualified Data.List.NonEmpty            as NE
 import           Data.Map                       ( Map )
 import qualified Data.Map                      as M
 import           Data.Maybe                     ( fromMaybe )
-import           Data.Aeson
-import qualified Data.Aeson.Types              as DAT
-import qualified Data.List.NonEmpty            as NE
 import           Data.Text                      ( Text )
 -- import qualified Data.HashMap.Strict           as HM -- needs unordered-containers
 import qualified Data.Text                     as T
@@ -29,7 +29,7 @@ import           Network.HTTP.Req
 data CrossrefException
   = CRHttpException HttpC.HttpException  -- HTTP errors, e.g. no Internet connection.
   | CRJsonException Text                 -- Got the JSON from Crossref, but it was not valid JSON. The Text is from Aeson and says what went wrong.
-  | CRUnknownWorkException WorkType      -- Abbot right now only parses journal articles. If you request metadata about a book (for example) this error will be returned.
+  | CRUnknownWorkException WorkType      -- Abbotsbury right now only parses journal articles. If you request metadata about a book (for example) this error will be returned.
   | CROtherException Text                -- Something else went wrong.
   deriving Show
 
@@ -85,10 +85,12 @@ getCrossrefJson email doi' = do
 
 
 -- | Step 2 is to get the 'message' component.
-getJsonMessage :: Value -- ^ The raw JSON from Crossref.
+getJsonMessage
+  :: Value -- ^ The raw JSON from Crossref.
   -> Either CrossrefException Value
 getJsonMessage val = do
-  let aesonParseResult = DAT.parseEither (withObject "Crossref JSON" (.: "message")) val
+  let aesonParseResult =
+        DAT.parseEither (withObject "Crossref JSON" (.: "message")) val
   first (CRJsonException . T.pack) aesonParseResult
 
 
@@ -140,19 +142,20 @@ identifyWorkType messageVal = do
         )
 
 
--- | Step 3b is to parse the 'message' component into the Abbot data types, depending on which type
+-- | Step 3b is to parse the 'message' component into the Abbotsbury data types, depending on which type
 -- of work it is. Right now only Articles are supported.
 parseCrossrefMessage
   :: Value -- ^ The 'message' component of the Crossref JSON data.
   -> Either CrossrefException Work  -- Either an error message or the Work.
 parseCrossrefMessage messageVal = do
   -- Figure out which parser to use.
-  wType <- identifyWorkType messageVal
+  wType  <- identifyWorkType messageVal
   parser <- case wType of
-                 JournalArticle -> Right parseJournalArticle
-                 _ -> Left (CRUnknownWorkException wType)
+    JournalArticle -> Right parseJournalArticle
+    _              -> Left (CRUnknownWorkException wType)
   -- Run the appropriate parser on the message Value.
-  let parsedWork = DAT.parseEither (withObject "Crossref response" parser) messageVal
+  let parsedWork =
+        DAT.parseEither (withObject "Crossref response" parser) messageVal
   first (CRJsonException . T.pack) parsedWork
 
 
@@ -285,4 +288,3 @@ defaultJournalShortMap = M.fromList
   , ("Journal of Computational Chemistry", "J. Comp. Chem.")
   , ("Nat Rev Methods Primers"           , "Nat. Rev. Methods Primers")
   ]
-

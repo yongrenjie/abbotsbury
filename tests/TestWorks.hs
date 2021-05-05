@@ -1,7 +1,7 @@
 module TestWorks where
 
 
-import           Abbot.Work
+import           Abbotsbury.Work
 import qualified Data.List.NonEmpty            as NE
 import           Data.Text                      ( Text )
 -- import qualified Data.Text                     as T

@@ -10,8 +10,8 @@ import qualified Data.ByteString.Lazy          as BL
 import qualified Data.Aeson                    as Aeson
 import qualified Data.List.NonEmpty            as NE
 import           Data.Text                      ( Text )
-import           Abbot.Crossref
-import           Abbot.Work
+import           Abbotsbury.Crossref
+import           Abbotsbury.Work
 
 
 -- Testing parsing of various Crossref returned JSON.

@@ -1,10 +1,11 @@
-module Abbot.Cite.Formats.Restructured where
+module Abbotsbury.Cite.Formats.Restructured where
 
 
-import           Abbot.Cite.Formats.Internal    ( render
+import           Abbotsbury.Cite.Formats.Internal
+                                                ( render
                                                 , surroundWith
                                                 )
-import           Abbot.Cite.Internal            ( Format(..) )
+import           Abbotsbury.Cite.Internal       ( Format(..) )
 
 
 -- | RestructuredText formatter.

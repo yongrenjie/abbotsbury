@@ -13,7 +13,7 @@ import           System.Directory
 import           System.FilePath
 
 
-import           Abbot.Crossref                 ( fetchWork )
+import           Abbotsbury.Crossref                 ( fetchWork )
 
 
 checkWorkingDirectory :: TestTree

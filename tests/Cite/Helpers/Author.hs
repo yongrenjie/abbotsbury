@@ -5,9 +5,10 @@ module Cite.Helpers.Author
   ) where
 
 
-import           Abbot.Cite
-import           Abbot.Cite.Helpers.Author
-import           Abbot.Work
+import           Abbotsbury
+import           Abbotsbury.Cite
+import           Abbotsbury.Cite.Helpers.Author
+import           Abbotsbury.Work
 
 
 import           Data.Map                       ( Map )
@@ -42,30 +43,30 @@ allFormats = [minBound .. maxBound]
 
 expectedOutputsFamilyInitials :: Map Author Text
 expectedOutputsFamilyInitials = M.fromList
-  [ (authJon, "Yong, J. R. J.")
-  , (authTim, "Claridge, T. D. W.")
-  , (authAli, "Foroozandeh, M.")
-  , (authJB , "Verstraete, J.-B.")
+  [ (authJon  , "Yong, J. R. J.")
+  , (authTim  , "Claridge, T. D. W.")
+  , (authAli  , "Foroozandeh, M.")
+  , (authJB   , "Verstraete, J.-B.")
   , (authEriks, "Kupče, Ē.")
   ]
 
 
 expectedOutputsInitialsFamily :: Map Author Text
 expectedOutputsInitialsFamily = M.fromList
-  [ (authJon, "J. R. J. Yong")
-  , (authTim, "T. D. W. Claridge")
-  , (authAli, "M. Foroozandeh")
-  , (authJB , "J.-B. Verstraete")
+  [ (authJon  , "J. R. J. Yong")
+  , (authTim  , "T. D. W. Claridge")
+  , (authAli  , "M. Foroozandeh")
+  , (authJB   , "J.-B. Verstraete")
   , (authEriks, "Ē. Kupče")
   ]
 
 
 expectedOutputsBibLaTeX :: Map Author Text
 expectedOutputsBibLaTeX = M.fromList
-  [ (authJon, "Yong, Jonathan Ren Jie")
-  , (authTim, "Claridge, Tim D.\\ W.")
-  , (authAli, "Foroozandeh, Mohammadali")
-  , (authJB , "Verstraete, Jean-Baptiste")
+  [ (authJon  , "Yong, Jonathan Ren Jie")
+  , (authTim  , "Claridge, Tim D.\\ W.")
+  , (authAli  , "Foroozandeh, Mohammadali")
+  , (authJB   , "Verstraete, Jean-Baptiste")
   , (authEriks, [r|Kup{\v{c}}e, {\=E}riks|])
   ]
 

@@ -1,8 +1,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Abbot.Work
-  ( module Abbot.Work
+module Abbotsbury.Work
+  ( module Abbotsbury.Work
   ) where
 
 import           Data.Aeson
