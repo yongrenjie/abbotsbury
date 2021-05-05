@@ -2,16 +2,16 @@ cabal-version:       2.4
 
 name:                abbotsbury
 version:             0.1.0.0
-synopsis:            Minimalistic command-line reference manager.
+synopsis:            Minimalistic reference management, primarily for chemistry, but works with all articles on Crossref.
 -- description:
--- bug-reports:
+bug-reports:         https://github.com/yongrenjie/abbotsbury/issues
 license:             MIT
 license-file:        LICENSE.txt
 author:              Jonathan Yong
 maintainer:          yongrenjie@gmail.com
 -- copyright:
 -- category:
-extra-source-files:  README.md, tests/test-data/*
+extra-source-files:  README.md, tests/test-data/*.json
 
 
 common abbot-deps
