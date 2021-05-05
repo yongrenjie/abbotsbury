@@ -7,11 +7,6 @@ import           Text.URI                       ( URI )
 -- Note that the URI imported here is from the `modern-uri` package.
 
 
--- | A set of Rules fully specifies how a citation (in the form of Text) is to be generated from
--- a Work. For more information, please see the documentation of the relevant type.
-data Rules = Rules Style Format
-
-
 -- | A Style refers to the citation style, i.e. ACS, Wiley (here called ACIE), RSC, etc.
 data Style = Style
   { articleConstructor :: Work -> [CitationPart]

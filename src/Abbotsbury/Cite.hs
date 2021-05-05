@@ -3,7 +3,6 @@ module Abbotsbury.Cite
   , makeParts
   , formatParts
   , formatOnePart
-  , Abbotsbury.Cite.Internal.Rules(..)
   ) where
 
 
@@ -16,14 +15,15 @@ import           Lens.Micro.Platform
 
 -- | Generate a citation for a work.
 cite
-  :: Rules -- ^ Citation rules to use.
+  :: Style -- ^ Citation style to use.
+  -> Format -- ^ Output formatting to use.
   -> Work -- ^ The work to cite.
   -> Text -- ^ The citation.
-cite (Rules style format) = formatParts format . makeParts style
+cite style format = formatParts format . makeParts style
 
 
--- | Using a citation style (part of the Rules), generate a list of CitationParts (i.e. Abbotsbury's
--- internal abstract representation of formatted text).
+-- | Using a citation style, generate a list of CitationParts (i.e. Abbotsbury's internal abstract
+-- representation of formatted text).
 makeParts :: Style -> Work -> [CitationPart]
 makeParts style work = case wt of
   JournalArticle -> articleConstructor style work
@@ -33,14 +33,14 @@ makeParts style work = case wt of
   tshow = T.pack . show
 
 
--- | Using a citation format (part of the Rules), generate text that has concrete formatting from
--- the abstractly formatted CitationParts.
+-- | Using a citation format, generate text that has concrete formatting from the abstractly
+-- formatted CitationParts.
 formatParts :: Format -> [CitationPart] -> Text
 formatParts format = T.concat . map (formatOnePart format)
 
 
--- | Using a citation format (part of the Rules), generate text that has concrete formatting from
--- one single CitationPart.
+-- | Using a citation format, generate text that has concrete formatting from one single
+-- CitationPart.
 formatOnePart
   :: Format -- ^ The citation output format to be used.
   -> CitationPart -- ^ The citation part to format.

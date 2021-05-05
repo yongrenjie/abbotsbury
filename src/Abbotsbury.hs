@@ -2,12 +2,13 @@ module Abbotsbury
   ( Abbotsbury.Crossref.fetchWork
   , Abbotsbury.Crossref.fetchUnmodifiedWork
   , Abbotsbury.Cite.cite
+  , Abbotsbury.Cite.Internal.Style(..)
+  , Abbotsbury.Cite.Styles.ACS.acsStyle
+  , Abbotsbury.Cite.Internal.Format(..)
   , Abbotsbury.Cite.Formats.Text.textFormat
   , Abbotsbury.Cite.Formats.Markdown.markdownFormat
   , Abbotsbury.Cite.Formats.Restructured.restructuredFormat
   , Abbotsbury.Cite.Formats.HTML.htmlFormat
-  , Abbotsbury.Cite.Styles.ACS.acsStyle
-  , Abbotsbury.Cite.Internal.Rules(..)
   ) where
 
 
