@@ -2,6 +2,7 @@
 
 module Main where
 
+import qualified Cite
 import qualified Cite.Helpers.Author
 import qualified Crossref
 
@@ -32,15 +33,10 @@ allTests = testGroup "Abbotsbury" [ checkWorkingDirectory
     aft :: TestTree -> TestTree
     aft = after AllSucceed "check working directory"
     -- The rest are tests organised by their imports.
-    citeTests = testGroup "Cite" [helperTests]
+    citeTests = testGroup "Cite" [Cite.tests, helperTests]
       where
         helperTests = testGroup "Helpers" [Cite.Helpers.Author.tests]
 
 
 main :: IO ()
 main = defaultMain allTests
-
-
-main' :: IO ()
-main' = do
-  fetchWork "yongrenjie@gmail.com" "10.1021/acs.orglett.9b0097" >>= print

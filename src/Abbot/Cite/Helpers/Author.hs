@@ -3,6 +3,7 @@ module Abbot.Cite.Helpers.Author where
 
 import           Abbot.LatexEscapes
 import           Abbot.Work
+import           Abbot.Cite.Internal
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import           Lens.Micro.Platform
@@ -21,12 +22,12 @@ data AuthorStyle = FamilyInitials   -- ACS style.
 
 
 -- | Formats an Author according to the specified AuthorFormat mode.
-formatAuthor :: AuthorStyle -> Author -> Text
+formatAuthor :: AuthorStyle -> Author -> CitationPart
 formatAuthor fmt auth =
   let fam = auth ^. family
       makeInitials = joinInitialsWith " " "-" "." . getInitials
   in
-    case auth ^. given of
+    CText $ case auth ^. given of
       Nothing  -> fam
       Just gvn -> case fmt of
         FamilyInitials -> fam <> ", " <> makeInitials gvn

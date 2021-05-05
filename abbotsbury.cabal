@@ -42,13 +42,18 @@ library
     src
   exposed-modules:
     Abbot.Cite
+    Abbot.Cite.Internal
     Abbot.Cite.Helpers.Author
     Abbot.Crossref
     Abbot.LatexEscapes
     Abbot.Work
   other-modules:
-    Abbot.Cite.Formats
-    Abbot.Cite.Internal
+    Abbot.Cite.Styles.ACS
+    Abbot.Cite.Formats.Internal
+    Abbot.Cite.Formats.Text
+    Abbot.Cite.Formats.Markdown
+    Abbot.Cite.Formats.Restructured
+    Abbot.Cite.Formats.HTML
   ghc-options:
     -Wall -j4 +RTS -A128m -n2m -RTS
 
@@ -92,8 +97,10 @@ test-suite tests
   main-is:
     Main.hs
   other-modules:
-    Crossref
+    Cite
     Cite.Helpers.Author
+    Crossref
+    TestWorks
   build-depends:
     base ^>=4.14.1.0
     , abbotsbury

@@ -4,8 +4,11 @@ module Cite.Helpers.Author
   ( tests
   ) where
 
+
+import           Abbot.Cite
 import           Abbot.Cite.Helpers.Author
 import           Abbot.Work
+
 
 import           Data.Map                       ( Map )
 import qualified Data.Map                      as M
@@ -28,11 +31,14 @@ authAli = Author (Just "Mohammadali") "Foroozandeh"
 authJB = Author (Just "Jean-Baptiste") "Verstraete"   -- useful for hyphens. Thanks JB
 authEriks = Author (Just "Ēriks") "Kupče"             -- test Unicode
 
+
 allAuthors :: [Author]
 allAuthors = [authJon, authTim, authAli, authJB, authEriks]
 
+
 allFormats :: [AuthorStyle]
 allFormats = [minBound .. maxBound]
+
 
 expectedOutputsFamilyInitials :: Map Author Text
 expectedOutputsFamilyInitials = M.fromList
@@ -43,6 +49,7 @@ expectedOutputsFamilyInitials = M.fromList
   , (authEriks, "Kupče, Ē.")
   ]
 
+
 expectedOutputsInitialsFamily :: Map Author Text
 expectedOutputsInitialsFamily = M.fromList
   [ (authJon, "J. R. J. Yong")
@@ -51,6 +58,7 @@ expectedOutputsInitialsFamily = M.fromList
   , (authJB , "J.-B. Verstraete")
   , (authEriks, "Ē. Kupče")
   ]
+
 
 expectedOutputsBibLaTeX :: Map Author Text
 expectedOutputsBibLaTeX = M.fromList
@@ -61,6 +69,7 @@ expectedOutputsBibLaTeX = M.fromList
   , (authEriks, [r|Kup{\v{c}}e, {\=E}riks|])
   ]
 
+
 allExpectedOutputs :: Map AuthorStyle (Map Author Text)
 allExpectedOutputs = M.fromList
   [ (FamilyInitials, expectedOutputsFamilyInitials)
@@ -68,13 +77,15 @@ allExpectedOutputs = M.fromList
   , (BibLaTeX      , expectedOutputsBibLaTeX)
   ]
 
+
 -- Helper function to make tests from the expected outputs
 mkTestCase :: AuthorStyle -> Author -> TestTree
 mkTestCase fmt auth = testCase label (actual @?= expected)
  where
-  actual   = formatAuthor fmt auth
+  actual   = formatOnePart textFormat (formatAuthor fmt auth)
   expected = allExpectedOutputs M.! fmt M.! auth
   label    = show fmt ++ "_" ++ T.unpack (_family auth)
+
 
 tests :: TestTree
 tests = testGroup

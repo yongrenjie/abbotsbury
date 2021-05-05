@@ -27,12 +27,12 @@ data WorkType = BookSection | Monograph | Report | PeerReview | BookTrack
 -- | TODO: Add more fields here.
 -- See https://github.com/Crossref/rest-api-doc/blob/master/api_format.md
 data Work = Work
-  { _title        :: Text
+  { _workType     :: WorkType
+  , _title        :: Text
   , _authors      :: NonEmpty Author
   , _journalLong  :: Text
   , _journalShort :: Text
   , _year         :: Int
-  , _workType     :: WorkType
   , _volume       :: Text
   , _issue        :: Text
   , _pages        :: Text

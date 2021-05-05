@@ -32,8 +32,17 @@ data CrossrefException
   | CRUnknownWorkException WorkType      -- Abbot right now only parses journal articles. If you request metadata about a book (for example) this error will be returned.
   | CROtherException Text                -- Something else went wrong.
   deriving Show
-instance CE.Exception CrossrefException
 
+
+instance CE.Exception CrossrefException
+-- | HttpC.HttpException doesn't have an Eq clause, so we just skip checking it.
+instance Eq CrossrefException where
+  (==) :: CrossrefException -> CrossrefException -> Bool
+  CRHttpException        _  == CRHttpException        _  = True
+  CRJsonException        t1 == CRJsonException        t2 = t1 == t2
+  CRUnknownWorkException w1 == CRUnknownWorkException w2 = w1 == w2
+  CROtherException       t1 == CROtherException       t2 = t1 == t2
+  _                         == _                         = False
 
 
 -- | Convert a DOI into a full-fledged Work by fetching metadata from Crossref.
