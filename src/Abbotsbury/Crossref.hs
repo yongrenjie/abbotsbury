@@ -50,11 +50,23 @@ instance Eq CrossrefException where
 -- In practice, Crossref data is fetched and parsed in a series of functions. In theory they could
 -- easily be lumped into this one function, but it seems easier to organise them in smaller
 -- functions.
+-- Note that this fixes "common" errors in Crossref's "short-container-title" entry (which is often
+-- incorrect). If you don't want this to happen automatically, then use `fetchUnmodifiedWork`.
 fetchWork
   :: Text -- ^ Your email address. This is mandatory for making a polite request.
   -> DOI -- ^ The DOI of interest.
   -> IO (Either CrossrefException Work)
-fetchWork email doi' = do
+fetchWork email doi' = (fmap . fmap)
+  (fixJournalShortInWork defaultJournalShortMap)
+  (fetchUnmodifiedWork email doi')
+
+
+-- | The same as fetchWork, but doesn't attempt to fix Crossref's default "short-container-title".
+fetchUnmodifiedWork
+  :: Text -- ^ Your email address. This is mandatory for making a polite request.
+  -> DOI -- ^ The DOI of interest.
+  -> IO (Either CrossrefException Work)
+fetchUnmodifiedWork email doi' = do
   -- IO monad
   rawJsonOrError <- getCrossrefJson email doi'
   pure $ rawJsonOrError >>= getJsonMessage >>= parseCrossrefMessage

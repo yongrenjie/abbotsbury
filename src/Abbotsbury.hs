@@ -1,5 +1,6 @@
 module Abbotsbury
   ( Abbotsbury.Crossref.fetchWork
+  , Abbotsbury.Crossref.fetchUnmodifiedWork
   , Abbotsbury.Cite.cite
   , Abbotsbury.Cite.Formats.Text.textFormat
   , Abbotsbury.Cite.Formats.Markdown.markdownFormat
