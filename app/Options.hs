@@ -103,9 +103,16 @@ citeParser =
     <$> (   AbbotCiteOptions
         <$> strArgument (metavar "DOI" <> helpDoc (Just doiHelp))
         <*> option styleReader
-                   (metavar "STYLE" <> long "style" <> short 's' <> helpDoc (Just styleHelp))
+                   (metavar "STYLE"
+                   <> long "style"
+                   <> short 's'
+                   <> helpDoc (Just styleHelp))
         <*> option formatReader
-                   (metavar "FORMAT" <> long "format" <> short 'f' <> helpDoc (Just formatHelp))
+                   (metavar "FORMAT"
+                   <> long "format"
+                   <> short 'f'
+                   <> value textFormat
+                   <> helpDoc (Just formatHelp))
         )
  where
   doiHelp :: PP.Doc
@@ -120,10 +127,10 @@ citeParser =
   formatHelp :: PP.Doc
   formatHelp = PP.nest 2 $ PP.vsep
     [ PP.text "Output format to use. Acceptable options:"
-    , PP.text "{h, html}              - HTML"
+    , PP.text "{t, text}              - Plain text (default)"
     , PP.text "{m, md, markdown}      - Markdown"
     , PP.text "{r, rst, restructured} - reStructuredText"
-    , PP.text "{t, text}              - Plain text"
+    , PP.text "{h, html}              - HTML"
     ]
 
 
