@@ -4,6 +4,7 @@ module Abbotsbury
   , Abbotsbury.Cite.cite
   , Abbotsbury.Cite.Internal.Style(..)
   , Abbotsbury.Cite.Styles.ACS.acsStyle
+  , Abbotsbury.Cite.Styles.Biblatex.bibStyle
   , Abbotsbury.Cite.Internal.Format(..)
   , Abbotsbury.Cite.Formats.Text.textFormat
   , Abbotsbury.Cite.Formats.Markdown.markdownFormat
@@ -19,4 +20,5 @@ import Abbotsbury.Cite.Formats.Markdown
 import Abbotsbury.Cite.Formats.Restructured
 import Abbotsbury.Cite.Formats.HTML
 import Abbotsbury.Cite.Styles.ACS
+import Abbotsbury.Cite.Styles.Biblatex
 import Abbotsbury.Crossref

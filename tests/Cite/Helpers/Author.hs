@@ -83,7 +83,7 @@ allExpectedOutputs = M.fromList
 mkTestCase :: AuthorStyle -> Author -> TestTree
 mkTestCase fmt auth = testCase label (actual @?= expected)
  where
-  actual   = formatOnePart textFormat (formatAuthor fmt auth)
+  actual   = formatAuthor fmt auth
   expected = allExpectedOutputs M.! fmt M.! auth
   label    = show fmt ++ "_" ++ T.unpack (_family auth)
 

@@ -50,6 +50,7 @@ library
     Abbotsbury.Work
   other-modules:
     Abbotsbury.Cite.Styles.ACS
+    Abbotsbury.Cite.Styles.Biblatex
     Abbotsbury.Cite.Formats.Internal
     Abbotsbury.Cite.Formats.Text
     Abbotsbury.Cite.Formats.Markdown

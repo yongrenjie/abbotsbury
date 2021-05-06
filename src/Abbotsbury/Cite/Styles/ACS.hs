@@ -23,9 +23,11 @@ articleConstructorACS work = L.intercalate
   [authorP, titleP, journalInfoP, doiP]
  where
   authorP, titleP, journalInfoP, doiP :: [CitationPart]
-  authorP = L.intersperse
-    (CText "; ")
-    (fmap (formatAuthor FamilyInitials) (NE.toList $ work ^. authors))
+  authorP =
+    [ CText $ T.intercalate
+        "; "
+        (fmap (formatAuthor FamilyInitials) (NE.toList $ work ^. authors))
+    ]
   titleP =
     let t   = work ^. title
         end = if (not . T.null $ t) && (T.last t == '.') then "" else "."

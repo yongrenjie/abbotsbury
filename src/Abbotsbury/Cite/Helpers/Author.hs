@@ -20,12 +20,19 @@ data AuthorStyle = FamilyInitials   -- ACS style.
                  deriving (Ord, Eq, Show, Enum, Bounded)
 
 
--- | Formats an Author according to the specified AuthorFormat mode.
-formatAuthor :: AuthorStyle -> Author -> CitationPart
+-- | Formats an Author according to the specified AuthorFormat mode, but wraps it inside a
+-- CText to make it a proper CitationPart.
+formatAuthorAsCPart :: AuthorStyle -> Author -> CitationPart
+formatAuthorAsCPart fmt auth = CText (formatAuthor fmt auth)
+
+
+-- | Formats an Author according to the specified AuthorFormat mode, but output in Text instead of
+-- as a CitationPart.
+formatAuthor :: AuthorStyle -> Author -> Text
 formatAuthor fmt auth =
   let fam          = auth ^. family
       makeInitials = joinInitialsWith " " "-" "." . getInitials
-  in  CText $ case auth ^. given of
+  in  case auth ^. given of
         Nothing  -> fam
         Just gvn -> case fmt of
           FamilyInitials -> fam <> ", " <> makeInitials gvn
