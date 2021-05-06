@@ -10,6 +10,7 @@ import           Abbotsbury.Cite.Internal
 
 import           Data.Char                      ( toLower )
 import           Options.Applicative     hiding ( style )
+import qualified Text.PrettyPrint.ANSI.Leijen  as PP
 
 
 -- | Command-line option parsing for the executable itself. At the moment, the
@@ -72,11 +73,11 @@ styleReader = eitherReader $ \s ->
   in  case s' of
         _
           | s' `elem` ["a", "acs"] -> Right acsStyle
+          | s' `elem` ["b", "bib"] -> Right bibStyle
           | otherwise -> Left $ mconcat
             [ "style '"
             , s
-            , "' not recognised.\nAcceptable values are:"
-            , "\n   {a, acs} for ACS style"
+            , "' not recognised.\nRun `abbot cite -h` to see acceptable values."
             ]
 
 
@@ -92,11 +93,7 @@ formatReader = eitherReader $ \f ->
           | otherwise -> Left $ mconcat
             [ "format '"
             , f
-            , "' not recognised.\nAcceptable values are:"
-            , "\n   {t, text}              for plain text"
-            , "\n   {m, md, markdown}      for Markdown"
-            , "\n   {r, rst, restructured} for reStructuredText"
-            , "\n   {h, html}              for HTML"
+            , "' not recognised.\nRun `abbot cite -h` to see acceptable values."
             ]
 
 
@@ -104,14 +101,30 @@ citeParser :: Parser AbbotCommand
 citeParser =
   AbbotCite
     <$> (   AbbotCiteOptions
-        <$> strArgument (metavar "DOI" <> help "DOI of paper to generate citation for")
-        <*> option
-              styleReader
-              (long "style" <> short 's' <> help "Citation style to use")
-        <*> option
-              formatReader
-              (long "format" <> short 'f' <> help "Output formatting to use")
+        <$> strArgument (metavar "DOI" <> helpDoc (Just doiHelp))
+        <*> option styleReader
+                   (metavar "STYLE" <> long "style" <> short 's' <> helpDoc (Just styleHelp))
+        <*> option formatReader
+                   (metavar "FORMAT" <> long "format" <> short 'f' <> helpDoc (Just formatHelp))
         )
+ where
+  doiHelp :: PP.Doc
+  doiHelp =
+    PP.nest 2 $ PP.vsep [PP.text "DOI of paper to generate citation for"]
+  styleHelp :: PP.Doc
+  styleHelp = PP.nest 2 $ PP.vsep
+    [ PP.text "Citation style to use. Acceptable options:"
+    , PP.text "{a, acs}               - ACS"
+    , PP.text "{b, bib}               - BibLaTeX"
+    ]
+  formatHelp :: PP.Doc
+  formatHelp = PP.nest 2 $ PP.vsep
+    [ PP.text "Output format to use. Acceptable options:"
+    , PP.text "{h, html}              - HTML"
+    , PP.text "{m, md, markdown}      - Markdown"
+    , PP.text "{r, rst, restructured} - reStructuredText"
+    , PP.text "{t, text}              - Plain text"
+    ]
 
 
 citeParserInfo :: ParserInfo AbbotCommand
