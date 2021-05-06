@@ -18,7 +18,7 @@ common abbot-deps
   build-depends:
     , base ^>=4.14.1.0
     , containers
-    , text
+    , text , unicode-transforms
     , microlens-platform
     , aeson , bytestring
     , req , modern-uri , http-client

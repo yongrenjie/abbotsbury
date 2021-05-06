@@ -7,13 +7,16 @@ import           Abbotsbury.LatexEscapes        ( latexify )
 import           Abbotsbury.Cite.Helpers.Author
 import           Abbotsbury.Cite.Internal
 import           Abbotsbury.Work
-import           Data.Char                      ( isLetter
+import           Data.Char                      ( isAscii
                                                 , isUpper
                                                 )
 import qualified Data.List.NonEmpty            as NE
 import           Data.Maybe                     ( catMaybes )
 import qualified Data.Text                     as T
 import           Data.Text                      ( Text )
+import           Data.Text.Normalize            ( NormalizationMode(..)
+                                                , normalize
+                                                )
 import           Lens.Micro.Platform
 
 
@@ -36,8 +39,7 @@ articleConstructorBib work = [CText (latexify t)]
   headerL = "@article{" <> identifier <> ","
    where
     identifier =
-      -- TODO convert special characters to ASCII before using isLetter
-      T.filter isLetter (work ^. (authors . ix 0 . family))
+      T.filter isAscii (normalize NFD (work ^. (authors . ix 0 . family)))
         <> T.filter isUpper (work ^. journalShort)
         <> (T.pack . show) (work ^. year)
   doiL    = makeBibField "doi" (work ^. doi)
