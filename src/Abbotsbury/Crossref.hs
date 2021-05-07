@@ -19,6 +19,9 @@ import qualified Data.Text                     as T
 import qualified Network.HTTP.Client           as NHC
 import qualified Network.HTTP.Client.TLS       as NHCT
 import           Data.Text.Encoding             ( encodeUtf8 )
+import           Network.URI                    ( escapeURIString
+                                                , isUnescapedInURIComponent
+                                                )
 
 
 -- | The Crossref JSON schema is documented at
@@ -100,17 +103,19 @@ getCrossrefJsonWithManager
   -> DOI -- ^ The DOI of interest.
   -> IO (Either CrossrefException Value)  -- ^ The raw JSON, represented as an Aeson Value.
 getCrossrefJsonWithManager manager email doi' = do
-  let emailBS = encodeUtf8 email
-  -- TODO: URL-encode the DOI
-  let uri = T.unpack ("https://api.crossref.org/works/" <> doi')
-  let request = NHC.setQueryString [("mailto", Just emailBS)] (NHC.parseRequest_ uri)
-  eitherExcResp :: Either NHC.HttpException (NHC.Response ByteString) <- CE.try $ NHC.httpLbs request manager
+  let emailBS    = encodeUtf8 email
+      escapedDoi = escapeURIString isUnescapedInURIComponent (T.unpack doi')
+      uri        = "https://api.crossref.org/works/" <> escapedDoi
+  request <- NHC.setQueryString [("mailto", Just emailBS)]
+    <$> NHC.parseUrlThrow uri
+  eitherExcResp :: Either NHC.HttpException (NHC.Response ByteString) <-
+    CE.try $ NHC.httpLbs request manager
   -- ExceptT would make this cleaner, admittedly, but it's only two layers.
   pure $ case eitherExcResp of
-       Left exc -> Left (CRHttpException exc)
-       Right resp -> case eitherDecode (NHC.responseBody resp) of
-                          Left errString -> Left (CRJsonException $ T.pack errString)
-                          Right val -> Right val
+    Left  exc  -> Left (CRHttpException exc)
+    Right resp -> case eitherDecode (NHC.responseBody resp) of
+      Left  err -> Left (CRJsonException $ T.pack err)
+      Right val -> Right val
 
 
 -- | Step 2 is to get the 'message' component.

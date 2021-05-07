@@ -21,7 +21,7 @@ common abbot-deps
     , text , unicode-transforms
     , microlens
     , aeson , bytestring
-    , http-client , http-client-tls
+    , http-client , http-client-tls , network-uri
     , raw-strings-qq
   default-language:
     Haskell2010
