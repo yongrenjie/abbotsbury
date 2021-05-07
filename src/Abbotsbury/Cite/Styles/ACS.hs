@@ -11,7 +11,6 @@ import qualified Data.List.NonEmpty            as NE
 import qualified Data.Text                     as T
 import           Data.Text                      ( Text )
 import           Lens.Micro
-import qualified Text.URI                      as URI
 
 
 acsStyle :: Style
@@ -38,9 +37,7 @@ articleConstructorACS work = L.intercalate
 
 
 mkDoiUri :: DOI -> CitationPart
-mkDoiUri doi' = case URI.mkURI ("https://doi.org/" <> doi') of
-  Just uri -> Link uri (CText doi')
-  Nothing  -> CText doi'
+mkDoiUri doi' = Link ("https://doi.org/" <> doi') (CText doi')
 
 
 formatJInfoACS :: Work -> [CitationPart]

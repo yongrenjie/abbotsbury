@@ -2,9 +2,7 @@ module Abbotsbury.Cite.Formats.HTML where
 
 
 import           Abbotsbury.Cite.Formats.Internal
-                                                ( render
-                                                , surroundWithTag
-                                                )
+                                                ( surroundWithTag )
 import           Abbotsbury.Cite.Internal       ( Format(..) )
 
 
@@ -14,5 +12,5 @@ htmlFormat = Format
   { plainFormatter  = id
   , boldFormatter   = surroundWithTag "b" []
   , italicFormatter = surroundWithTag "i" []
-  , linkFormatter   = \url -> surroundWithTag "a" [("href", Just (render url))]
+  , linkFormatter   = \url -> surroundWithTag "a" [("href", Just url)]
   }

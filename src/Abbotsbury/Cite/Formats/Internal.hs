@@ -2,13 +2,11 @@ module Abbotsbury.Cite.Formats.Internal
   ( surroundWith2
   , surroundWith
   , surroundWithTag
-  , Text.URI.render
   ) where
 
 
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
-import           Text.URI                       ( render )
 
 
 -- | surroundWith2 x1 x2 y surrounds the Text y with the specified ends.

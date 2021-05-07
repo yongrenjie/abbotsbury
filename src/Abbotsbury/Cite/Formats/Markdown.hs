@@ -2,9 +2,7 @@ module Abbotsbury.Cite.Formats.Markdown where
 
 
 import           Abbotsbury.Cite.Formats.Internal
-                                                ( render
-                                                , surroundWith
-                                                )
+                                                ( surroundWith )
 import           Abbotsbury.Cite.Internal       ( Format(..) )
 
 
@@ -14,5 +12,5 @@ markdownFormat = Format
   { plainFormatter  = id
   , boldFormatter   = surroundWith "**"
   , italicFormatter = surroundWith "*"
-  , linkFormatter   = \url disp -> "[" <> disp <> "](" <> render url <> ")"
+  , linkFormatter   = \url disp -> "[" <> disp <> "](" <> url <> ")"
   }

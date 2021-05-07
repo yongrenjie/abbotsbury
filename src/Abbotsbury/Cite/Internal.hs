@@ -3,8 +3,6 @@ module Abbotsbury.Cite.Internal where
 
 import           Abbotsbury.Work
 import           Data.Text                      ( Text )
-import           Text.URI                       ( URI )
--- Note that the URI imported here is from the `modern-uri` package.
 
 
 -- | A Style refers to the citation style, i.e. ACS, Wiley (here called ACIE), RSC, etc.
@@ -27,7 +25,7 @@ data Format = Format
   { plainFormatter  :: Text -> Text
   , boldFormatter   :: Text -> Text
   , italicFormatter :: Text -> Text
-  , linkFormatter   :: URI -> Text -> Text  -- ^ The second argument is the displayed text.
+  , linkFormatter   :: Text -> Text -> Text  -- ^ The first argument is the URI. The second argument is the displayed text.
   }
 
 
@@ -36,5 +34,5 @@ data Format = Format
 data CitationPart = CText Text
                   | Bold CitationPart
                   | Italic CitationPart
-                  | Link URI CitationPart
+                  | Link Text CitationPart
                   deriving (Eq, Show)

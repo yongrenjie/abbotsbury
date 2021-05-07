@@ -8,17 +8,17 @@ import           Control.Applicative            ( (<|>) )
 import qualified Control.Exception             as CE
 import           Data.Aeson
 import qualified Data.Aeson.Types              as DAT
+import           Data.ByteString.Lazy           ( ByteString )
 import           Data.Bifunctor                 ( first )
 import qualified Data.List.NonEmpty            as NE
 import           Data.Map                       ( Map )
 import qualified Data.Map                      as M
 import           Data.Maybe                     ( fromMaybe )
 import           Data.Text                      ( Text )
--- import qualified Data.HashMap.Strict           as HM -- needs unordered-containers
 import qualified Data.Text                     as T
-import qualified Network.HTTP.Client           as HttpC
-import           Network.HTTP.Req
--- import qualified Text.URI                      as URI
+import qualified Network.HTTP.Client           as NHC
+import qualified Network.HTTP.Client.TLS       as NHCT
+import           Data.Text.Encoding             ( encodeUtf8 )
 
 
 -- | The Crossref JSON schema is documented at
@@ -27,7 +27,7 @@ import           Network.HTTP.Req
 -- | Fetching data from Crossref can fail for a number of reasons. In this case we either throw a
 -- CrossrefException (from fetchCrossrefJson), or we put it
 data CrossrefException
-  = CRHttpException HttpC.HttpException  -- HTTP errors, e.g. no Internet connection.
+  = CRHttpException NHC.HttpException  -- HTTP errors, e.g. no Internet connection.
   | CRJsonException Text                 -- Got the JSON from Crossref, but it was not valid JSON. The Text is from Aeson and says what went wrong.
   | CRUnknownWorkException WorkType      -- Abbotsbury right now only parses journal articles. If you request metadata about a book (for example) this error will be returned.
   | CROtherException Text                -- Something else went wrong.
@@ -35,7 +35,7 @@ data CrossrefException
 
 
 instance CE.Exception CrossrefException
--- | HttpC.HttpException doesn't have an Eq clause, so we just skip checking it.
+-- | NHC.HttpException doesn't have an Eq clause, so we just skip checking it.
 instance Eq CrossrefException where
   (==) :: CrossrefException -> CrossrefException -> Bool
   CRHttpException        _  == CRHttpException        _  = True
@@ -61,6 +61,9 @@ fetchWork email doi' = (fmap . fmap)
   (fetchUnmodifiedWork email doi')
 
 
+-- TODO: fetchWorkWithManager
+
+
 -- | The same as fetchWork, but doesn't attempt to fix Crossref's default "short-container-title".
 fetchUnmodifiedWork
   :: Text -- ^ Your email address. This is mandatory for making a polite request.
@@ -72,28 +75,42 @@ fetchUnmodifiedWork email doi' = do
   pure $ rawJsonOrError >>= getJsonMessage >>= parseCrossrefMessage
 
 
+-- TODO: fetchUnmodifiedWorkWithManager
+
+
 -- | Step 1 is to fetch the raw JSON response from Crossref for a given DOI. Errors that can occur
 -- here are CRHttpException (if the HTTPS request fails) or CRJSONInvalidException (if a JSON
 -- response is obtained but it is entirely invalid). As long as the JSON response is valid, we move
 -- on to the next stage.
+-- Note that this function creates a new Manager every time it is called. If you want to reuse a
+-- manager, you should use getCrossrefJsonWithManager.
 getCrossrefJson
   :: Text -- ^ Your email address. This is mandatory for making a polite request.
   -> DOI -- ^ The DOI of interest.
   -> IO (Either CrossrefException Value)  -- ^ The raw JSON, represented as an Aeson Value.
 getCrossrefJson email doi' = do
-  -- IO monad
-  eitherJsonResponse <- CE.try $ runReq defaultHttpConfig $ do
-    -- Req monad
-    let uri          = https "api.crossref.org" /: "works" /: doi'
-    let httpsOptions = "mailto" =: email
-    resp <- req GET uri NoReqBody jsonResponse httpsOptions
-    pure (responseBody resp)
-  -- Check for errors arising from Req and convert them to CrossrefException accordingly.
-  pure $ case eitherJsonResponse of
-    Left exc -> case exc of
-      VanillaHttpException httpExc -> Left (CRHttpException httpExc)
-      JsonHttpException    jsonExc -> Left (CRJsonException (T.pack jsonExc))
-    Right val -> Right val
+  manager <- NHC.newManager NHCT.tlsManagerSettings
+  getCrossrefJsonWithManager manager email doi'
+
+
+-- | The same as getCrossrefJson, but allow the user to pass a specific connection Manager.
+getCrossrefJsonWithManager
+  :: NHC.Manager
+  -> Text -- ^ Your email address. This is mandatory for making a polite request.
+  -> DOI -- ^ The DOI of interest.
+  -> IO (Either CrossrefException Value)  -- ^ The raw JSON, represented as an Aeson Value.
+getCrossrefJsonWithManager manager email doi' = do
+  let emailBS = encodeUtf8 email
+  -- TODO: URL-encode the DOI
+  let uri = T.unpack ("https://api.crossref.org/works/" <> doi')
+  let request = NHC.setQueryString [("mailto", Just emailBS)] (NHC.parseRequest_ uri)
+  eitherExcResp :: Either NHC.HttpException (NHC.Response ByteString) <- CE.try $ NHC.httpLbs request manager
+  -- ExceptT would make this cleaner, admittedly, but it's only two layers.
+  pure $ case eitherExcResp of
+       Left exc -> Left (CRHttpException exc)
+       Right resp -> case eitherDecode (NHC.responseBody resp) of
+                          Left errString -> Left (CRJsonException $ T.pack errString)
+                          Right val -> Right val
 
 
 -- | Step 2 is to get the 'message' component.
