@@ -21,12 +21,16 @@ import           Control.Monad.Except
 import           Control.Monad.State
 import           Data.IntMap                    ( IntMap )
 import qualified Data.IntMap                   as IM
+import           Data.Maybe                     ( isNothing )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           Lens.Micro.Platform
 import           Options.Applicative            ( execParser )
 import           System.Console.Haskeline      as HL
+import           System.Environment             ( lookupEnv )
+import           System.Exit
+import           System.IO                      ( stderr )
 
 
 -- | All information needed for the main loop.
@@ -84,12 +88,31 @@ main = do
       startDir <- expandDirectory (startingDirectory mainOptions)
       let startState = LoopState startDir startDir True IM.empty
       evalStateT (mRunInputT defaultSettings $ mWithInterrupt loop) startState
+      exitSuccess
     AbbotCite citeOptions -> do
-      let AbbotCiteOptions doi' style' format' = citeOptions
-      eitherWork <- fetchWork "yongrenjie@gmail.com" doi'
-      case eitherWork of
-           Left exception -> TIO.putStrLn ("failed to get Crossref metadata for DOI '" <> doi' <> "'")
-           Right work -> TIO.putStrLn $ cite style' format' work
+      maybeEmail <- lookupEnv "ABBOT_EMAIL"
+      case maybeEmail of
+        Nothing -> do
+          exitWithError noAbbotEmailText
+        Just email -> do
+          let AbbotCiteOptions doi' style' format' = citeOptions
+          eitherWork <- fetchWork (T.pack email) doi'
+          case eitherWork of
+            Left exception -> do
+              exitWithError
+                ("failed to get Crossref metadata for DOI '" <> doi' <> "'")
+            Right work -> do
+              TIO.putStrLn $ cite style' format' work
+              exitSuccess
+ where
+  exitWithError :: Text -> IO ()
+  exitWithError t = TIO.hPutStrLn stderr t' >> exitFailure
+    where t' = (setColor "tomato" . setBold $ "error: ") <> setColor "tomato" t
+  noAbbotEmailText :: Text
+  noAbbotEmailText =
+    "Please set the ABBOT_EMAIL environment variable to your email before using `abbot cite`.\n"
+      <> "       Abbot needs this information to make 'polite' calls to the Crossref API.\n"
+      <> "       See https://github.com/CrossRef/rest-api-doc#etiquette for more information."
 
 
 -- | The main REPL loop of abbot. The `quit` and `cd` functions are implemented

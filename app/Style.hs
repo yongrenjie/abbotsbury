@@ -24,9 +24,10 @@ setSGRCode = T.pack . (++ "\STX") . ANSI.setSGRCode
 resetCode :: Text
 resetCode = setSGRCode [Reset]
 
--- | Change the foreground colour.
+-- | Change the foreground colour. Only CSS colours are accepted. These can be viewed at
+-- https://www.w3.org/TR/SVG11/types.html#ColorKeywords
 setColor
-  :: String  -- The name of the colour. Only CSS colours are accepted.
+  :: String  -- The name of the colour.
   -> Text    -- The text to transform.
   -> Text    -- The coloured text.
 setColor colourName =
