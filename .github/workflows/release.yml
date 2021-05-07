@@ -124,9 +124,9 @@ jobs:
           brew install --build-bottle --verbose abbotsbury
           brew bottle abbotsbury
       - name: Upload the bottle to the GitHub release
-        uses: actions/upload-release-asset@v1.0.1
+        uses: actions/upload-release-asset@v1
         env:
-          GH_PERSONAL_ACCESS_TOKEN: ${{ secrets.HOMEBREW_ABBOT_API_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create_release.outputs.upload_url }}
           asset_path: ./abbotsbury--${{ needs.create_release.outputs.version }}.catalina.bottle.tar.gz
