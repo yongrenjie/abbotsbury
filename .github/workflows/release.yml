@@ -74,14 +74,16 @@ jobs:
       run: |
         cabal test abbotsbury:test:tests
 
+    - name: Get the version
+      id: get-version
+      run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+
     - name: Install
       run: |
         mkdir bdist
         cabal install exe:abbot --install-method=copy --overwrite-policy=always --installdir=bdist
-
-    - name: Get the version
-      id: get-version
-      run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+        cd bdist
+        tar cf abbot-${{ steps.get-version.outputs.VERSION }}-${{ runner.os }}.tar.gz abbot
 
     - name: Upload release asset
       id: upload-release-asset
@@ -90,6 +92,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ needs.job1.outputs.upload_url }}
-        asset_path: ./bdist/abbot
-        asset_name: abbot-${{ steps.get-version.outputs.VERSION }}-${{ runner.os }}-ghc-${{ matrix.ghc }}
+        asset_path: ./bdist/abbot-${{ steps.get-version.outputs.VERSION }}-${{ runner.os }}.tar.gz
+        asset_name: abbot-${{ steps.get-version.outputs.VERSION }}-${{ runner.os }}.tar.gz
         asset_content_type: application/octet-stream
