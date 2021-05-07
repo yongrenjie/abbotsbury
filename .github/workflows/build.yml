@@ -1,6 +1,8 @@
 name: build
 on:
-  push
+  push:
+    tags-ignore:
+      v*
 
 # see: https://markkarpov.com/post/github-actions-for-haskell-ci.html
 

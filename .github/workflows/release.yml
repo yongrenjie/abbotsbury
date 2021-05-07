@@ -53,14 +53,33 @@ jobs:
       run: |
         cabal test abbotsbury:test:tests
 
-    - name: Create and upload release if everything succeeded
+    - name: Install
+      run: |
+        mkdir bdist
+        cabal install exe:abbot --install-method=copy --overwrite-policy=always --installdir=bdist
+
+    - name: Get version number
+      run: echo "::set-env name=VERSION::$(git tag -l --points-at HEAD | sed 's/^v//')"
+
+    - name: Create release if everything succeeded
       if: ${{ success() }}
-      id: create_release
-      uses: softprops/action-gh-release@v1
+      id: create-release
+      uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        files: dist-newstyle/**/abbot
         tag_name: ${{ github.ref }}
+        release_name: abbotsbury-v${{ env.VERSION }}
         draft: true
         prerelease: false
+
+    - name: Upload release asset
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create-release.outputs.upload_url }}
+        asset_path: ./dist/abbot
+        asset_name: abbot-${{ env.VERSION }}-${{ runner.os }}-ghc-${{ matrix.ghc }}
+        asset_content_type: application/octet-stream
