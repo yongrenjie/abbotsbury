@@ -2,6 +2,8 @@ name: build
 on:
   push
 
+# see: https://markkarpov.com/post/github-actions-for-haskell-ci.html
+
 jobs:
   cabal:
     name: ${{ matrix.os }}-GHC${{ matrix.ghc }}
@@ -23,19 +25,22 @@ jobs:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: ${{ matrix.cabal }}
 
-    - name: Configure
+    - name: cabal update
       run: |
-        cabal configure --enable-tests --enable-benchmarks --test-show-details=direct
+        cabal update
 
     - name: cabal freeze
       run: |
         cabal freeze
 
     - uses: actions/cache@v2
-      name: Cache ~/.cabal/store
       with:
-        path: ${{ steps.setup-haskell.outputs.cabal-store }}
+        path: |
+          ~/.cabal/store
+          dist-newstyle
         key: ${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('cabal.project.freeze') }}
+        restore-keys: |
+          ${{ runner.os }}-${{ matrix.ghc }}-
 
     - name: Build
       run: |
