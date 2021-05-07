@@ -1,6 +1,5 @@
 name: release-asset
 on:
-  workflow_dispatch:
   push:
     tags:
       - 'v*'
@@ -10,7 +9,7 @@ on:
 
 jobs:
   cabal:
-    name: ${{ matrix.os }}-GHC${{ matrix.ghc }}
+    name: ${{ matrix.os }}-ghc${{ matrix.ghc }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -62,6 +61,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         files: dist-newstyle/**/abbot
-        release_name: abbotsbury-${{ github.ref }}
+        tag_name: ${{ github.ref }}
         draft: true
         prerelease: false

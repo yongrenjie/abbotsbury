@@ -6,7 +6,7 @@ on:
 
 jobs:
   cabal:
-    name: ${{ matrix.os }}-GHC${{ matrix.ghc }}
+    name: ${{ matrix.os }}-ghc${{ matrix.ghc }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
