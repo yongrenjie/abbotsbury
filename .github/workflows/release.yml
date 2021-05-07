@@ -19,7 +19,7 @@ jobs:
     steps:
     - name: Get the version
       id: get-version
-      run: echo ::set-output name=version::${GITHUB_REF/refs\/tags\//}
+      run: echo ::set-output name=version::${GITHUB_REF/refs\/tags\/v/}
 
     - name: Create the release
       if: ${{ success() }}
@@ -29,7 +29,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: ${{ github.ref }}
-        release_name: ${{ steps.get-version.outputs.version }}
+        release_name: v${{ steps.get-version.outputs.version }}
         draft: false
         prerelease: true
 
