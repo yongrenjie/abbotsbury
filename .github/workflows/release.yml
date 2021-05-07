@@ -1,0 +1,67 @@
+name: release-asset
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+# see: https://markkarpov.com/post/github-actions-for-haskell-ci.html
+# see: http://taylor.fausak.me/2016/05/09/add-files-to-github-releases/
+
+jobs:
+  cabal:
+    name: ${{ matrix.os }}-GHC${{ matrix.ghc }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macOS-latest]
+        ghc: ["8.10.4"]
+        cabal: ["3.4.0.0"]
+
+    steps:
+    - uses: actions/checkout@v2
+      name: Checkout repository
+
+    - uses: haskell/actions/setup@v1
+      id: setup-haskell
+      name: Set up Haskell
+      with:
+        ghc-version: ${{ matrix.ghc }}
+        cabal-version: ${{ matrix.cabal }}
+
+    - name: cabal update
+      run: |
+        cabal update
+
+    - name: cabal freeze
+      run: |
+        cabal freeze
+
+    - uses: actions/cache@v2
+      with:
+        path: |
+          ~/.cabal/store
+          dist-newstyle
+        key: ${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('cabal.project.freeze') }}
+        restore-keys: |
+          ${{ runner.os }}-${{ matrix.ghc }}-
+
+    - name: Build
+      run: |
+        cabal build all
+
+    - name: Test
+      run: |
+        cabal test abbotsbury:test:tests
+
+    - name: Create and upload release if everything succeeded
+      if: ${{ success() }}
+      id: create_release
+      uses: softprops/action-gh-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        files: dist-newstyle/**/abbot
+        release_name: abbotsbury-${{ github.ref }}
+        draft: true
+        prerelease: false
