@@ -1,0 +1,55 @@
+name: Update Homebrew
+
+on:
+  release:
+    types: [published, created]
+
+# see: https://github.com/NSHipster/update-homebrew-formula-action
+
+jobs:
+
+  update_formula_version:
+    name: Update the Homebrew formula with latest release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: NSHipster/update-homebrew-formula-action@main
+        with:
+          repository: yongrenjie/abbotsbury
+          tap: yongrenjie/homebrew-abbotsbury
+          formula: Formula/abbotsbury.rb
+        env:
+          GH_PERSONAL_ACCESS_TOKEN: ${{ secrets.HOMEBREW_ABBOT_API_TOKEN }}
+            
+  upload_bottle:
+    name: Build and distribute Catalina Homebrew bottle
+    runs-on: macOS-10.15
+    needs: [update_formula_version]
+    steps:
+      - name: Build a bottle using Homebrew
+        run: |
+          brew tap yongrenjie/abbotsbury
+          brew install --build-bottle --verbose abbotsbury
+          brew bottle abbotsbury
+      - name: Upload the bottle to the GitHub release
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GH_PERSONAL_ACCESS_TOKEN: ${{ secrets.HOMEBREW_ABBOT_API_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./abbotsbury--${{ github.event.release.tag_name }}.catalina.bottle.tar.gz
+          asset_name: abbotsbury-${{ github.event.release.tag_name }}.catalina.bottle.tar.gz
+          asset_content_type: application/gzip
+  update_formula_bottle:
+    name: Update the Homebrew formula again with bottle
+    runs-on: ubuntu-latest
+    needs: [upload_bottle]
+    steps:
+      - uses: NSHipster/update-homebrew-formula-action@main
+        with:
+          repository: yongrenjie/abbotsbury
+          tap: yongrenjie/homebrew-abbotsbury
+          formula: Formula/abbotsbury.rb
+          message: |
+              Add Catalina bottle for abbotsbury ${{ github.event.release.tag_name }}
+        env:
+          GH_PERSONAL_ACCESS_TOKEN: ${{ secrets.HOMEBREW_ABBOT_API_TOKEN }}

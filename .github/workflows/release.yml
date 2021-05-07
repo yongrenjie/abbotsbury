@@ -25,8 +25,8 @@ jobs:
       with:
         tag_name: ${{ github.ref }}
         release_name: ${{ steps.get-version.outputs.VERSION }}
-        draft: true
-        prerelease: false
+        draft: false
+        prerelease: true
 
   job2:
     name: Build and upload on ${{ matrix.os }}-ghc${{ matrix.ghc }}
