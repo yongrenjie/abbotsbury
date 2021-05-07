@@ -6,10 +6,31 @@ on:
 
 # see: https://markkarpov.com/post/github-actions-for-haskell-ci.html
 # see: http://taylor.fausak.me/2016/05/09/add-files-to-github-releases/
+# see: https://github.com/actions/upload-release-asset/issues/56
 
 jobs:
-  cabal:
-    name: ${{ matrix.os }}-ghc${{ matrix.ghc }}
+  job1:
+    name: Create one release for all OS outputs
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create-release.outputs.upload_url }}
+
+    steps:
+    - name: Create the release
+      if: ${{ success() }}
+      id: create-release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: ${{ steps.get-version.outputs.VERSION }}
+        draft: true
+        prerelease: false
+
+  job2:
+    name: Build and upload on ${{ matrix.os }}-ghc${{ matrix.ghc }}
+    needs: job1
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -58,20 +79,9 @@ jobs:
         mkdir bdist
         cabal install exe:abbot --install-method=copy --overwrite-policy=always --installdir=bdist
 
-    - name: Get version number
-      run: echo "::set-env name=VERSION::$(git tag -l --points-at HEAD | sed 's/^v//')"
-
-    - name: Create release if everything succeeded
-      if: ${{ success() }}
-      id: create-release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: abbotsbury-v${{ env.VERSION }}
-        draft: true
-        prerelease: false
+    - name: Get the version
+      id: get-version
+      run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
 
     - name: Upload release asset
       id: upload-release-asset
@@ -79,7 +89,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ steps.create-release.outputs.upload_url }}
-        asset_path: ./dist/abbot
-        asset_name: abbot-${{ env.VERSION }}-${{ runner.os }}-ghc-${{ matrix.ghc }}
+        upload_url: ${{ needs.job1.outputs.upload_url }}
+        asset_path: ./bdist/abbot
+        asset_name: abbot-${{ steps.get-version.outputs.VERSION }}-${{ runner.os }}-ghc-${{ matrix.ghc }}
         asset_content_type: application/octet-stream
