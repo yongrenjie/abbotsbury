@@ -5,7 +5,7 @@ import qualified TestWorks                     as TW
 import           Data.Maybe                     ( fromJust )
 import           Test.Tasty
 import           Test.Tasty.HUnit
-import           Lens.Micro.Platform
+import           Lens.Micro
 import qualified Data.ByteString.Lazy          as BL
 import qualified Data.Aeson                    as Aeson
 import qualified Data.List.NonEmpty            as NE

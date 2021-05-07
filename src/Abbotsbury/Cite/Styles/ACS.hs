@@ -10,7 +10,7 @@ import qualified Data.List                     as L
 import qualified Data.List.NonEmpty            as NE
 import qualified Data.Text                     as T
 import           Data.Text                      ( Text )
-import           Lens.Micro.Platform
+import           Lens.Micro
 import qualified Text.URI                      as URI
 
 

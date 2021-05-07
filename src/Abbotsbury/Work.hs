@@ -9,7 +9,7 @@ import           Data.Aeson
 import           Data.List.NonEmpty             ( NonEmpty )
 import           Data.Text                      ( Text )
 import           GHC.Generics
-import           Lens.Micro.Platform
+import           Lens.Micro
 
 type DOI = Text
 
@@ -40,6 +40,28 @@ data Work = Work
   , _articleNumber :: Text
   }
   deriving (Generic, Show, Eq)
+workType :: Lens' Work WorkType
+workType = lens _workType (\w x -> w { _workType = x })
+title :: Lens' Work Text
+title = lens _title (\w x -> w { _title = x })
+authors :: Lens' Work (NonEmpty Author)
+authors = lens _authors (\w x -> w { _authors = x })
+journalLong :: Lens' Work Text
+journalLong = lens _journalLong (\w x -> w { _journalLong = x })
+journalShort :: Lens' Work Text
+journalShort = lens _journalShort (\w x -> w { _journalShort = x })
+year :: Lens' Work Int
+year = lens _year (\w x -> w { _year = x })
+volume :: Lens' Work Text
+volume = lens _volume (\w x -> w { _volume = x })
+issue :: Lens' Work Text
+issue = lens _issue (\w x -> w { _issue = x })
+pages :: Lens' Work Text
+pages = lens _pages (\w x -> w { _pages = x })
+doi :: Lens' Work DOI
+doi = lens _doi (\w x -> w { _doi = x })
+articleNumber :: Lens' Work Text
+articleNumber = lens _articleNumber (\w x -> w { _articleNumber = x })
 
 
 -- | Technically, this should be renamed to "contributor".
@@ -48,10 +70,12 @@ data Author = Author
   , _family :: Text
   }
   deriving (Generic, Show, Ord, Eq)
+given :: Lens' Author (Maybe Text)
+given = lens _given (\a g -> a {_given = g})
+family :: Lens' Author Text
+family = lens _family (\a f -> a {_family = f})
 
 
-makeLenses ''Author
-makeLenses ''Work
 instance ToJSON WorkType where
   toEncoding = genericToEncoding defaultOptions
 instance ToJSON Work where

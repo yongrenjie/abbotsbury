@@ -6,7 +6,7 @@ import           Abbotsbury.LatexEscapes
 import           Abbotsbury.Work
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
-import           Lens.Micro.Platform
+import           Lens.Micro
 
 
 -- Note that these AuthorStyles are merely helper functions. We can't and shouldn't hard code them

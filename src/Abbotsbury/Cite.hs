@@ -10,7 +10,7 @@ import           Abbotsbury.Cite.Internal
 import           Abbotsbury.Work
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
-import           Lens.Micro.Platform
+import           Lens.Micro
 
 
 -- | Generate a citation for a work.

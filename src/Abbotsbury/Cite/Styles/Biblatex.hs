@@ -20,7 +20,7 @@ import           Data.Text                      ( Text )
 import           Data.Text.Normalize            ( NormalizationMode(..)
                                                 , normalize
                                                 )
-import           Lens.Micro.Platform
+import           Lens.Micro
 
 
 bibStyle :: Style
