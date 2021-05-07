@@ -1,5 +1,6 @@
 -- | Defines the BibLaTeX "citation style". In practice, this actually gives an entry for a .bib
 -- file (it isn't a true citation style per se).
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 module Abbotsbury.Cite.Styles.Biblatex where
 
 
@@ -7,8 +8,10 @@ import           Abbotsbury.LatexEscapes        ( latexify )
 import           Abbotsbury.Cite.Helpers.Author
 import           Abbotsbury.Cite.Internal
 import           Abbotsbury.Work
+import           Control.Applicative            ( (<|>) )
 import           Data.Char                      ( isAscii
                                                 , isUpper
+                                                , isDigit
                                                 )
 import qualified Data.List.NonEmpty            as NE
 import           Data.Maybe                     ( catMaybes )
@@ -53,8 +56,10 @@ articleConstructorBib work = [CText (latexify t)]
   titleL   = makeBibField "title" (work ^. title)
   yearL    = makeBibField "year" (T.pack . show $ work ^. year)
   volumeM  = makeMaybeBibField "volume" (work ^. volume)
-  issueM   = makeMaybeBibField "issue" (work ^. issue)
+  issueM   = makeMaybeBibFieldWith (T.all isDigit) "number" (work ^. issue)
+             <|> makeMaybeBibField "issue" (work ^. issue)
   pagesM   = makeMaybeBibField "pages" (work ^. pages)
+             <|> makeMaybeBibField "pages" (work ^. articleNumber)
 
 
 -- | Shortcut to make a BibLaTeX key-value pair. If the value is not guaranteed to be present, then
@@ -66,10 +71,19 @@ makeBibField
 makeBibField key val = "    " <> key <> " = {" <> val <> "},"
 
 
+-- | Makes a BibLaTeX field if a certain predicate is satisfied. Generalised form of
+-- makeMaybeBibField.
+makeMaybeBibFieldWith :: (Text -> Bool) -- ^ The predicate. The field is created if this predicate returns True when applied to the value.
+  -> Text -- ^ The key.
+  -> Text -- ^ The value (which the predicate is tested against).
+  -> Maybe Text -- ^ Just the line to be printed, or Nothing if predicate fails.
+makeMaybeBibFieldWith pred key val = 
+  if pred val then Just (makeBibField key val) else Nothing
+
+
 -- | Shortcut to make Just a BibLaTex key-value pair, but only if the value is nonempty.
 makeMaybeBibField
   :: Text -- ^ The key.
   -> Text -- ^ The (possibly empty) value.
   -> Maybe Text -- ^ Just the line to be printed, or Nothing if the value was empty.
-makeMaybeBibField key val =
-  if T.null val then Nothing else Just (makeBibField key val)
+makeMaybeBibField = makeMaybeBibFieldWith (not . T.null)

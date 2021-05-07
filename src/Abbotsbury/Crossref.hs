@@ -201,6 +201,7 @@ parseJournalArticle messageObj = do
   _issue  <- (messageObj .: "journal-issue" >>= (.: "issue")) <|> pure ""
   _pages  <- messageObj .:? "page" .!= ""
   _doi    <- messageObj .:? "DOI" .!= ""
+  _articleNumber <- messageObj .:? "article-number" .!= ""
   pure $ Work { .. }
 
 

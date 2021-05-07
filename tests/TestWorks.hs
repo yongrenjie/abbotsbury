@@ -13,7 +13,7 @@ auth (gvn, fmy) = Author (Just gvn) fmy
 
 
 orgLett :: Work
-orgLett = Work wt t a jL jS y v i p d
+orgLett = Work wt t a jL jS y v i p d aN
  where
   wt = JournalArticle
   t =
@@ -26,6 +26,7 @@ orgLett = Work wt t a jL jS y v i p d
   i  = "8"
   p  = "2918-2922"
   d  = "10.1021/acs.orglett.9b00971"
+  aN = ""
   mansfield, smith, yong, garry, anderson :: Author
   mansfield = auth ("Steven J.", "Mansfield")
   smith     = auth ("Russell C.", "Smith")
@@ -35,7 +36,7 @@ orgLett = Work wt t a jL jS y v i p d
 
 
 nrmpCorrected :: Work
-nrmpCorrected = Work wt t a jL jS y v i p d
+nrmpCorrected = Work wt t a jL jS y v i p d aN
  where
   wt = JournalArticle
   t  = "Parallel nuclear magnetic resonance spectroscopy"
@@ -45,8 +46,9 @@ nrmpCorrected = Work wt t a jL jS y v i p d
   y  = 2021
   v  = "1"
   i  = "1"
-  p  = ""  -- should be 27 but Crossref doesn't have it
+  p  = ""
   d  = "10.1038/s43586-021-00024-3"
+  aN = "27"
   kupce, frydman, webb, yong, claridge :: Author
   kupce    = auth ("Ēriks", "Kupče")
   frydman  = auth ("Lucio", "Frydman")
@@ -56,7 +58,7 @@ nrmpCorrected = Work wt t a jL jS y v i p d
 
 
 noFirstNameN2020 :: Work
-noFirstNameN2020 = Work wt t a jL jS y v i p d
+noFirstNameN2020 = Work wt t a jL jS y v i p d aN
  where
   wt = JournalArticle
   t  = "Attention science: some people have only one name"
@@ -68,13 +70,14 @@ noFirstNameN2020 = Work wt t a jL jS y v i p d
   i  = ""
   p  = ""
   d  = "10.1038/d41586-020-02761-z"
+  aN = ""
   sheherazade, ardiantiono :: Author
   sheherazade = Author Nothing "Sheherazade"
   ardiantiono = Author Nothing "Ardiantiono"
 
 
 glaserS1998 :: Work
-glaserS1998 = Work wt t a jL jS y v i p d
+glaserS1998 = Work wt t a jL jS y v i p d aN
  where
   wt = JournalArticle
   t
@@ -88,3 +91,4 @@ glaserS1998 = Work wt t a jL jS y v i p d
   i  = "5362"
   p  = "421-424"
   d  = "10.1126/science.280.5362.421"
+  aN = ""
