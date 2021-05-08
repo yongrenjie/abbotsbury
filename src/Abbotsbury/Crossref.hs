@@ -5,6 +5,8 @@ import           Abbotsbury.Work
 import           Abbotsbury.Crossref.Internal
 
 
+import           Control.Concurrent
+import           Control.Monad
 import           Data.Map                       ( Map )
 import qualified Data.Map                      as M
 import           Data.Text                      ( Text )
@@ -26,7 +28,7 @@ import qualified Network.HTTP.Client.TLS       as NHCT
 -- fetchWork uses a new Manager on each call. If you don't want this, then use
 -- `fetchWorkWithManager`.
 fetchWork
-  :: Text -- ^ Your email address. This is mandatory for making a polite request.
+  :: Text -- ^ Your email address. This is mandatory for making a polite request to the Crossref API.
   -> DOI -- ^ The DOI of interest.
   -> IO (Either CrossrefException Work)
 fetchWork = fetchWorkWithOptions Nothing defaultJournalFix
@@ -81,6 +83,48 @@ fetchWorkWithOptions maybeManager fixMap email doi' = do
         eitherErrorJson >>= getJsonMessage >>= parseCrossrefMessage
   -- Perform journal replacements
   pure $ fmap (fixJournalShortInWork fixMap) eitherErrorWork
+
+
+-- | The same as `fetchWork`, but concurrently fetches metadata for a series of DOIs (it uses the
+-- same HTTP manager for all DOIs).
+fetchWorks
+  :: Text -- ^ Your email address. This is mandatory for making a polite request to the Crossref API.
+  -> [DOI] -- ^ The DOI of interest.
+  -> IO [Either CrossrefException Work]
+fetchWorks = fetchWorksWithOptions Nothing defaultJournalFix
+
+
+-- | The same as `fetchWorkWithOptions`, but concurrently fetches metadata for a series of DOIs (it
+-- uses the same HTTP manager for all DOIs).
+fetchWorksWithOptions
+  :: Maybe NHC.Manager  -- ^ Just a Manager if a specific one is to be used. Nothing if a new one is to be created.
+  -> Map Text Text  -- ^ Map of (actual short journal name, expected short journal name).
+  -> Text -- ^ Your email address. This is mandatory for making a polite request.
+  -> [DOI] -- ^ The DOIs of interest.
+  -> IO [Either CrossrefException Work]
+fetchWorksWithOptions maybeManager fixMap email dois = if null dois
+  then pure []   -- Avoid doing more work than we need to.
+  else do
+  -- Set up the manager. If it's not specified, create a new one using default settings.
+    manager <- case maybeManager of
+      Nothing -> NHC.newManager NHCT.tlsManagerSettings
+      Just m  -> pure m
+    -- Create a bunch of mvars.
+    let n = length dois
+    mvars <- replicateM n newEmptyMVar
+    -- Fetch metadata concurrently.
+    forM_
+      (zip mvars dois)
+      (\(mvar, doi') -> forkIO $ do
+      -- Get the JSON data.
+        eitherErrorJson <- getCrossrefJson manager email doi'
+        -- Parse the JSON data.
+        let eitherErrorWork =
+              eitherErrorJson >>= getJsonMessage >>= parseCrossrefMessage
+        -- Perform journal replacements and return it to the MVar.
+        putMVar mvar $ fmap (fixJournalShortInWork fixMap) eitherErrorWork
+      )
+    mapM takeMVar mvars
 
 
 -- | A predefined list of (actual, expected) journal short names which can be used as the argument

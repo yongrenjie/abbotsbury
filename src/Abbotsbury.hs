@@ -3,6 +3,11 @@ module Abbotsbury
   , Abbotsbury.Crossref.fetchWork'
   , Abbotsbury.Crossref.fetchWorkWithManager
   , Abbotsbury.Crossref.fetchWorkWithManager'
+  , Abbotsbury.Crossref.fetchWorks
+  , Abbotsbury.Crossref.fetchWorkWithOptions
+  , Abbotsbury.Crossref.fetchWorksWithOptions
+  , Abbotsbury.Crossref.defaultJournalFix
+  , Abbotsbury.Crossref.emptyJournalFix
   , Abbotsbury.Cite.cite
   , Abbotsbury.Cite.Internal.Style(..)
   , Abbotsbury.Cite.Styles.ACS.acsStyle
