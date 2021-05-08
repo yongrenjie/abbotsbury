@@ -1,8 +1,5 @@
 module Abbotsbury
   ( Abbotsbury.Crossref.fetchWork
-  , Abbotsbury.Crossref.fetchWork'
-  , Abbotsbury.Crossref.fetchWorkWithManager
-  , Abbotsbury.Crossref.fetchWorkWithManager'
   , Abbotsbury.Crossref.fetchWorks
   , Abbotsbury.Crossref.fetchWorkWithOptions
   , Abbotsbury.Crossref.fetchWorksWithOptions

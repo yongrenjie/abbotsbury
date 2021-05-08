@@ -23,45 +23,16 @@ import qualified Network.HTTP.Client.TLS       as NHCT
 -- In practice, Crossref data is fetched and parsed in a series of functions. In theory they could
 -- easily be lumped into this one function, but it seems easier to organise them in smaller
 -- functions.
--- Note that this fixes "common" errors in Crossref's "short-container-title" entry (which is often
--- incorrect). If you don't want this to happen automatically, then use `fetchUnmodifiedWork`.
--- fetchWork uses a new Manager on each call. If you don't want this, then use
--- `fetchWorkWithManager`.
+-- Note that this fixes "common" errors in Crossref's "short-container-title" entry (which are often
+-- incorrect), according to a hardcoded Map of journal title replacements (see `defaultJournalFix`).
+-- Also, this function creates a new HTTP manager every time it is called. This is meant to be
+-- simple default behaviour: if you want something different, you can use `fetchWorkWithOptions` and
+-- pass appropriate arguments.
 fetchWork
   :: Text -- ^ Your email address. This is mandatory for making a polite request to the Crossref API.
   -> DOI -- ^ The DOI of interest.
   -> IO (Either CrossrefException Work)
 fetchWork = fetchWorkWithOptions Nothing defaultJournalFix
-
-
--- | The same as fetchWork, but doesn't attempt to fix Crossref's default "short-container-title".
--- fetchWork' uses a new Manager on each call. If you don't want this, then use
--- `fetchWork'`.
-fetchWork'
-  :: Text -- ^ Your email address. This is mandatory for making a polite request.
-  -> DOI -- ^ The DOI of interest.
-  -> IO (Either CrossrefException Work)
-fetchWork' = fetchWorkWithOptions Nothing emptyJournalFix
-
-
--- | The same as `fetchWork`, but uses a specific Manager.
-fetchWorkWithManager
-  :: NHC.Manager  -- ^ The http-client Manager. Note that this should be created using Network.Http.Client.TLS.tlsManagerSttings.
-  -> Text -- ^ Your email address. This is mandatory for making a polite request.
-  -> DOI -- ^ The DOI of interest.
-  -> IO (Either CrossrefException Work)
-fetchWorkWithManager manager =
-  fetchWorkWithOptions (Just manager) defaultJournalFix
-
-
--- | The same as `fetchWork'`, but uses a specific Manager.
-fetchWorkWithManager'
-  :: NHC.Manager  -- ^ The http-client Manager. Note that this should be created using Network.Http.Client.TLS.tlsManagerSttings.
-  -> Text -- ^ Your email address. This is mandatory for making a polite request.
-  -> DOI -- ^ The DOI of interest.
-  -> IO (Either CrossrefException Work)
-fetchWorkWithManager' manager =
-  fetchWorkWithOptions (Just manager) emptyJournalFix
 
 
 -- | Generalised version of fetchWork.
