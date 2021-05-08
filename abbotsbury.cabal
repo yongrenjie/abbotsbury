@@ -1,7 +1,7 @@
 cabal-version:       2.4
 
 name:                abbotsbury
-version:             0.1.0.9
+version:             0.1.0.10
 synopsis:            Minimalistic reference management, primarily for chemistry, but works with all articles on Crossref.
 -- description:
 bug-reports:         https://github.com/yongrenjie/abbotsbury/issues
