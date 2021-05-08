@@ -107,9 +107,9 @@ main = do
           forM_ eitherWorks $ \case
             Left exc -> do
               displayError
-                (  "failed to get Crossref metadata for DOI '"
+                (  "could not find metadata for DOI '"
                 <> getDoiFromException exc
-                <> "'"
+                <> "' on Crossref"
                 )
             Right work -> do
               TIO.putStrLn $ cite style' format' work
