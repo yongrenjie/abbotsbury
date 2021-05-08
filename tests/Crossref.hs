@@ -33,8 +33,9 @@ auth (gvn, fmy) = Author (Just gvn) fmy
 
 parseCrossrefJsonFromFile :: FilePath -> IO (Either CrossrefException Work)
 parseCrossrefJsonFromFile fp = do
+  let blankDOI = ""
   jsonValue <- fromJust . Aeson.decode <$> BL.readFile fp
-  pure $ getJsonMessage jsonValue >>= parseCrossrefMessage
+  pure $ getJsonMessage blankDOI jsonValue >>= parseCrossrefMessage blankDOI
 
 
 testOL :: TestTree
