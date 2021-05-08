@@ -6,6 +6,8 @@ module Abbotsbury
   , Abbotsbury.Crossref.defaultJournalFix
   , Abbotsbury.Crossref.emptyJournalFix
   , Abbotsbury.Cite.cite
+  , Abbotsbury.Crossref.Internal.CrossrefException(..)
+  , Abbotsbury.Crossref.Internal.getDoiFromException
   , Abbotsbury.Cite.Internal.Style(..)
   , Abbotsbury.Cite.Styles.ACS.acsStyle
   , Abbotsbury.Cite.Styles.Biblatex.bibStyle
@@ -26,3 +28,4 @@ import Abbotsbury.Cite.Formats.HTML
 import Abbotsbury.Cite.Styles.ACS
 import Abbotsbury.Cite.Styles.Biblatex
 import Abbotsbury.Crossref
+import Abbotsbury.Crossref.Internal

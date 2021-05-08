@@ -51,7 +51,7 @@ fetchWorkWithOptions maybeManager fixMap email doi' = do
   eitherErrorJson <- getCrossrefJson manager email doi'
   -- Parse the JSON data.
   let eitherErrorWork =
-        eitherErrorJson >>= getJsonMessage >>= parseCrossrefMessage
+        eitherErrorJson >>= getJsonMessage doi' >>= parseCrossrefMessage doi'
   -- Perform journal replacements
   pure $ fmap (fixJournalShortInWork fixMap) eitherErrorWork
 
@@ -91,7 +91,7 @@ fetchWorksWithOptions maybeManager fixMap email dois = if null dois
         eitherErrorJson <- getCrossrefJson manager email doi'
         -- Parse the JSON data.
         let eitherErrorWork =
-              eitherErrorJson >>= getJsonMessage >>= parseCrossrefMessage
+              eitherErrorJson >>= getJsonMessage doi' >>= parseCrossrefMessage doi'
         -- Perform journal replacements and return it to the MVar.
         putMVar mvar $ fmap (fixJournalShortInWork fixMap) eitherErrorWork
       )

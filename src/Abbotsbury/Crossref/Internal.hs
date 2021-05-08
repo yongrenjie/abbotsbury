@@ -30,10 +30,10 @@ import           Network.URI                    ( escapeURIString
 -- | Fetching data from Crossref can fail for a number of reasons. In this case we either throw a
 -- CrossrefException (from fetchCrossrefJson), or we put it
 data CrossrefException
-  = CRHttpException NHC.HttpException  -- HTTP errors, e.g. no Internet connection.
-  | CRJsonException Text                 -- Got the JSON from Crossref, but it was not valid JSON. The Text is from Aeson and says what went wrong.
-  | CRUnknownWorkException WorkType      -- Abbotsbury right now only parses journal articles. If you request metadata about a book (for example) this error will be returned.
-  | CROtherException Text                -- Something else went wrong.
+  = CRHttpException DOI NHC.HttpException  -- HTTP errors, e.g. no Internet connection.
+  | CRJsonException DOI Text                 -- Got the JSON from Crossref, but it was not valid JSON. The Text is from Aeson and says what went wrong.
+  | CRUnknownWorkException DOI WorkType      -- Abbotsbury right now only parses journal articles. If you request metadata about a book (for example) this error will be returned.
+  | CROtherException DOI Text                -- Something else went wrong.
   deriving Show
 
 
@@ -41,11 +41,18 @@ instance CE.Exception CrossrefException
 -- | NHC.HttpException doesn't have an Eq clause, so we just skip checking it.
 instance Eq CrossrefException where
   (==) :: CrossrefException -> CrossrefException -> Bool
-  CRHttpException        _  == CRHttpException        _  = True
-  CRJsonException        t1 == CRJsonException        t2 = t1 == t2
-  CRUnknownWorkException w1 == CRUnknownWorkException w2 = w1 == w2
-  CROtherException       t1 == CROtherException       t2 = t1 == t2
+  CRHttpException        doi1 _  == CRHttpException        doi2 _  = doi1 == doi2
+  CRJsonException        doi1 t1 == CRJsonException        doi2 t2 = doi1 == doi2 && t1 == t2
+  CRUnknownWorkException doi1 w1 == CRUnknownWorkException doi2 w2 = doi1 == doi2 && w1 == w2
+  CROtherException       doi1 t1 == CROtherException       doi2 t2 = doi1 == doi2 && t1 == t2
   _                         == _                         = False
+
+
+getDoiFromException :: CrossrefException -> DOI
+getDoiFromException (CRHttpException d _) = d
+getDoiFromException (CRJsonException d _) = d
+getDoiFromException (CRUnknownWorkException d _) = d
+getDoiFromException (CROtherException d _) = d
 
 
 -- | Step 1 is to fetch the raw JSON response from Crossref for a given DOI. Errors that can occur
@@ -67,32 +74,33 @@ getCrossrefJson manager email doi' = do
     CE.try $ NHC.httpLbs request manager
   -- ExceptT would make this cleaner, admittedly, but it's only two layers.
   pure $ case eitherExcResp of
-    Left  exc  -> Left (CRHttpException exc)
+    Left  exc  -> Left (CRHttpException doi' exc)
     Right resp -> case eitherDecode (NHC.responseBody resp) of
-      Left  err -> Left (CRJsonException $ T.pack err)
+      Left  err -> Left (CRJsonException doi' (T.pack err))
       Right val -> Right val
 
 
 -- | Step 2 is to get the 'message' component.
 getJsonMessage
-  :: Value -- ^ The raw JSON from Crossref.
+  :: DOI
+  -> Value -- ^ The raw JSON from Crossref.
   -> Either CrossrefException Value
-getJsonMessage val = do
+getJsonMessage doi' val = do
   let aesonParseResult =
         DAT.parseEither (withObject "Crossref JSON" (.: "message")) val
-  first (CRJsonException . T.pack) aesonParseResult
+  first (CRJsonException doi' . T.pack) aesonParseResult
 
 
 -- | Step 3a is to identify the type of work. This basically gives a CRUnknownWorkException if it's
 -- not an article, which is technically a bug, but I don't know when I'll be able to work on adding
 -- new types of works (e.g. books).
-identifyWorkType :: Value -> Either CrossrefException WorkType
-identifyWorkType messageVal = do
+identifyWorkType :: DOI -> Value -> Either CrossrefException WorkType
+identifyWorkType doi' messageVal = do
   let parsedWorkType =
         DAT.parseEither (withObject "Crossref response" (.: "type")) messageVal
   case parsedWorkType of
     Left failedParseMessage ->
-      Left (CRJsonException (T.pack failedParseMessage))
+      Left (CRJsonException doi' (T.pack failedParseMessage))
     Right wType -> case wType of
       "book-section"        -> Right BookSection
       "monograph"           -> Right Monograph
@@ -123,7 +131,7 @@ identifyWorkType messageVal = do
       "edited-book"         -> Right EditedBook
       "standard-series"     -> Right StandardSeries
       _                     -> Left
-        (  CRJsonException
+        (  CRJsonException doi'
         $  "work type '"
         <> T.pack wType
         <> "' not found in Crossref schema. "
@@ -134,18 +142,19 @@ identifyWorkType messageVal = do
 -- | Step 3b is to parse the 'message' component into the Abbotsbury data types, depending on which type
 -- of work it is. Right now only Articles are supported.
 parseCrossrefMessage
-  :: Value -- ^ The 'message' component of the Crossref JSON data.
+  :: DOI
+  -> Value -- ^ The 'message' component of the Crossref JSON data.
   -> Either CrossrefException Work  -- Either an error message or the Work.
-parseCrossrefMessage messageVal = do
+parseCrossrefMessage doi' messageVal = do
   -- Figure out which parser to use.
-  wType  <- identifyWorkType messageVal
+  wType  <- identifyWorkType doi' messageVal
   parser <- case wType of
     JournalArticle -> Right parseJournalArticle
-    _              -> Left (CRUnknownWorkException wType)
+    _              -> Left (CRUnknownWorkException doi' wType)
   -- Run the appropriate parser on the message Value.
   let parsedWork =
         DAT.parseEither (withObject "Crossref response" parser) messageVal
-  first (CRJsonException . T.pack) parsedWork
+  first (CRJsonException doi' . T.pack) parsedWork
 
 
 -- | The parser which parses JournalArticles.
