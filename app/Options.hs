@@ -29,6 +29,10 @@ data AbbotMainOptions = AbbotMainOptions
                       }
 
 
+abbotParserPrefs :: ParserPrefs
+abbotParserPrefs = prefs (multiSuffix "..." <> showHelpOnError <> showHelpOnEmpty)
+
+
 -- | Wraps the command-line Parser into a ParserInfo structure, which contains "top-level"
 -- information. This is a required step for actually executing a parser (see optparse README).
 parserInfo :: ParserInfo AbbotCommand
@@ -117,7 +121,7 @@ citeParser =
  where
   doiHelp :: PP.Doc
   doiHelp =
-    PP.nest 2 $ PP.vsep [PP.text "DOIs for which citations are generated"]
+    PP.nest 2 $ PP.vsep [PP.text "DOI(s) to generate citations for."]
   styleHelp :: PP.Doc
   styleHelp = PP.nest 2 $ PP.vsep
     [ PP.text "Citation style to use. Acceptable options:"
@@ -137,6 +141,5 @@ citeParser =
 citeParserInfo :: ParserInfo AbbotCommand
 citeParserInfo = info (helper <*> citeParser)
   ( fullDesc
-  <> progDesc "Generate a citation for one specific paper, using a particular citation style and format."
-  <> header "Single-use citation generator"
+  <> progDesc "Generate citations for one or more papers, using a particular citation style and format."
   )

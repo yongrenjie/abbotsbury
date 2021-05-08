@@ -28,7 +28,7 @@ import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           Lens.Micro.Platform
-import           Options.Applicative            ( execParser )
+import           Options.Applicative            ( customExecParser )
 import           System.Console.Haskeline      as HL
 import           System.Environment             ( lookupEnv )
 import           System.Exit
@@ -84,7 +84,7 @@ mOutputStrLn = MInputT . HL.outputStrLn
 -- | Entry point.
 main :: IO ()
 main = do
-  options <- execParser parserInfo
+  options <- customExecParser abbotParserPrefs parserInfo
   case options of
     AbbotMain mainOptions -> do
       startDir <- expandDirectory (startingDirectory mainOptions)
