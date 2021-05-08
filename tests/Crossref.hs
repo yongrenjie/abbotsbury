@@ -11,6 +11,7 @@ import qualified Data.Aeson                    as Aeson
 import qualified Data.List.NonEmpty            as NE
 import           Data.Text                      ( Text )
 import           Abbotsbury.Crossref
+import           Abbotsbury.Crossref.Internal
 import           Abbotsbury.Work
 
 
@@ -80,5 +81,5 @@ testfixJShortNRMP = testCase "fixJournalShortInWork - 2021 NRMP"
   checkFixedNRMPJSON :: Assertion
   checkFixedNRMPJSON = do
     work <- parseCrossrefJsonFromFile "tests/test-data/nrmp.json"
-    let fixedWork = fixJournalShortInWork defaultJournalShortMap <$> work
+    let fixedWork = fixJournalShortInWork defaultJournalFix <$> work
     fixedWork @?= Right TW.nrmpCorrected

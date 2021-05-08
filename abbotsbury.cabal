@@ -46,6 +46,7 @@ library
     Abbotsbury.Cite.Internal
     Abbotsbury.Cite.Helpers.Author
     Abbotsbury.Crossref
+    Abbotsbury.Crossref.Internal
     Abbotsbury.LatexEscapes
     Abbotsbury.Work
   other-modules:

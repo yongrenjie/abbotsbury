@@ -1,6 +1,8 @@
 module Abbotsbury
   ( Abbotsbury.Crossref.fetchWork
-  , Abbotsbury.Crossref.fetchUnmodifiedWork
+  , Abbotsbury.Crossref.fetchWork'
+  , Abbotsbury.Crossref.fetchWorkWithManager
+  , Abbotsbury.Crossref.fetchWorkWithManager'
   , Abbotsbury.Cite.cite
   , Abbotsbury.Cite.Internal.Style(..)
   , Abbotsbury.Cite.Styles.ACS.acsStyle
