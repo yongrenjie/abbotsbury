@@ -12,6 +12,7 @@ import           Reference
 import           Style
 
 
+import           Control.Monad
 import           Control.Monad.Catch            ( MonadCatch
                                                 , MonadMask
                                                 , MonadThrow
@@ -19,6 +20,7 @@ import           Control.Monad.Catch            ( MonadCatch
                                                 )
 import           Control.Monad.Except
 import           Control.Monad.State
+import           Data.Either
 import           Data.IntMap                    ( IntMap )
 import qualified Data.IntMap                   as IM
 import           Data.Maybe                     ( isNothing )
@@ -95,19 +97,21 @@ main = do
         Nothing -> do
           exitWithError noAbbotEmailText
         Just email -> do
-          let AbbotCiteOptions doi' style' format' = citeOptions
-          eitherWork <- fetchWork (T.pack email) doi'
-          case eitherWork of
-            Left exception -> do
-              exitWithError
-                ("failed to get Crossref metadata for DOI '" <> doi' <> "'")
+          let AbbotCiteOptions dois style' format' = citeOptions
+          eitherWorks <- fetchWorks (T.pack email) dois
+          forM_ eitherWorks $ \case
+            Left exc -> do
+              displayError
+                ("failed to get Crossref metadata for DOI '" <> getDoiFromException exc <> "'")
             Right work -> do
               TIO.putStrLn $ cite style' format' work
-              exitSuccess
+          if not (any isLeft eitherWorks) then exitSuccess else exitFailure
  where
-  exitWithError :: Text -> IO ()
-  exitWithError t = TIO.hPutStrLn stderr t' >> exitFailure
+  displayError :: Text -> IO ()
+  displayError t = TIO.hPutStrLn stderr t'
     where t' = (setColor "tomato" . setBold $ "error: ") <> setColor "tomato" t
+  exitWithError :: Text -> IO ()
+  exitWithError t = displayError t >> exitFailure
   noAbbotEmailText :: Text
   noAbbotEmailText =
     "Please set the ABBOT_EMAIL environment variable to your email before using `abbot cite`.\n"

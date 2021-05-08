@@ -60,9 +60,9 @@ mainParser =
 
 
 data AbbotCiteOptions = AbbotCiteOptions
-  { citeDOI :: DOI
-  , style :: Style
-  , format :: Format
+  { citeDOI :: [DOI]  -- ^ The DOIs to cite.
+  , style :: Style    -- ^ The citation style to use.
+  , format :: Format  -- ^ The output format to use.
   }
 
 
@@ -101,7 +101,7 @@ citeParser :: Parser AbbotCommand
 citeParser =
   AbbotCite
     <$> (   AbbotCiteOptions
-        <$> strArgument (metavar "DOI" <> helpDoc (Just doiHelp))
+        <$> some (strArgument (metavar "DOI" <> helpDoc (Just doiHelp)))
         <*> option styleReader
                    (metavar "STYLE"
                    <> long "style"
@@ -117,7 +117,7 @@ citeParser =
  where
   doiHelp :: PP.Doc
   doiHelp =
-    PP.nest 2 $ PP.vsep [PP.text "DOI of paper to generate citation for"]
+    PP.nest 2 $ PP.vsep [PP.text "DOIs for which citations are generated"]
   styleHelp :: PP.Doc
   styleHelp = PP.nest 2 $ PP.vsep
     [ PP.text "Citation style to use. Acceptable options:"
