@@ -98,14 +98,14 @@ jobs:
         asset_name: abbot-${{ needs.create_release.outputs.version }}-${{ runner.os }}.tar.gz
         asset_content_type: application/octet-stream
 
-# see: https://github.com/NSHipster/update-homebrew-formula-action
+# see: https://github.com/yongrenjie/update-homebrew-formula-action
 
   update_formula_version:
     name: Update the Homebrew formula with latest release
     runs-on: ubuntu-latest
     needs: [build_upload]
     steps:
-      - uses: NSHipster/update-homebrew-formula-action@main
+      - uses: yongrenjie/update-homebrew-formula-action@main
         with:
           repository: yongrenjie/abbotsbury
           tap: yongrenjie/homebrew-abbotsbury
@@ -138,7 +138,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [upload_bottle]
     steps:
-      - uses: NSHipster/update-homebrew-formula-action@main
+      - uses: yongrenjie/update-homebrew-formula-action@main
         with:
           repository: yongrenjie/abbotsbury
           tap: yongrenjie/homebrew-abbotsbury
