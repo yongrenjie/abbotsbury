@@ -6,9 +6,11 @@ module Options where
 import           Abbotsbury
 import           Abbotsbury.Work
 import           Abbotsbury.Cite.Internal
+import           Paths_abbotsbury
 
 
 import           Data.Char                      ( toLower )
+import           Data.Version
 import           Options.Applicative     hiding ( style )
 import qualified Text.PrettyPrint.ANSI.Leijen  as PP
 
@@ -25,8 +27,9 @@ data AbbotCommand = AbbotMain AbbotMainOptions
 
 
 data AbbotMainOptions = AbbotMainOptions
-                      { startingDirectory :: FilePath
-                      }
+  { startingDirectory :: FilePath  -- ^ The working directory to start in.
+  , mainVersion       :: Bool      -- ^ Whether to show the version number and exit.
+  }
 
 
 abbotParserPrefs :: ParserPrefs
@@ -38,7 +41,10 @@ abbotParserPrefs = prefs (multiSuffix "..." <> showHelpOnError <> showHelpOnEmpt
 parserInfo :: ParserInfo AbbotCommand
 parserInfo = info
   (helper <*> parser)
-  (fullDesc <> progDesc "Minimalistic command-line reference manager")
+  (fullDesc
+  <> progDesc "Minimalistic command-line reference manager."
+  <> header ("abbot v" <> showVersion version)
+  )
 
 
 parser :: Parser AbbotCommand
@@ -53,20 +59,22 @@ subparsers = subparser (command "cite" citeParserInfo)
 mainParser :: Parser AbbotCommand
 mainParser =
   AbbotMain
-    <$> (AbbotMainOptions <$> strOption
-          (  short 'd'
-          <> long "directory"
-          <> help "Directory to start in"
-          <> value "."
-          <> showDefaultWith (const "current working directory")
-          )
+    <$> (   AbbotMainOptions
+        <$> strOption
+              (  short 'd'
+              <> long "directory"
+              <> help "Directory to start in"
+              <> value "."
+              <> showDefaultWith (const "current working directory")
+              )
+        <*> switch (long "version" <> help "Display version number and exit")
         )
 
 
 data AbbotCiteOptions = AbbotCiteOptions
-  { citeDOI :: [DOI]  -- ^ The DOIs to cite.
-  , style :: Style    -- ^ The citation style to use.
-  , format :: Format  -- ^ The output format to use.
+  { citeDOI     :: [DOI]   -- ^ The DOIs to cite.
+  , style       :: Style   -- ^ The citation style to use.
+  , format      :: Format  -- ^ The output format to use.
   }
 
 
@@ -142,4 +150,5 @@ citeParserInfo :: ParserInfo AbbotCommand
 citeParserInfo = info (helper <*> citeParser)
   ( fullDesc
   <> progDesc "Generate citations for one or more papers, using a particular citation style and format."
+  <> header ("abbot-cite v" <> showVersion version)
   )

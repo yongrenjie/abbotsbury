@@ -3,11 +3,13 @@
 
 module Main where
 
+
 import           Abbotsbury
 import           Commands
 import           Commands.Shared
 import           Options
 import           Path
+import           Paths_abbotsbury
 import           Reference
 import           Style
 
@@ -27,6 +29,7 @@ import           Data.Maybe                     ( isNothing )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
+import           Data.Version
 import           Lens.Micro.Platform
 import           Options.Applicative            ( customExecParser )
 import           System.Console.Haskeline      as HL
@@ -87,7 +90,9 @@ main = do
   options <- customExecParser abbotParserPrefs parserInfo
   case options of
     AbbotMain mainOptions -> do
-      startDir <- expandDirectory (startingDirectory mainOptions)
+      let AbbotMainOptions startingDirectory version' = mainOptions
+      when version' displayVersionAndExit
+      startDir <- expandDirectory startingDirectory
       let startState = LoopState startDir startDir True IM.empty
       evalStateT (mRunInputT defaultSettings $ mWithInterrupt loop) startState
       exitSuccess
@@ -102,11 +107,16 @@ main = do
           forM_ eitherWorks $ \case
             Left exc -> do
               displayError
-                ("failed to get Crossref metadata for DOI '" <> getDoiFromException exc <> "'")
+                (  "failed to get Crossref metadata for DOI '"
+                <> getDoiFromException exc
+                <> "'"
+                )
             Right work -> do
               TIO.putStrLn $ cite style' format' work
           if not (any isLeft eitherWorks) then exitSuccess else exitFailure
  where
+  displayVersionAndExit :: IO ()
+  displayVersionAndExit = putStrLn ("abbot version " <> showVersion version) >> exitSuccess
   displayError :: Text -> IO ()
   displayError t = TIO.hPutStrLn stderr t'
     where t' = (setColor "tomato" . setBold $ "error: ") <> setColor "tomato" t
