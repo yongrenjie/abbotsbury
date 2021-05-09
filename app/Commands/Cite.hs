@@ -3,12 +3,13 @@ module Commands.Cite
     ) where
 
 
+import           Abbotsbury.Cite
 import           Commands.Shared
 import           Reference
+import           Internal.Copy            ( copy )
 
 import           Control.Monad.Except
 import           Data.Either                    ( isLeft )
-import           Control.Exception             as CE
 import           Data.IntMap                    ( IntMap )
 import qualified Data.IntMap                   as IM
 import           Data.IntSet                    ( IntSet )
@@ -23,8 +24,11 @@ import           Lens.Micro.Platform
 import           Text.Megaparsec
 
 
-data ReplCiteStyle = PlainShort
-                   | PlainLong
+data ReplCiteRules = AcsText
+                   | AcsMarkdown
+                   | AcsRestructured
+                   | AcsHtml
+                   | Biblatex
                    deriving (Ord, Eq, Show, Enum, Bounded)
 
 
@@ -35,7 +39,7 @@ runCite args input = do
   when (IM.null refs) (throwError "cite: no references found")
   case parse pCite "" args of
     Left bundle -> throwError $ T.pack ("cite: " ++ errorBundlePretty bundle)  -- parse error
-    Right (refnos, format) -> do
+    Right (refnos, rules) -> do
       -- First, check for any refnos that don't exist
       let badRefnos = refnos IS.\\ IM.keysSet refs
       unless
@@ -46,23 +50,32 @@ runCite args input = do
       -- Then, check if refnos is empty
       when (IS.null refnos) (throwError "open: no references selected")
       -- Generate the citation(s)
-      let citations = "citations not done yet"
+      let (style, format) = getStyleFormat rules
+          refsToCite = IM.elems (IM.restrictKeys refs refnos)
+          citations = T.intercalate "\n\n" $ map (cite style format . _work) refsToCite
       -- Print them
       liftIO $ TIO.putStrLn citations
-      -- Copy them to clipboard (assuming macOS)
-      -- The exception handling is not exactly elegant
-      let copy = do (Just hIn, _, _, _) <- liftIO $ createProcess (proc "pbcopy" []) { std_in = CreatePipe }
-                    liftIO $ TIO.hPutStr hIn citations
-      copyResult <- liftIO (CE.try copy :: IO (Either CE.SomeException ()))
-      when (isLeft copyResult) (printError "copy failed")
+      liftIO $ copy citations
       -- Return basically nothing
       pure $ SCmdOutput refs Nothing
 
 
-pCite :: Parser (IntSet, ReplCiteStyle)
-pCite = ((,) <$> pRefnos <*> pOneFormatCaseSens abbrevs (Just PlainShort)) <* eof
+pCite :: Parser (IntSet, ReplCiteRules)
+pCite = ((,) <$> pRefnos <*> pOneFormatCaseSens abbrevs (Just Biblatex)) <* eof
  where
   abbrevs = M.fromList
-    [ ("p", PlainShort)
-    , ("P", PlainLong)
+    [ ("T", AcsText)
+    , ("M", AcsMarkdown)
+    , ("R", AcsRestructured)
+    , ("H", AcsHtml)
+    , ("b", Biblatex)
+    , ("B", Biblatex)
     ]
+
+
+getStyleFormat :: ReplCiteRules -> (Style, Format)
+getStyleFormat AcsText = (acsStyle, textFormat)
+getStyleFormat AcsMarkdown = (acsStyle, markdownFormat)
+getStyleFormat AcsRestructured = (acsStyle, restructuredFormat)
+getStyleFormat AcsHtml = (acsStyle, htmlFormat)
+getStyleFormat Biblatex = (bibStyle, textFormat)

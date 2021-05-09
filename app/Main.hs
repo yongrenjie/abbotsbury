@@ -214,8 +214,3 @@ prompt fp = mGetInputLine . T.unpack $ mconcat
 -- | Prints an error in the main loop.
 printErr :: Text -> MInputT (StateT LoopState IO) ()
 printErr = mOutputStrLn . T.unpack . makeError
-
-
--- | Copies to clipboard. Not done yet (obviously.)
-copyToClipboard :: Text -> IO ()
-copyToClipboard = TIO.putStrLn

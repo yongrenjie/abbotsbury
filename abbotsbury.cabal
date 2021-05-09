@@ -75,6 +75,7 @@ executable abbot
     Commands.Open
     Commands.Shared
     Commands.Sort
+    Internal.Copy
     Options
     Path
     Reference
