@@ -32,4 +32,7 @@ runCmdWith cmd input =
         Sort -> runSort args input
         Add  -> runAdd  args input
       -- Composed commands.
-      Composed _ _ -> throwError "pipes not implemented yet"
+      Composed cmd1 cmd2 -> do
+        SCmdOutput refs2 var2 <- runCmdWith (Single cmd1) input
+        let input2 = CmdInput (cwdin input) refs2 var2
+        runCmdWith (Single cmd2) input2

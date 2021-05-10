@@ -48,15 +48,16 @@ data BaseCommand = Help | List | Cite | Open | Sort | Add
 
 
 -- | A command takes several sources of input:
---  1) varin: 'variable input', i.e. 'stdin' piped from a previous command. If there
---       is no previous command or if the previous command returns no input, then
---       this is Nothing.
---  2) cwdin: the current working directory
---  3) refsin: the current reference list
+--  1) cwdin: the current working directory
+--  2) refsin: the current reference list
+--  3) varin: 'variable input', i.e. 'stdin' piped from a previous command. If there is no previous
+--  command or if the previous command returns no input, then this is Nothing. This does not
+--  *replace* refsin (i.e. it does not modify the reference list), but rather acts as a *filter* on
+--  the reference list which the next command may choose to obey (or not).
 data CmdInput = CmdInput
-  { varin  :: Maybe IntSet
-  , cwdin  :: FilePath
+  { cwdin  :: FilePath
   , refsin :: IntMap Reference
+  , varin  :: Maybe IntSet
   }
   deriving Show
 
@@ -64,10 +65,10 @@ data CmdInput = CmdInput
 -- | A command can perform several IO actions, which ultimately return either
 -- an error message (Left), OR a successful return with SCmdOutput, comprising
 -- 1) the final state of the reference list, plus
--- 2) an optional set of refnos (which can be piped to another command)
+-- 2) an optional set of refnos (which can be piped to another command, see `CmdInput`)
 type CmdOutput = ExceptT Text IO SCmdOutput
 data SCmdOutput = SCmdOutput
-  { outrefs :: IntMap Reference
+  { refsout :: IntMap Reference
   , varout  :: Maybe IntSet
   }
   deriving Show
