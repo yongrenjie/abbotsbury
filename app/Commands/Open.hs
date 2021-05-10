@@ -66,17 +66,21 @@ runOpen args input = do
         (throwErrorWithPrefix
           ("reference(s) " <> intercalateCommas badRefnos <> " not found")
         )
-      -- Then, check if refnos is empty
-      when (IS.null refnos) (throwErrorWithPrefix "no references selected")
+      -- Figure out which refnos to open
+      refnosToOpen <- case (varin input, IS.null refnos) of
+        (Nothing , True ) -> throwErrorWithPrefix "no references selected"
+        (Nothing , False) -> pure refnos
+        (Just set, True ) -> pure set
+        (Just set, False) ->
+          throwErrorWithPrefix "cannot specify refnos and a pipe simultaneously"
       -- Construct the links to be opened.
       let jobs =
-            [ (rno, fmt) | fmt <- S.toList formats, rno <- IS.toList refnos ]
+            [ (rno, fmt) | fmt <- S.toList formats, rno <- IS.toList refnosToOpen ]
       let openCommands = do
             (rno, fmt) <- jobs
             let openLink = T.unpack $ getOpenLink fmt (refs IM.! rno) cwd
             pure $ proc "open" [openLink]
       -- Run the commands.
-      -- TODO: This is not parallelised. How to?
       processReturns <- liftIO
         $ mapM (`readCreateProcessWithExitCode` "") openCommands
       -- Check exit codes and return an error if any of them failed.
