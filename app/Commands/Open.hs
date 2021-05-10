@@ -1,6 +1,4 @@
-module Commands.Open
-  ( module Commands.Open
-  ) where
+module Commands.Open (runOpen) where
 
 import           Commands.Shared
 import           Path                           ( PDFType(..)
@@ -41,6 +39,11 @@ data OpenFormat = OpenFullText
                 | OpenWebURL
                 deriving (Ord, Eq, Show)
 
+
+throwErrorWithPrefix :: Text -> ExceptT Text IO a
+throwErrorWithPrefix e = throwError $ "open: " <> e
+
+
 showT :: OpenFormat -> Text
 showT OpenFullText = "full text"
 showT OpenSI       = "SI"
@@ -52,19 +55,19 @@ runOpen args input = do
   let cwd  = cwdin input
       refs = refsin input
   -- If no refs present, error immediately
-  when (IM.null refs) (throwError "open: no references found")
+  when (IM.null refs) (throwErrorWithPrefix "no references found")
   case parse pOpen "" args of
-    Left bundle -> throwError $ T.pack ("open: " ++ errorBundlePretty bundle)  -- parse error
+    Left bundle -> throwErrorWithPrefix (T.pack (errorBundlePretty bundle))  -- parse error
     Right (refnos, formats) -> do
       -- First, check for any refnos that don't exist
       let badRefnos = refnos IS.\\ IM.keysSet refs
       unless
         (IS.null badRefnos)
-        (throwError
-          ("open: reference(s) " <> intercalateCommas badRefnos <> " not found")
+        (throwErrorWithPrefix
+          ("reference(s) " <> intercalateCommas badRefnos <> " not found")
         )
       -- Then, check if refnos is empty
-      when (IS.null refnos) (throwError "open: no references selected")
+      when (IS.null refnos) (throwErrorWithPrefix "no references selected")
       -- Construct the links to be opened.
       let jobs =
             [ (rno, fmt) | fmt <- S.toList formats, rno <- IS.toList refnos ]

@@ -1,6 +1,4 @@
-module Commands.Cite 
-  ( module Commands.Cite
-    ) where
+module Commands.Cite (runCite) where
 
 
 import           Abbotsbury.Cite
@@ -24,6 +22,10 @@ import           Lens.Micro.Platform
 import           Text.Megaparsec
 
 
+throwErrorWithPrefix :: Text -> ExceptT Text IO a
+throwErrorWithPrefix e = throwError $ "cite: " <> e
+
+
 data ReplCiteRules = AcsText
                    | AcsMarkdown
                    | AcsRestructured
@@ -37,7 +39,7 @@ runCite :: Args -> CmdInput -> CmdOutput
 runCite args input = do
   let refs = refsin input
   -- If no refs present, error immediately
-  when (IM.null refs) (throwError "cite: no references found")
+  when (IM.null refs) (throwErrorWithPrefix "no references found")
   case parse pCite "" args of
     Left bundle -> throwError $ T.pack ("cite: " ++ errorBundlePretty bundle)  -- parse error
     Right (refnos, rules) -> do
@@ -45,11 +47,11 @@ runCite args input = do
       let badRefnos = refnos IS.\\ IM.keysSet refs
       unless
         (IS.null badRefnos)
-        (throwError
-          ("cite: reference(s) " <> intercalateCommas badRefnos <> " not found")
+        (throwErrorWithPrefix
+          ("reference(s) " <> intercalateCommas badRefnos <> " not found")
         )
       -- Then, check if refnos is empty
-      when (IS.null refnos) (throwError "open: no references selected")
+      when (IS.null refnos) (throwError "cite: no references selected")
       -- Generate the citation(s)
       let (style, format) = getStyleFormat rules
           refsToCite = IM.elems (IM.restrictKeys refs refnos)

@@ -1,9 +1,6 @@
-module Commands.Sort
-  ( module Commands.Sort
-    ) where
+module Commands.Sort (runSort) where
 
 import           Commands.Shared
-import           Reference
 import           Control.Applicative            ( (<|>)
                                                 , liftA3
                                                 )
@@ -12,16 +9,23 @@ import           Data.Char                      ( isUpper )
 import qualified Data.IntMap                   as IM
 import           Data.List                      ( sortBy )
 import qualified Data.Map                      as M
+import           Data.Ord                       ( comparing )
+import qualified Data.Text                     as T
+import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
-import           Data.Ord                       ( comparing )
 import           Lens.Micro.Platform
-import           Text.Megaparsec                ( eof
+import           Reference
+import           Text.Megaparsec                ( anySingle
+                                                , eof
                                                 , errorBundlePretty
-                                                , parse
                                                 , lookAhead
-                                                , anySingle
+                                                , parse
                                                 )
+
+
+throwErrorWithPrefix :: Text -> ExceptT Text IO a
+throwErrorWithPrefix e = throwError $ "sort: " <> e
 
 
 {-|
@@ -92,10 +96,10 @@ runSort :: Args              -- ^ Arguments passed to the 'sort' command.
 runSort args input = do
   let refs = refsin input
   -- If no refs present, error immediately
-  when (IM.null refs) (throwError "sort: no references found")
+  when (IM.null refs) (throwErrorWithPrefix "no references found")
   -- Parse arguments: detect whether reversed order is desired...
   case parse pSort "" args of
-    Left bundle -> throwError $ T.pack ("open: " ++ errorBundlePretty bundle)  -- parse error
+    Left bundle -> throwErrorWithPrefix (T.pack (errorBundlePretty bundle))  -- parse error
     Right criterion -> do
       let originalRefs = IM.elems refs       -- no refnos
       let sortedRefs = sortBy (getComparisonFn criterion) originalRefs

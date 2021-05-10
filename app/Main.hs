@@ -191,7 +191,7 @@ loop =
             Right otherCmd -> do
               currentDir  <- use curDir
               currentRefs <- use references
-              let cmdInput = CmdInput Nothing currentDir currentRefs
+              let cmdInput = CmdInput currentDir currentRefs Nothing
               -- TODO: In principle, all IO exceptions should be caught here, as
               -- they are not exhaustively encoded in the ExceptT error type.
               cmdOutput   <- liftIO . runExceptT $ runCmdWith otherCmd cmdInput

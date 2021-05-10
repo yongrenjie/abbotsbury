@@ -1,6 +1,4 @@
-module Commands.List
-  ( module Commands.List
-  ) where
+module Commands.List (runList) where
 
 import           Abbotsbury.Cite.Helpers.Author
 import           Commands.Shared
@@ -34,23 +32,27 @@ import           Text.Megaparsec                ( eof
                                                 )
 
 
+throwErrorWithPrefix :: Text -> ExceptT Text IO a
+throwErrorWithPrefix e = throwError $ "list: " <> e
+
+
 runList :: Args -> CmdInput -> CmdOutput
 runList args input = do
   -- If no refs present, error immediately
-  when (IM.null $ refsin input) (throwError "list: no references found")
+  when (IM.null $ refsin input) (throwErrorWithPrefix "no references found")
   let cwd     = cwdin input
       refs    = refsin input
       numRefs = fst $ IM.findMax refs
   case parse (pRefnos <* eof) "" args of
-    Left  bundle -> throwError $ T.pack ("list: " ++ errorBundlePretty bundle)  -- parse error
+    Left  bundle -> throwErrorWithPrefix (T.pack (errorBundlePretty bundle))  -- parse error
     -- Some refnos were specified.
     Right refnos -> do
       -- First, check for any refnos that don't exist
       let badRefnos = refnos IS.\\ IM.keysSet refs
       unless
         (IS.null badRefnos)
-        (throwError
-          ("list: reference(s) " <> intercalateCommas badRefnos <> " not found")
+        (throwErrorWithPrefix
+          ("reference(s) " <> intercalateCommas badRefnos <> " not found")
         )
       -- If we reached here, everything is good
       let refnosToPrint =

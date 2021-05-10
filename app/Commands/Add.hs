@@ -1,4 +1,4 @@
-module Commands.Add where
+module Commands.Add (runAdd) where
 
 
 import           Abbotsbury
@@ -21,18 +21,22 @@ import           System.Process
 import           Data.Time.Clock                ( getCurrentTime )
 
 
+throwErrorWithPrefix :: Text -> ExceptT Text IO a
+throwErrorWithPrefix e = throwError $ "add: " <> e
+
+
 runAdd :: Args -> CmdInput -> CmdOutput
 runAdd args input = do
   let refs = refsin input
       dois = T.words args  -- Argument parsing here is trivial.
   -- Error out if no DOIs were given.
-  when (null dois) $ throwError "add: no DOIs supplied"
+  when (null dois) $ throwErrorWithPrefix "no DOIs supplied"
   -- TODO: minimal verification of DOI legitimacy, to prevent spurious requests.
   -- Try to get the email to use for Crossref.
   maybeEmail <- liftIO getEmailForCrossref
   case maybeEmail of
-    Nothing -> throwError
-      (  "add: no email was specified. "
+    Nothing -> throwErrorWithPrefix
+      (  "no email was specified. "
       <> "Please set either the ABBOT_EMAIL environment variable, "
       <> "or set an email in your .gitconfig file."
       )
