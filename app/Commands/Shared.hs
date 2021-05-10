@@ -35,14 +35,17 @@ data ReplCmd = Nop
              | Composed AbbotCmd AbbotCmd      -- Two commands joined by a pipe.
              deriving Show
 
+
 data AbbotCmd = AbbotCmd
   { cbase :: BaseCommand
   , cargs :: Text
   }
   deriving Show
 
-data BaseCommand = Help | List | Cite | Open | Sort
+
+data BaseCommand = Help | List | Cite | Open | Sort | Add
                  deriving (Ord, Eq, Show)
+
 
 -- | A command takes several sources of input:
 --  1) varin: 'variable input', i.e. 'stdin' piped from a previous command. If there
@@ -57,6 +60,7 @@ data CmdInput = CmdInput
   }
   deriving Show
 
+
 -- | A command can perform several IO actions, which ultimately return either
 -- an error message (Left), OR a successful return with SCmdOutput, comprising
 -- 1) the final state of the reference list, plus
@@ -68,10 +72,12 @@ data SCmdOutput = SCmdOutput
   }
   deriving Show
 
+
 -- | We don't want to hardcode the types of the arguments, because they will
 -- be different for each command. Each command, when run, will parse their
 -- arguments using a particular parser.
 type Args = Text
+
 
 -- | Setup for command-line parsing.
 type Parser = Parsec Void Text
@@ -100,6 +106,7 @@ pRepl = do
   eof
   return cmd
 
+
 pSingleCmd :: Parser AbbotCmd
 pSingleCmd = do
   base <- replLexeme $ choice
@@ -108,6 +115,7 @@ pSingleCmd = do
     , Open <$ choice (map string' ["open", "op", "o"])
     , Sort <$ choice (map string' ["sort", "so"])
     , Cite <$ choice (map string' ["cite", "c"])
+    , Add <$ choice (map string' ["add", "a"])
     ]
   -- For a single command, the arguments cannot include the character '|', 
   -- because it is exclusively used in pipes. We need to have a better way
@@ -115,6 +123,7 @@ pSingleCmd = do
   args <- replLexeme
     $ takeWhileP (Just "arguments") (\c -> isPrint c && c /= '|')
   pure $ AbbotCmd base args
+
 
 pComposedCmd :: Parser ReplCmd
 pComposedCmd = do
@@ -184,7 +193,6 @@ pOneFormatCaseSens abbrevs defval =
       defaultParser :: [Parser a]
       defaultParser = maybe [] (pure . pure) defval  -- one pure for [], one for Parser
   in  choice (formatParsers ++ defaultParser)
-
 
 
 -- | Because the help command requires runReplParser itself, we can't stick it

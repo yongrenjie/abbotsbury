@@ -3,13 +3,14 @@ module Commands
   ) where
 -- The other two exports are needed for the Main.hs file.
 
+
+import           Commands.Add
 import           Commands.Cite
 import           Commands.List
 import           Commands.Open
 import           Commands.Shared
 import           Commands.Sort
-
-import           Control.Monad.Except
+import           Control.Monad.Except           ( throwError )
 
 
 -- | Execute a command given an input.
@@ -29,5 +30,6 @@ runCmdWith cmd input =
         Cite -> runCite args input
         Open -> runOpen args input
         Sort -> runSort args input
+        Add  -> runAdd  args input
       -- Composed commands.
       Composed _ _ -> throwError "pipes not implemented yet"

@@ -70,6 +70,7 @@ executable abbot
     Main.hs
   other-modules:
     Commands
+    Commands.Add
     Commands.Cite
     Commands.List
     Commands.Open
