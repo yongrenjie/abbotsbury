@@ -6,7 +6,7 @@ module Commands.Cite
 import           Abbotsbury.Cite
 import           Commands.Shared
 import           Reference
-import           Internal.Copy            ( copy )
+import           Internal.Copy
 
 import           Control.Monad.Except
 import           Data.Either                    ( isLeft )
@@ -28,6 +28,7 @@ data ReplCiteRules = AcsText
                    | AcsMarkdown
                    | AcsRestructured
                    | AcsHtml
+                   | AcsWord
                    | Biblatex
                    deriving (Ord, Eq, Show, Enum, Bounded)
 
@@ -55,7 +56,12 @@ runCite args input = do
           citations = T.intercalate "\n\n" $ map (cite style format . _work) refsToCite
       -- Print them
       liftIO $ TIO.putStrLn citations
-      liftIO $ copy citations
+      -- Copy them
+      liftIO $ case rules of
+                    AcsWord -> do
+                      let htmlLines = map (cite style htmlFormat . _work) refsToCite
+                      copyHtmlLinesAsRtf htmlLines
+                    _ -> copy citations
       -- Return basically nothing
       pure $ SCmdOutput refs Nothing
 
@@ -68,6 +74,7 @@ pCite = ((,) <$> pRefnos <*> pOneFormatCaseSens abbrevs (Just Biblatex)) <* eof
     , ("M", AcsMarkdown)
     , ("R", AcsRestructured)
     , ("H", AcsHtml)
+    , ("W", AcsWord)
     , ("b", Biblatex)
     , ("B", Biblatex)
     ]
@@ -78,4 +85,5 @@ getStyleFormat AcsText = (acsStyle, textFormat)
 getStyleFormat AcsMarkdown = (acsStyle, markdownFormat)
 getStyleFormat AcsRestructured = (acsStyle, restructuredFormat)
 getStyleFormat AcsHtml = (acsStyle, htmlFormat)
+getStyleFormat AcsWord = (acsStyle, textFormat)
 getStyleFormat Biblatex = (bibStyle, textFormat)
