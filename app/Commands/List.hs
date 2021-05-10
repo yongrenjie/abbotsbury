@@ -226,15 +226,23 @@ getShortestJournalName =
 
 
 -- | Produce information about the volume, issue, and page numbers of a reference.
--- This output is only meant for list printing, hence is placed here.
+-- This output is only meant for list printing, hence is placed here. It's a slight reworking of one
+-- of the functions in Abbotsbury.Cite.Styles.ACS (which isn't exported) (but anyway we want
+-- slightly different output).
 getVolInfo :: Reference -> Text
-getVolInfo ref =
-  let theVolume = ref ^. (work . volume)
-      theIssue  = ref ^. (work . issue)
-      thePages  = ref ^. (work . pages)
-  in  if T.null theIssue
-        then mconcat [theVolume, ", ", thePages]
-        else mconcat [theVolume, " (", theIssue, "), ", thePages]
+getVolInfo ref = T.intercalate ", "
+  $ filter (not . T.null) [theYear, theVolInfo, thePages]
+ where
+  theYear  = T.pack (show (ref ^. work . year))
+  thePages = case (ref ^. work . pages, ref ^. work . articleNumber) of
+    ("", "") -> ""
+    ("", aN) -> "No. " <> aN <> ""
+    (pg, _ ) -> pg <> ""
+  theVolInfo = case (ref ^. work . volume, ref ^. work . issue) of
+    (""    , ""    ) -> ""
+    (""    , theIss) -> "No. " <> theIss
+    (theVol, ""    ) -> theVol
+    (theVol, theIss) -> theVol <> " (" <> theIss <> ")"
 
 
 -- | Get availability string for a reference.
