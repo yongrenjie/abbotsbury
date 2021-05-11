@@ -1,20 +1,20 @@
 module Path
-  ( module Path
-  , System.Directory.setCurrentDirectory
-  ) where
+  ( module Path,
+    System.Directory.setCurrentDirectory,
+  )
+where
 
-import           Reference
-
-import           Control.Monad.Except
-import           Data.IntMap                    ( IntMap )
-import qualified Data.IntMap                   as IM
-import           Data.List                      ( isInfixOf )
-import           Data.Text                      ( Text )
-import qualified Data.Text                     as T
-import           Data.Yaml
-import           Lens.Micro.Platform
-import           System.Directory
-import           System.FilePath
+import Control.Monad.Except
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as IM
+import Data.List (isInfixOf)
+import Data.Text (Text)
+import qualified Data.Text as T
+import Data.Yaml
+import Lens.Micro.Platform
+import Reference
+import System.Directory
+import System.FilePath
 
 -- | Expands relative paths and tildes in directories. Tilde expansion does not
 -- work with arbitrary users (`~user/path/to/file`), only the currently logged
@@ -23,14 +23,14 @@ import           System.FilePath
 expandDirectory :: FilePath -> IO FilePath
 expandDirectory fp =
   let components = splitPath . dropTrailingPathSeparator $ fp
-  in  (case components of
-        []            -> getHomeDirectory
-        ["/"        ] -> pure fp
-        ["~"        ] -> getHomeDirectory
-        ("~/" : rest) -> do
-          home <- getHomeDirectory
-          pure $ joinPath ((home ++ "/") : rest)
-        _ -> pure fp
+   in ( case components of
+          [] -> getHomeDirectory
+          ["/"] -> pure fp
+          ["~"] -> getHomeDirectory
+          ("~/" : rest) -> do
+            home <- getHomeDirectory
+            pure $ joinPath ((home ++ "/") : rest)
+          _ -> pure fp
       )
         >>= canonicalizePath
 
@@ -41,9 +41,10 @@ yamlFileName = "abbot.yaml"
 
 -- | My own set of YAML errors, which is meant to make error reporting less
 -- complicated, as we don't need the full set of ParseExceptions.
-data MyYamlError = YamlFileNotFound
-                 | InvalidYamlInFile
-                 | OtherYamlError
+data MyYamlError
+  = YamlFileNotFound
+  | InvalidYamlInFile
+  | OtherYamlError
 
 -- | Simplify the full set of ParseExceptions into MyYamlError.
 categoriseYamlError :: ParseException -> MyYamlError
@@ -52,7 +53,7 @@ categoriseYamlError (InvalidYaml (Just (YamlException excText)))
   | "mapping values are not allowed" `isInfixOf` excText = InvalidYamlInFile
   | otherwise = OtherYamlError
 categoriseYamlError (AesonException _) = InvalidYamlInFile
-categoriseYamlError _                  = OtherYamlError
+categoriseYamlError _ = OtherYamlError
 
 -- | Reads in a list of references from the YAML file in a folder, but
 -- also does some pattern matching on the returned result so that error
@@ -69,33 +70,39 @@ readRefs cwd = do
   refs <- liftIO $ decodeFileEither fname
   case refs of
     -- Successfully parsed.
-    Right newRefs  -> pure (IM.fromList $ zip [1..] newRefs)
+    Right newRefs -> pure (IM.fromList $ zip [1 ..] newRefs)
     -- Some error
-    Left  parseExc -> case categoriseYamlError parseExc of
-      YamlFileNotFound  -> pure IM.empty
+    Left parseExc -> case categoriseYamlError parseExc of
+      YamlFileNotFound -> pure IM.empty
       InvalidYamlInFile -> throwError invalidYamlErrMsg
-      OtherYamlError    -> throwError $ T.pack
-        (show parseExc <> "\n This error is unexpected; please file a bug!")
+      OtherYamlError ->
+        throwError $
+          T.pack
+            (show parseExc <> "\n This error is unexpected; please file a bug!")
 
 -- | Saves a list of references to the given FilePath, as long as it's not empty.
 -- This prevents us from creating files which didn't exist in the first place.
 saveRefs :: IntMap Reference -> FilePath -> IO ()
-saveRefs refs cwd = unless (IM.null refs)
-                           (encodeFile (cwd </> yamlFileName) (IM.elems refs))
+saveRefs refs cwd =
+  unless
+    (IM.null refs)
+    (encodeFile (cwd </> yamlFileName) (IM.elems refs))
 
-data PDFType = FullText
-             | SI
-             deriving (Ord, Eq, Show)
+data PDFType
+  = FullText
+  | SI
+  deriving (Ord, Eq, Show)
 
 -- | Find the path to a PDF file belonging to a reference.
-getPDFPath :: PDFType    -- Full text or SI.
-           -> FilePath   -- Current working directory.
-           -> Reference  -- The reference.
-           -> FilePath   -- Path to the file.
+getPDFPath ::
+  PDFType -> -- Full text or SI.
+  FilePath -> -- Current working directory.
+  Reference -> -- The reference.
+  FilePath -- Path to the file.
 getPDFPath pdfType cwd ref = cwd </> dirName </> fileName
   where
     dirName = case pdfType of
-                   FullText -> "pdf-abbot"
-                   SI       -> "si-abbot"
+      FullText -> "pdf-abbot"
+      SI -> "si-abbot"
     -- TODO: The 'doi' getter will only work with articles. Books should use ISBN.
     fileName = T.unpack . flip T.append ".pdf" . T.replace "/" "#" $ ref ^. (work . doi)
