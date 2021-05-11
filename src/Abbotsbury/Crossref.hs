@@ -9,9 +9,9 @@
 -- for usage guidance, please go to the top-level module "Abbotsbury".
 module Abbotsbury.Crossref
   ( fetchWork,
-    fetchWorkWithOptions,
+    fetchWork',
     fetchWorks,
-    fetchWorksWithOptions,
+    fetchWorks',
     Abbotsbury.Crossref.Internal.CrossrefException,
     Abbotsbury.Crossref.Internal.getDoiFromException,
     defaultJournalFix,
@@ -34,9 +34,9 @@ import qualified Network.HTTP.Client.TLS as NHCT
 -- Note that this function uses a hardcoded Map of journal title replacements
 -- (see 'defaultJournalFix') to fix common errors in Crossref's
 -- @short-container-title@ entries (which are often incorrect).  Also, this
--- function creates a new HTTP manager every time it is called. This is meant to
--- be simple default behaviour: if you want something different, you can use
--- 'fetchWorkWithOptions' and pass appropriate arguments.
+-- function creates a new HTTP 'Network.HTTP.Client.Manager' every time it is
+-- called. This is meant to represent simple default behaviour: if you want
+-- something different, you can use 'fetchWork'' and pass appropriate arguments.
 --
 -- Assuming you have a working Internet connection:
 --
@@ -49,8 +49,8 @@ import qualified Network.HTTP.Client.TLS as NHCT
 --    (long HTTP exception output elided...)
 -- }) "Resource not found.")))
 --
--- In practice, this function calls on a number of smaller functions, which are
--- described in "Abbotsbury.Crossref.Internal".
+-- The implementation of this function calls on a number of smaller functions,
+-- which are described in "Abbotsbury.Crossref.Internal".
 fetchWork ::
   -- | Your email address. This is mandatory for making a polite request to the
   -- Crossref API.
@@ -62,11 +62,25 @@ fetchWork ::
   -- really works with DOIs.
   DOI ->
   IO (Either CrossrefException Work)
-fetchWork = fetchWorkWithOptions Nothing defaultJournalFix
+fetchWork = fetchWork' Nothing defaultJournalFix
 
--- | Generalised version of fetchWork.
-fetchWorkWithOptions ::
-  -- | Just a Manager if a specific one is to be used. Nothing if a new one is to be created.
+-- | The same as 'fetchWork', but concurrently fetches metadata for a series of
+-- DOIs (it uses the same 'Network.HTTP.Client.Manager' for all DOIs).
+fetchWorks ::
+  -- | Your email address. This is mandatory for making a polite request to the
+  -- Crossref API.
+  Text ->
+  -- | The DOIs of interest.
+  [DOI] ->
+  IO [Either CrossrefException Work]
+fetchWorks = fetchWorks' Nothing defaultJournalFix
+
+-- | Generalised version of 'fetchWork', which allows the user to specify the
+-- @http-client@ 'Network.HTTP.Client.Manager' used for the request, and also
+-- control which incorrect Crossref entries are fixed.
+fetchWork' ::
+  -- | @Just manager@ if a specific one is to be used. @Nothing@ if a new one is
+  -- to be created.
   Maybe NHC.Manager ->
   -- | Map of (actual short journal name, expected short journal name).
   Map Text Text ->
@@ -75,8 +89,9 @@ fetchWorkWithOptions ::
   -- | The DOI of interest.
   DOI ->
   IO (Either CrossrefException Work)
-fetchWorkWithOptions maybeManager fixMap email doi' = do
-  -- Set up the manager. If it's not specified, create a new one using default settings.
+fetchWork' maybeManager fixMap email doi' = do
+  -- Set up the manager. If it's not specified, create a new one using default
+  -- settings.
   manager <- case maybeManager of
     Nothing -> NHC.newManager NHCT.tlsManagerSettings
     Just m -> pure m
@@ -88,29 +103,20 @@ fetchWorkWithOptions maybeManager fixMap email doi' = do
   -- Perform journal replacements
   pure $ fmap (fixJournalShortInWork fixMap) eitherErrorWork
 
--- | The same as `fetchWork`, but concurrently fetches metadata for a series of DOIs (it uses the
--- same HTTP manager for all DOIs).
-fetchWorks ::
-  -- | Your email address. This is mandatory for making a polite request to the Crossref API.
-  Text ->
-  -- | The DOI of interest.
-  [DOI] ->
-  IO [Either CrossrefException Work]
-fetchWorks = fetchWorksWithOptions Nothing defaultJournalFix
-
--- | The same as `fetchWorkWithOptions`, but concurrently fetches metadata for a series of DOIs (it
--- uses the same HTTP manager for all DOIs).
-fetchWorksWithOptions ::
-  -- | Just a Manager if a specific one is to be used. Nothing if a new one is to be created.
+-- | The same as 'fetchWork'', but concurrently fetches metadata for a series of
+-- DOIs (it uses the same HTTP manager for all DOIs).
+fetchWorks' ::
+  -- | @Just manager@ if a specific one is to be used. @Nothing@ if a new one is
+  -- to be created.
   Maybe NHC.Manager ->
-  -- | Map of (actual short journal name, expected short journal name).
+  -- | @Map@ of (actual short journal name, expected short journal name).
   Map Text Text ->
   -- | Your email address. This is mandatory for making a polite request.
   Text ->
   -- | The DOIs of interest.
   [DOI] ->
   IO [Either CrossrefException Work]
-fetchWorksWithOptions maybeManager fixMap email dois =
+fetchWorks' maybeManager fixMap email dois =
   if null dois
     then pure [] -- Avoid doing more work than we need to.
     else do
@@ -135,8 +141,8 @@ fetchWorksWithOptions maybeManager fixMap email dois =
         )
       mapM takeMVar mvars
 
--- | A predefined list of (actual, expected) journal short names which can be used as the argument
--- to fixJournalShort and fixJournalShortInWork. These come up in my own work.
+-- | A predefined list of @(actual, expected)@ journal short names which can be
+-- used as an input to 'fixJournalShort' and 'fixJournalShortInWork'.
 defaultJournalFix :: Map Text Text
 defaultJournalFix =
   M.fromList
@@ -166,6 +172,8 @@ defaultJournalFix =
       ("Nat Rev Methods Primers", "Nat. Rev. Methods Primers")
     ]
 
--- | Convenience function for users.
+-- | An empty @Map@, provided here as a convenience to users (passing this as
+-- the argument to 'fetchWork'' or 'fetchWorks'' means that no attempt will be
+-- made to fix incorrect Crossref metadata).
 emptyJournalFix :: Map Text Text
 emptyJournalFix = M.empty
