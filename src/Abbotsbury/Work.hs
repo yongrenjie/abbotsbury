@@ -1,8 +1,42 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+-- |
+-- Module    : Abbotsbury.Work
+-- Copyright : (C) 2021 Jonathan Yong
+-- License   : MIT
+--
+-- This module describes the concept of a Work, which (for the purposes of
+-- abbotsbury) means a @JournalArticle@.  Although Crossref provides many other
+-- types of works (see <https://api.crossref.org/types>), we don't support most
+-- of them because they are unlikely to ever really appear in day-to-day use. We
+-- might eventually add a few more, but the entire range of work types is
+-- unlikely to ever be supported.
 module Abbotsbury.Work
-  ( module Abbotsbury.Work,
+  ( -- * Type synonyms
+    DOI,
+    ISBN,
+
+    -- * Fundamental data types
+    WorkType (..),
+    Work (..),
+    Author (..),
+
+    -- * Lenses
+    workType,
+    title,
+    authors,
+    journalLong,
+    journalShort,
+    year,
+    volume,
+    issue,
+    pages,
+    doi,
+    isbn,
+    articleNumber,
+    given,
+    family,
   )
 where
 
@@ -12,11 +46,21 @@ import Data.Text (Text)
 import GHC.Generics
 import Lens.Micro
 
+-- | A type synonym for Digital Object Identifiers (DOIs). Given that abbotsbury
+-- doesn't provide a "smart constructor" for DOIs, it seems that the sensible
+-- option for these is to use a plain type synonym instead of a @newtype@. See
+-- also [Alexis King's blogpost on this](https://git.io/JsfwJ).
 type DOI = Text
 
+-- | As above, but for International Standard Book Numbers (ISBNs).
 type ISBN = Text
 
--- from http://api.crossref.org/types
+-- | The list of possible work types is taken from Crossref
+-- (<https://api.crossref.org/types>). Although we do not support all of them,
+-- they are enumerated here as they allow a more useful error message to be
+-- returned if data for an unsupported work type is fetched from Crossref.
+--
+-- To be extremely clear: only 'JournalArticle' is supported right now.
 data WorkType
   = BookSection
   | Monograph
@@ -48,23 +92,44 @@ data WorkType
   | StandardSeries
   deriving (Generic, Eq, Show)
 
--- | TODO: Add more fields here.
--- See https://github.com/Crossref/rest-api-doc/blob/master/api_format.md
-data Work = Work
-  { _workType :: WorkType,
-    _title :: Text,
-    _authors :: NonEmpty Author,
+-- | A @Work@ represents one single work from Crossref, whether it is a journal
+-- article, book, or any other type of work. Lenses are provided for each field.
+--
+-- Defining a work as a simple record type like this unfortunately leads to many
+-- redundant fields: for example, a journal article does not have an ISBN, and a
+-- book does not have a long or short journal name. However, this representation
+-- has been chosen, as the alternative (@data Work = Article {...} | Book {...}
+-- | ...@) would require @Prism@s to navigate, and I would rather not have
+-- @lens@ as a dependency (@abbotsbury@ uses
+-- [microlens](http://hackage.haskell.org/package/microlens)).
+--
+-- TODO: Add more fields here for other information (e.g. editors). See
+-- <https://github.com/Crossref/rest-api-doc/blob/master/api_format.md>.
+data Work = Work { _workType :: WorkType, _title :: Text, _authors :: NonEmpty
+                 Author,
+    -- | The full name of the journal, e.g. "Journal of the American Chemical
+    -- Society".
     _journalLong :: Text,
-    _journalShort :: Text,
-    _year :: Int,
-    _volume :: Text,
-    _issue :: Text,
-    _pages :: Text,
-    _doi :: DOI,
-    _isbn :: ISBN,
-    _articleNumber :: Text
+    -- | The short name of the journal, e.g. "J. Am. Chem. Soc.". This short
+    -- form should be taken from [CASSI](https://cassi.cas.org/); however,
+    -- Crossref often has incorrect information for this field, which motivates
+    -- the 'fixJournalShort' function.
+    _journalShort :: Text, _year :: Int,
+    -- The volume and issue cannot be Ints, because sometimes they are a range.
+    _volume :: Text, _issue :: Text, _pages :: Text, _doi :: DOI, _isbn :: ISBN,
+    -- | Some online-only articles do not have page numbers, and are indexed by
+    -- article numbers instead.
+    _articleNumber :: Text } deriving (Generic, Show, Eq)
+
+-- | This is an incomplete representation of an author.
+--
+-- TODO: Rename this to @Contributor@ and add the @suffix@ and @role@ records.
+-- This will allow us to deal with editors, etc. more properly.
+data Author = Author
+  { _given :: Maybe Text,  -- ^ Not everyone has a given name.
+    _family :: Text        -- ^ But everyone has at least one name.
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Show, Ord, Eq)
 
 workType :: Lens' Work WorkType
 workType = lens _workType (\w x -> w {_workType = x})
@@ -101,13 +166,6 @@ isbn = lens _isbn (\w x -> w {_isbn = x})
 
 articleNumber :: Lens' Work Text
 articleNumber = lens _articleNumber (\w x -> w {_articleNumber = x})
-
--- | Technically, this should be renamed to "contributor".
-data Author = Author
-  { _given :: Maybe Text, -- Not everyone has a given name.
-    _family :: Text
-  }
-  deriving (Generic, Show, Ord, Eq)
 
 given :: Lens' Author (Maybe Text)
 given = lens _given (\a g -> a {_given = g})
