@@ -150,6 +150,7 @@ parseCrossrefMessage doi' messageVal = do
   wType  <- identifyWorkType doi' messageVal
   parser <- case wType of
     JournalArticle -> Right parseJournalArticle
+    Book           -> Right parseBook
     _              -> Left (CRUnknownWorkException doi' wType)
   -- Run the appropriate parser on the message Value.
   let parsedWork =
@@ -187,7 +188,35 @@ parseJournalArticle messageObj = do
   _issue  <- (messageObj .: "journal-issue" >>= (.: "issue")) <|> pure ""
   _pages  <- messageObj .:? "page" .!= ""
   _doi    <- messageObj .:? "DOI" .!= ""
+  let _isbn = ""
   _articleNumber <- messageObj .:? "article-number" .!= ""
+  pure $ Work { .. }
+
+
+parseBook :: Object -> DAT.Parser Work
+parseBook messageObj = do
+  let _workType = Book
+  _title       <- safeHead "could not get title" $ messageObj .: "title"
+  -- Authors
+  _authorArray <- messageObj .: "author"
+  _authors     <- do
+    auths <- mapM parseAuthor _authorArray
+    case NE.nonEmpty auths of
+      Just x  -> pure x
+      Nothing -> fail "expected at least one author, found none"
+  let _journalLong  = ""
+  let _journalShort = ""
+  -- Year (prefer print publish date over online publish date as the former is the one usually used)
+  publishedObj <-
+    messageObj .: "published-print" <|> messageObj .: "published-online"
+  _year <- safeHead "year not found in date-parts"
+    $ safeHead "date-parts was empty" (publishedObj .: "date-parts")
+  let _volume = ""
+  let _issue  = ""
+  let _pages  = ""
+  _doi  <- messageObj .:? "DOI" .!= ""
+  _isbn <- safeHead "ISBN was empty" (messageObj .: "ISBN") <|> pure ""
+  let _articleNumber = ""
   pure $ Work { .. }
 
 

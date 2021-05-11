@@ -12,6 +12,7 @@ import           GHC.Generics
 import           Lens.Micro
 
 type DOI = Text
+type ISBN = Text
 
 
 -- from http://api.crossref.org/types
@@ -37,6 +38,7 @@ data Work = Work
   , _issue         :: Text
   , _pages         :: Text
   , _doi           :: DOI
+  , _isbn          :: ISBN
   , _articleNumber :: Text
   }
   deriving (Generic, Show, Eq)
@@ -60,6 +62,8 @@ pages :: Lens' Work Text
 pages = lens _pages (\w x -> w { _pages = x })
 doi :: Lens' Work DOI
 doi = lens _doi (\w x -> w { _doi = x })
+isbn :: Lens' Work ISBN
+isbn = lens _isbn (\w x -> w { _isbn = x })
 articleNumber :: Lens' Work Text
 articleNumber = lens _articleNumber (\w x -> w { _articleNumber = x })
 
