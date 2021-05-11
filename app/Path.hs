@@ -95,14 +95,17 @@ data PDFType
 
 -- | Find the path to a PDF file belonging to a reference.
 getPDFPath ::
-  PDFType -> -- Full text or SI.
-  FilePath -> -- Current working directory.
-  Reference -> -- The reference.
-  FilePath -- Path to the file.
+  -- | Full text or SI.
+  PDFType ->
+  -- | Current working directory.
+  FilePath ->
+  -- | The reference.
+  Reference ->
+  -- | Path to the file.
+  FilePath
 getPDFPath pdfType cwd ref = cwd </> dirName </> fileName
   where
     dirName = case pdfType of
       FullText -> "pdf-abbot"
       SI -> "si-abbot"
-    -- TODO: The 'doi' getter will only work with articles. Books should use ISBN.
     fileName = T.unpack . flip T.append ".pdf" . T.replace "/" "#" $ ref ^. (work . doi)
