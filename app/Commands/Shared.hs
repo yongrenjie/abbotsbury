@@ -196,6 +196,17 @@ pOneFormatCaseSens abbrevs defval =
   in  choice (formatParsers ++ defaultParser)
 
 
+-- | Run a parser and throwError if it doesn't parse nicely. Otherwise return the result. This just
+-- simplifies the code in the runCmd family of functions.
+parseInCommand :: Parser r -- ^ The parser to run.
+  -> Text -- ^ The text to pass to the parser.
+  -> Text -- ^ The name of the command (plus a colon and space) for error reporting.
+  -> ExceptT Text IO r
+parseInCommand parser args prefix = case parse parser "" args of
+  Left  bundle -> throwError $ prefix <> T.pack (errorBundlePretty bundle)
+  Right x      -> pure x
+
+
 -- | Because the help command requires runReplParser itself, we can't stick it
 -- in a different module (that would lead to a cyclic import).
 runHelp :: Text -> ExceptT Text IO ()

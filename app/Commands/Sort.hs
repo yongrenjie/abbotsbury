@@ -24,8 +24,12 @@ import           Text.Megaparsec                ( anySingle
                                                 )
 
 
+prefix :: Text
+prefix = "sort: "
+
+
 throwErrorWithPrefix :: Text -> ExceptT Text IO a
-throwErrorWithPrefix e = throwError $ "sort: " <> e
+throwErrorWithPrefix e = throwError $ prefix <> e
 
 
 {-|
@@ -98,13 +102,11 @@ runSort args input = do
   -- If no refs present, error immediately
   when (IM.null refs) (throwErrorWithPrefix "no references found")
   -- Parse arguments: detect whether reversed order is desired...
-  case parse pSort "" args of
-    Left bundle -> throwErrorWithPrefix (T.pack (errorBundlePretty bundle))  -- parse error
-    Right criterion -> do
-      let originalRefs = IM.elems refs       -- no refnos
-      let sortedRefs = sortBy (getComparisonFn criterion) originalRefs
-      liftIO $ TIO.putStrLn ("sorted references by " <> showT criterion)
-      pure $ SCmdOutput (IM.fromList $ zip [1 ..] sortedRefs) Nothing
+  criterion <- parseInCommand pSort args prefix
+  let originalRefs = IM.elems refs       -- no refnos
+  let sortedRefs = sortBy (getComparisonFn criterion) originalRefs
+  liftIO $ TIO.putStrLn ("sorted references by " <> showT criterion)
+  pure $ SCmdOutput (IM.fromList $ zip [1 ..] sortedRefs) Nothing
 
 
 {-|

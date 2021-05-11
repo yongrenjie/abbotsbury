@@ -23,8 +23,12 @@ import           System.Process
 import           Text.Megaparsec
 
 
+prefix :: Text
+prefix = "cite: "
+
+
 throwErrorWithPrefix :: Text -> ExceptT Text IO a
-throwErrorWithPrefix e = throwError $ "cite: " <> e
+throwErrorWithPrefix e = throwError $ prefix <> e
 
 
 data ReplCiteRules = AcsText
@@ -41,38 +45,36 @@ runCite args input = do
   let refs = refsin input
   -- If no refs present, error immediately
   when (IM.null refs) (throwErrorWithPrefix "no references found")
-  case parse pCite "" args of
-    Left bundle -> throwError $ T.pack ("cite: " ++ errorBundlePretty bundle)  -- parse error
-    Right (refnos, rules) -> do
-      -- First, check for any refnos that don't exist
-      let badRefnos = refnos IS.\\ IM.keysSet refs
-      unless
-        (IS.null badRefnos)
-        (throwErrorWithPrefix
-          ("reference(s) " <> intercalateCommas badRefnos <> " not found")
-        )
-      -- Figure out which refnos to print
-      refsToCite <- case (varin input, IS.null refnos) of
-        (Nothing , True ) -> throwErrorWithPrefix "no references selected"
-        (Nothing , False) -> pure $ IM.elems (refs `IM.restrictKeys` refnos)
-        (Just set, True ) -> pure $ IM.elems (refs `IM.restrictKeys` set)
-        (Just set, False) ->
-          throwErrorWithPrefix "cannot specify refnos and a pipe simultaneously"
-      -- Generate the citation(s)
-      let
-        (style, format) = getStyleFormat rules
-        citations =
-          T.intercalate "\n\n" $ map (cite style format . _work) refsToCite
-      -- Print them
-      liftIO $ TIO.putStrLn citations
-      -- Copy them
-      liftIO $ case rules of
-        AcsWord -> do
-          let htmlLines = map (cite style htmlFormat . _work) refsToCite
-          copyHtmlLinesAsRtf htmlLines
-        _ -> copy citations
-      -- Return basically nothing
-      pure $ SCmdOutput refs Nothing
+  -- Parse arguments
+  (refnos, rules) <- parseInCommand pCite args prefix
+  -- Check for any refnos that don't exist
+  let badRefnos = refnos IS.\\ IM.keysSet refs
+  unless
+    (IS.null badRefnos)
+    (throwErrorWithPrefix
+      ("reference(s) " <> intercalateCommas badRefnos <> " not found")
+    )
+  -- Figure out which refnos to print
+  refsToCite <- case (varin input, IS.null refnos) of
+    (Nothing , True ) -> throwErrorWithPrefix "no references selected"
+    (Nothing , False) -> pure $ IM.elems (refs `IM.restrictKeys` refnos)
+    (Just set, True ) -> pure $ IM.elems (refs `IM.restrictKeys` set)
+    (Just set, False) ->
+      throwErrorWithPrefix "cannot specify refnos and a pipe simultaneously"
+  -- Generate the citation(s)
+  let (style, format) = getStyleFormat rules
+      citations =
+        T.intercalate "\n\n" $ map (cite style format . _work) refsToCite
+  -- Print them
+  liftIO $ TIO.putStrLn citations
+  -- Copy them to the clipboard
+  liftIO $ case rules of
+    AcsWord -> do
+      let htmlLines = map (cite style htmlFormat . _work) refsToCite
+      copyHtmlLinesAsRtf htmlLines
+    _ -> copy citations
+  -- Return basically nothing
+  pure $ SCmdOutput refs Nothing
 
 
 pCite :: Parser (IntSet, ReplCiteRules)
