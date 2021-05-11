@@ -75,9 +75,13 @@ import Network.HTTP.Client ()
 -- short journal names that Crossref gives you, and the values are the /correct/
 -- short journal names. For example, if Crossref gives the incorrect
 -- abbreviation
+-- 
 -- > Nat Rev Chem
+--
 -- and you really want it to be (this is based on a real example)
+--
 -- > Nat. Rev. Chem.
+--
 -- then you should pass @M.fromList [("Nat Rev Chem", "Nat. Rev. Chem.")]@ as
 -- the argument to 'fetchWorkWithOptions'.
 --
