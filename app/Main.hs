@@ -1,38 +1,59 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE UndecidableInstances #-}
-
 module Main where
 
-import Abbotsbury
-import Commands
+import Abbotsbury (cite, fetchWorks, getDoiFromException)
+import Commands (runCmdWith)
 import Commands.Shared
-import Control.Monad
+  ( CmdInput (CmdInput),
+    ReplCmd (Cd, Nop, Quit),
+    SCmdOutput (SCmdOutput),
+    runReplParser,
+  )
+import Control.Monad (forM_, unless, when)
 import Control.Monad.Catch
   ( MonadCatch,
     MonadMask,
     MonadThrow,
     catchIOError,
   )
-import Control.Monad.Except
-import Control.Monad.State
-import Data.Either
+import Control.Monad.Except (MonadIO (liftIO), runExceptT)
+import Control.Monad.State (StateT (..), evalStateT)
+import Data.Either (isLeft)
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IM
 import Data.Maybe (isNothing)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-import Data.Version
-import Lens.Micro.Platform
+import Data.Version (showVersion)
+import Internal.MInputT
+  ( MInputT,
+    defaultSettings,
+    mGetInputLine,
+    mHandleInterrupt,
+    mOutputStrLn,
+    mRunInputT,
+    mWithInterrupt,
+  )
+import Lens.Micro.Platform (Lens', lens, use, (.=))
 import Options
+  ( AbbotCiteOptions (AbbotCiteOptions),
+    AbbotCommand (AbbotCite, AbbotMain),
+    AbbotMainOptions (AbbotMainOptions),
+    abbotParserPrefs,
+    parserInfo,
+  )
 import Options.Applicative (customExecParser)
 import Path
-import Paths_abbotsbury
-import Reference
-import Style
-import System.Console.Haskeline as HL
+  ( expandDirectory,
+    readRefs,
+    saveRefs,
+    setCurrentDirectory,
+  )
+import Paths_abbotsbury (version)
+import Reference (Reference)
+import Style (makeError, setBold, setColor, setItalic)
 import System.Environment (lookupEnv)
-import System.Exit
+import System.Exit (exitFailure, exitSuccess)
 import System.IO (stderr)
 
 -- | All information needed for the main loop.
@@ -55,40 +76,6 @@ dirChanged = lens _dirChanged (\ls dir -> ls {_dirChanged = dir})
 
 references :: Lens' LoopState (IntMap Reference)
 references = lens _references (\ls dir -> ls {_references = dir})
-
--- InputT doesn't provide instances of MTL classes, so we need to do it ourselves
--- The approach is taken from the (no longer working) haskeline-class package, which
--- can be found at https://hackage.haskell.org/package/haskeline-class
-newtype MInputT m a = MInputT {unMInputT :: HL.InputT m a}
-  deriving (Functor, Applicative, Monad, MonadTrans, MonadIO, MonadThrow, MonadCatch)
-
-instance MonadState s m => MonadState s (MInputT m) where
-  get = lift get
-  put = lift . put
-  state = lift . state
-
-mRunInputT :: (MonadIO m, MonadMask m) => HL.Settings m -> MInputT m a -> m a
-mRunInputT s m = HL.runInputT s (unMInputT m)
-
-mWithInterrupt :: (MonadIO m, MonadMask m) => MInputT m a -> MInputT m a
-mWithInterrupt = MInputT . HL.withInterrupt . unMInputT
-
-mHandleInterrupt ::
-  (MonadIO m, MonadMask m) => MInputT m a -> MInputT m a -> MInputT m a
-mHandleInterrupt catchA tryA =
-  MInputT $ HL.handleInterrupt (unMInputT catchA) (unMInputT tryA)
-
-mGetInputLine :: (MonadIO m, MonadMask m) => String -> MInputT m (Maybe String)
-mGetInputLine = MInputT . HL.getInputLine
-
-mGetInputChar :: (MonadIO m, MonadMask m) => String -> MInputT m (Maybe Char)
-mGetInputChar = MInputT . HL.getInputChar
-
-mOutputStr :: MonadIO m => String -> MInputT m ()
-mOutputStr = MInputT . HL.outputStr
-
-mOutputStrLn :: MonadIO m => String -> MInputT m ()
-mOutputStrLn = MInputT . HL.outputStrLn
 
 -- | Entry point.
 main :: IO ()

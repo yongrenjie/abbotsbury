@@ -91,6 +91,7 @@ executable abbot
     Commands.Shared
     Commands.Sort
     Internal.Copy
+    Internal.MInputT
     Options
     Path
     Reference
