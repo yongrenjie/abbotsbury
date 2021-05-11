@@ -82,6 +82,7 @@ main :: IO ()
 main = do
   options <- customExecParser abbotParserPrefs parserInfo
   case options of
+    AbbotCite citeOptions -> runAbbotCite citeOptions
     AbbotMain mainOptions -> do
       let AbbotMainOptions startingDirectory version' = mainOptions
       when version' displayVersionAndExit
@@ -89,38 +90,9 @@ main = do
       let startState = LoopState startDir startDir True IM.empty
       evalStateT (mRunInputT defaultSettings $ mWithInterrupt loop) startState
       exitSuccess
-    AbbotCite citeOptions -> do
-      maybeEmail <- lookupEnv "ABBOT_EMAIL"
-      case maybeEmail of
-        Nothing -> do
-          exitWithError noAbbotEmailText
-        Just email -> do
-          let AbbotCiteOptions dois style' format' = citeOptions
-          eitherWorks <- fetchWorks (T.pack email) dois
-          forM_ eitherWorks $ \case
-            Left exc -> do
-              displayError
-                ( "could not find metadata for DOI '"
-                    <> getDoiFromException exc
-                    <> "' on Crossref"
-                )
-            Right work -> do
-              TIO.putStrLn $ cite style' format' work
-          if not (any isLeft eitherWorks) then exitSuccess else exitFailure
   where
     displayVersionAndExit :: IO ()
     displayVersionAndExit = putStrLn ("abbot version " <> showVersion version) >> exitSuccess
-    displayError :: Text -> IO ()
-    displayError t = TIO.hPutStrLn stderr t'
-      where
-        t' = (setColor "tomato" . setBold $ "error: ") <> setColor "tomato" t
-    exitWithError :: Text -> IO ()
-    exitWithError t = displayError t >> exitFailure
-    noAbbotEmailText :: Text
-    noAbbotEmailText =
-      "Please set the ABBOT_EMAIL environment variable to your email before using `abbot cite`.\n"
-        <> "       Abbot needs this information to make 'polite' calls to the Crossref API.\n"
-        <> "       See https://github.com/CrossRef/rest-api-doc#etiquette for more information."
 
 -- | The main REPL loop of abbot. The `quit` and `cd` functions are implemented
 -- here, because they affect the entire state of the program. Other functions
@@ -208,3 +180,35 @@ prompt fp =
 -- | Prints an error in the main loop.
 printErr :: Text -> MInputT (StateT LoopState IO) ()
 printErr = mOutputStrLn . T.unpack . makeError
+
+runAbbotCite :: AbbotCiteOptions -> IO ()
+runAbbotCite citeOptions = do
+  maybeEmail <- lookupEnv "ABBOT_EMAIL"
+  case maybeEmail of
+    Nothing -> do
+      exitWithError noAbbotEmailText
+    Just email -> do
+      let AbbotCiteOptions dois style' format' = citeOptions
+      eitherWorks <- fetchWorks (T.pack email) dois
+      forM_ eitherWorks $ \case
+        Left exc -> do
+          displayError
+            ( "could not find metadata for DOI '"
+                <> getDoiFromException exc
+                <> "' on Crossref"
+            )
+        Right work -> do
+          TIO.putStrLn $ cite style' format' work
+      if not (any isLeft eitherWorks) then exitSuccess else exitFailure
+  where
+    noAbbotEmailText :: Text
+    noAbbotEmailText =
+      "Please set the ABBOT_EMAIL environment variable to your email before using `abbot cite`.\n"
+        <> "       Abbot needs this information to make 'polite' calls to the Crossref API.\n"
+        <> "       See https://github.com/CrossRef/rest-api-doc#etiquette for more information."
+    displayError :: Text -> IO ()
+    displayError t = TIO.hPutStrLn stderr t'
+      where
+        t' = (setColor "tomato" . setBold $ "error: ") <> setColor "tomato" t
+    exitWithError :: Text -> IO ()
+    exitWithError t = displayError t >> exitFailure
