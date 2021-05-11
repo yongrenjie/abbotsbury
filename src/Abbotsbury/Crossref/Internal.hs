@@ -14,14 +14,12 @@ import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Text.Encoding (encodeUtf8)
+import Data.Text.Normalize (NormalizationMode (NFC), normalize)
 import qualified Network.HTTP.Client as NHC
 import Network.URI
   ( escapeURIString,
     isUnescapedInURIComponent,
   )
-
--- The Crossref JSON schema is documented at
--- https://github.com/Crossref/rest-api-doc/blob/master/api_format.md.
 
 -- | Fetching data from Crossref can fail for a number of reasons. In this case we either throw a
 -- CrossrefException (from fetchCrossrefJson), or we put it
@@ -161,7 +159,7 @@ parseJournalArticle :: Object -> DAT.Parser Work
 parseJournalArticle messageObj = do
   -- Title
   let _workType = JournalArticle
-  _title <- safeHead "could not get title" $ messageObj .: "title"
+  _title <- normalize NFC <$> safeHead "could not get title" (messageObj .: "title")
   -- Authors
   _authorArray <- messageObj .: "author"
   _authors <- do
@@ -242,8 +240,8 @@ parseAuthor ::
   Object ->
   DAT.Parser Author
 parseAuthor authJSON = do
-  _given <- (fmap . fmap) separateInitials (authJSON .:? "given")
-  _family <- authJSON .: "family"
+  _given <- fmap (normalize NFC . separateInitials) <$> (authJSON .:? "given")
+  _family <- normalize NFC <$> authJSON .: "family"
   pure Author {..}
 
 -- | This function enforces the separation of initials by a space, as described in parseAuthor.
