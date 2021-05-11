@@ -1,17 +1,15 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+
 -- |
 -- Module    : Abbotsbury.Work
 -- Copyright : (C) 2021 Jonathan Yong
 -- License   : MIT
 --
--- This module describes the concept of a Work, which (for the purposes of
--- abbotsbury) means a @JournalArticle@.  Although Crossref provides many other
--- types of works (see <https://api.crossref.org/types>), we don't support most
--- of them because they are unlikely to ever really appear in day-to-day use. We
--- might eventually add a few more, but the entire range of work types is
--- unlikely to ever be supported.
+-- This module defines the core datatypes of @abbotsbury@, in particular, the
+-- 'Work'. If you are looking for usage guidance, please go to the top-level
+-- module "Abbotsbury".
 module Abbotsbury.Work
   ( -- * Type synonyms
     DOI,

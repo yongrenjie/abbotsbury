@@ -1,21 +1,19 @@
--- | This module provides the functionality which allows fetching metadata from
--- Crossref and parsing them into 'Work's.
+-- |
+-- Module    : Abbotsbury.Crossref
+-- Copyright : (C) 2021 Jonathan Yong
+-- License   : MIT
 --
--- Note that all the @fetchWork...@ functions take an extra @Text@ argument,
--- which is supposed to be your email address. The reason for this is
--- politeness. Crossref asks that users of their API provide some form of
--- contact information in their requests:
--- <https://github.com/CrossRef/rest-api-doc#etiquette>
--- The positive side of this is that you get redirected to a 'polite' pool,
--- which is [slightly faster and more reliable](https://status.crossref.org/).
+-- This module provides the functionality which allows fetching metadata from
+-- Crossref and parsing them into 'Work's. These lower-level modules mainly
+-- contain functions which are exposed for testing purposes. If you are looking
+-- for usage guidance, please go to the top-level module "Abbotsbury".
 module Abbotsbury.Crossref
-  ( -- $exceptions_note
-    Abbotsbury.Crossref.Internal.CrossrefException,
-    Abbotsbury.Crossref.Internal.getDoiFromException,
-    fetchWork,
+  ( fetchWork,
     fetchWorkWithOptions,
     fetchWorks,
     fetchWorksWithOptions,
+    Abbotsbury.Crossref.Internal.CrossrefException,
+    Abbotsbury.Crossref.Internal.getDoiFromException,
     defaultJournalFix,
     emptyJournalFix,
   )
@@ -30,10 +28,6 @@ import qualified Data.Map as M
 import Data.Text (Text)
 import qualified Network.HTTP.Client as NHC
 import qualified Network.HTTP.Client.TLS as NHCT
-
--- $exceptions_note
--- The following functions :w
---
 
 -- | Convert a DOI into a full-fledged Work by fetching metadata from Crossref.
 --

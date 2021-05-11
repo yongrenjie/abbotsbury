@@ -1,16 +1,20 @@
--- | This top-level module essentially re-exports all the useful functionality
--- of the lower-level modules. Although the functions are documented here, it is
--- probably more helpful to look at the individual modules' documentation as
--- they have more text about the general design of @abbotsbury@.
+-- |
+-- Module    : Abbotsbury
+-- Copyright : (C) 2021 Jonathan Yong
+-- License   : MIT
 --
--- In particular:
+-- This top-level module (re-)exports all of the functionality that you, as an
+-- end user, will likely use. Therefore, full explanatory documentation is
+-- provided here, and not in the lower-level modules.
 --
---  * "Abbotsbury.Work" describes the @Work@, which is the fundamental data type
---    which @abbotsbury@ uses.
---  * "Abbotsbury.Crossref" describes how to create @Work@s by fetching data
---    from Crossref.
---  * "Abbotsbury.Cite" has information about how to generate citations from
---    @Work@s.
+-- However, it is worth adding a note about the organisation of the project. The
+-- main submodules are:
+--
+--  * "Abbotsbury.Work" defines the @Work@, which is the fundamental data type
+--    used by @abbotsbury@.
+--  * "Abbotsbury.Crossref" provides functions for creating @Work@s by fetching
+--    data from Crossref.
+--  * "Abbotsbury.Cite" generates citations from @Work@s.
 
 module Abbotsbury
   ( -- * Fetching metadata from Crossref
@@ -86,13 +90,20 @@ import Network.HTTP.Client ()
 -- :-)](https://github.com/yongrenjie/abbotsbury/)
 
 -- $cite-overview
--- Only this one single function is needed for citation generation. The
--- /citation style/ dictates what text is output, and the /output format/
--- dictates how this text is formatted. For example, the ACS style specifies
--- that the year must be in bold. The exact way in which this is achieved
--- depends on the output format: for example, with the Markdown format, the year
--- is surrounded by @**@; and with the HTML format, the year is surrounded with
--- the @\<b\>...\</b\>@ tags.
+-- Only this one single function is needed for citation generation. It takes two
+-- inputs: the /citation style/ and the /output format/. The
+-- /style/ dictates what text is output, as well as an abstract representation
+-- of its formatting; and the /format/ takes this abstract formatting and turns
+-- it into concrete formatting.
+--
+-- For example, when specifying 'acsStyle' as the @Style@ to use, the year will
+-- be output in bold (according to the [ACS Style
+-- Guide](https://pubs.acs.org/doi/full/10.1021/acsguide.40303)). The @Style@
+-- only specifies that the year is to be bolded: it does not say anything about
+-- the way in which this is achieved. Instead, the @Format@ is what controls
+-- this. For example, with the Markdown format, the year will be surrounded by
+-- @**@; and with the HTML format, the year will be surrounded with the
+-- @\<b\>...\</b\>@ tags.
 --
 -- One curiosity is the BibLaTeX \'style\'. @abbotsbury@ in fact was originally
 -- designed to only output BibLaTeX entries, and was later expanded to include

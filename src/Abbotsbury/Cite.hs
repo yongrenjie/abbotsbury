@@ -1,3 +1,12 @@
+-- |
+-- Module    : Abbotsbury.Cite
+-- Copyright : (C) 2021 Jonathan Yong
+-- License   : MIT
+--
+-- This module, and its submodules, provide the functionality for generating
+-- citations from 'Work's. These modules mainly contain functions which are
+-- exposed for testing purposes. If you are looking for usage guidance, please
+-- go to the top-level module "Abbotsbury".
 module Abbotsbury.Cite
   ( cite,
     makeParts,
