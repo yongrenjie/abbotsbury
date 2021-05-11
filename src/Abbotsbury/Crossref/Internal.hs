@@ -160,6 +160,8 @@ parseJournalArticle messageObj = do
   -- Title
   let _workType = JournalArticle
   _title <- normalize NFC <$> safeHead "could not get title" (messageObj .: "title")
+  -- Publisher (can be blank)
+  _publisher <- messageObj .:? "publisher" .!= ""
   -- Authors
   _authorArray <- messageObj .: "author"
   _authors <- do
@@ -194,6 +196,8 @@ parseBook :: Object -> DAT.Parser Work
 parseBook messageObj = do
   let _workType = Book
   _title <- safeHead "could not get title" $ messageObj .: "title"
+  -- Publisher (can't be blank)
+  _publisher <- messageObj .: "publisher"
   -- Authors
   _authorArray <- messageObj .: "author"
   _authors <- do

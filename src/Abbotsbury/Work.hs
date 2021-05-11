@@ -1,7 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-
 -- |
 -- Module    : Abbotsbury.Work
 -- Copyright : (C) 2021 Jonathan Yong
@@ -23,6 +22,7 @@ module Abbotsbury.Work
     -- * Lenses
     workType,
     title,
+    publisher,
     authors,
     journalLong,
     journalShort,
@@ -103,8 +103,12 @@ data WorkType
 --
 -- TODO: Add more fields here for other information (e.g. editors). See
 -- <https://github.com/Crossref/rest-api-doc/blob/master/api_format.md>.
-data Work = Work { _workType :: WorkType, _title :: Text, _authors :: NonEmpty
-                 Author,
+data Work = Work
+  { _workType :: WorkType,
+    _title :: Text,
+    _publisher :: Text,
+    -- | There has to be at least one author!.
+    _authors :: NonEmpty Author,
     -- | The full name of the journal, e.g. "Journal of the American Chemical
     -- Society".
     _journalLong :: Text,
@@ -112,20 +116,29 @@ data Work = Work { _workType :: WorkType, _title :: Text, _authors :: NonEmpty
     -- form should be taken from [CASSI](https://cassi.cas.org/); however,
     -- Crossref often has incorrect information for this field, which motivates
     -- the 'fixJournalShort' function.
-    _journalShort :: Text, _year :: Int,
+    _journalShort :: Text,
+    _year :: Int,
     -- The volume and issue cannot be Ints, because sometimes they are a range.
-    _volume :: Text, _issue :: Text, _pages :: Text, _doi :: DOI, _isbn :: ISBN,
+    _volume :: Text,
+    _issue :: Text,
+    _pages :: Text,
+    _doi :: DOI,
+    _isbn :: ISBN,
     -- | Some online-only articles do not have page numbers, and are indexed by
     -- article numbers instead.
-    _articleNumber :: Text } deriving (Generic, Show, Eq)
+    _articleNumber :: Text
+  }
+  deriving (Generic, Show, Eq)
 
 -- | This is an incomplete representation of an author.
 --
 -- TODO: Rename this to @Contributor@ and add the @suffix@ and @role@ records.
 -- This will allow us to deal with editors, etc. more properly.
 data Author = Author
-  { _given :: Maybe Text,  -- ^ Not everyone has a given name.
-    _family :: Text        -- ^ But everyone has at least one name.
+  { -- | Not everyone has a given name.
+    _given :: Maybe Text,
+    -- | But everyone has at least one name.
+    _family :: Text
   }
   deriving (Generic, Show, Ord, Eq)
 
@@ -134,6 +147,9 @@ workType = lens _workType (\w x -> w {_workType = x})
 
 title :: Lens' Work Text
 title = lens _title (\w x -> w {_title = x})
+
+publisher :: Lens' Work Text
+publisher = lens _publisher (\w x -> w {_publisher = x})
 
 authors :: Lens' Work (NonEmpty Author)
 authors = lens _authors (\w x -> w {_authors = x})

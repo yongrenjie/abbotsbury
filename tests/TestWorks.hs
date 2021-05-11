@@ -10,11 +10,12 @@ auth :: (Text, Text) -> Author
 auth (gvn, fmy) = Author (Just gvn) fmy
 
 orgLett :: Work
-orgLett = Work wt t a jL jS y v i p doi isbn aN
+orgLett = Work wt t pub a jL jS y v i p doi isbn aN
   where
     wt = JournalArticle
     t =
       "A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides"
+    pub = "American Chemical Society (ACS)"
     a = NE.fromList [mansfield, smith, yong, garry, anderson]
     jL = "Organic Letters"
     jS = "Org. Lett."
@@ -33,10 +34,11 @@ orgLett = Work wt t a jL jS y v i p doi isbn aN
     anderson = auth ("Edward A.", "Anderson")
 
 nrmpCorrected :: Work
-nrmpCorrected = Work wt t a jL jS y v i p doi isbn aN
+nrmpCorrected = Work wt t pub a jL jS y v i p doi isbn aN
   where
     wt = JournalArticle
     t = "Parallel nuclear magnetic resonance spectroscopy"
+    pub = "Springer Science and Business Media LLC"
     a = NE.fromList [kupce, frydman, webb, yong, claridge]
     jL = "Nature Reviews Methods Primers"
     jS = "Nat. Rev. Methods Primers"
@@ -55,10 +57,11 @@ nrmpCorrected = Work wt t a jL jS y v i p doi isbn aN
     claridge = auth ("Tim D. W.", "Claridge")
 
 noFirstNameN2020 :: Work
-noFirstNameN2020 = Work wt t a jL jS y v i p doi isbn aN
+noFirstNameN2020 = Work wt t pub a jL jS y v i p doi isbn aN
   where
     wt = JournalArticle
     t = "Attention science: some people have only one name"
+    pub = "Springer Science and Business Media LLC"
     a = NE.fromList [sheherazade, ardiantiono]
     jL = "Nature"
     jS = "Nature"
@@ -74,11 +77,12 @@ noFirstNameN2020 = Work wt t a jL jS y v i p doi isbn aN
     ardiantiono = Author Nothing "Ardiantiono"
 
 glaserS1998 :: Work
-glaserS1998 = Work wt t a jL jS y v i p doi isbn aN
+glaserS1998 = Work wt t pub a jL jS y v i p doi isbn aN
   where
     wt = JournalArticle
     t =
       "Unitary Control in Quantum Ensembles: Maximizing Signal Intensity in Coherent Spectroscopy"
+    pub = "American Association for the Advancement of Science (AAAS)"
     -- Crossref gives entirely wrong data for this. It has 7 authors.
     a = NE.fromList [auth ("S. J.", "Glaser")]
     jL = "Science"
