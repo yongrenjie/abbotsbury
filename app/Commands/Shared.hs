@@ -108,16 +108,14 @@ pRepl = do
 
 pSingleCmd :: Parser AbbotCmd
 pSingleCmd = do
-  base <-
-    replLexeme $
-      choice
-        [ Help <$ string' "help",
-          List <$ choice (map string' ["list", "ls", "l"]),
-          Open <$ choice (map string' ["open", "op", "o"]),
-          Sort <$ choice (map string' ["sort", "so"]),
-          Cite <$ choice (map string' ["cite", "c"]),
-          Add <$ choice (map string' ["add", "a"])
-        ]
+  baseCmdText <- replLexeme $ takeWhile1P (Just "alphabetical letter") isAlpha
+  base <- case baseCmdText of
+               t | t `elem` ["h", "help"] -> pure Help
+                 | t `elem` ["l", "ls", "list"] -> pure List
+                 | t `elem` ["so", "sort"] -> pure Sort
+                 | t `elem` ["c", "cite"] -> pure Cite
+                 | t `elem` ["a", "add"] -> pure Add
+                 | otherwise -> fail "command not recognised"
   -- For a single command, the arguments cannot include the character '|',
   -- because it is exclusively used in pipes. We need to have a better way
   -- to deal with this, to be honest.
