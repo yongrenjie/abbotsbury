@@ -2,8 +2,22 @@ cabal-version:       2.4
 
 name:                abbotsbury
 version:             0.1.1.1
-synopsis:            Minimalistic reference management, primarily for chemistry, but works with all articles on Crossref.
--- description:
+synopsis:            Minimalistic reference management
+description:         `abbotsbury` is a small package designed to fetch data
+                     from Crossref and generate citations from them in a
+                     variety of (internally coded) citation styles. It is
+                     primarily designed to work with chemistry data, although
+                     in theory should work with anything off Crossref.
+                     `abbotsbury` also provides a command-line tool, `abbot`,
+                     which essentially acts as a reference manager. It does so
+                     by maintaining a collection of PDFs.
+                     Note that `abbotsbury` does /not/ parse Crossref data in
+                     its entirety: it only retains as much information as it
+                     needs, and throws the rest away. It currently also only
+                     works with journal articles (i.e. no books, conference
+                     proceedings, etc.). Lastly, it does not parse CSL files.
+                     All in all, it is a specialised solution to a specialised
+                     need.
 bug-reports:         https://github.com/yongrenjie/abbotsbury/issues
 license:             MIT
 license-file:        LICENSE.txt
