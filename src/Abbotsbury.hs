@@ -1,3 +1,16 @@
+-- | This top-level module essentially re-exports all the useful functionality
+-- of the lower-level modules. Although the functions are documented here, it is
+-- probably more helpful to look at the individual modules' documentation as
+-- they have more text about the general design of @abbotsbury@.
+--
+-- In particular:
+--
+--  * 'Abbotsbury.Work' describes the data types which @abbotsbury@ uses.
+--  * 'Abbotsbury.Crossref' describes how to create @Work@s by fetching data
+--     from Crossref.
+--  * 'Abbotsbury.Cite' has information about how to generate citations from
+--     @Work@s.
+
 module Abbotsbury
   ( Abbotsbury.Crossref.fetchWork,
     Abbotsbury.Crossref.fetchWorks,
