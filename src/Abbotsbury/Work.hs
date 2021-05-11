@@ -54,11 +54,11 @@ type DOI = Text
 type ISBN = Text
 
 -- | The list of possible work types is taken from Crossref
--- (<https://api.crossref.org/types>). Although we do not support all of them,
--- they are enumerated here as they allow a more useful error message to be
--- returned if data for an unsupported work type is fetched from Crossref.
---
--- To be extremely clear: only 'JournalArticle' is supported right now.
+-- (<https://api.crossref.org/types>). Only 'JournalArticle' is supported right
+-- now. Although we do not support all of them, they are enumerated here as they
+-- allow a more useful error message to be returned if data for an unsupported
+-- work type is fetched from Crossref (see
+-- 'Abbotsbury.Crossref.CRUnknownWorkException').
 data WorkType
   = BookSection
   | Monograph
