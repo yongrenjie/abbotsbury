@@ -69,7 +69,9 @@ data AbbotCiteOptions = AbbotCiteOptions
     -- | The citation style to use.
     style :: Style,
     -- | The output format to use.
-    format :: Format
+    format :: Format,
+    -- | Whether to get the email from `git config --get user.email`.
+    useGitEmail :: Bool
   }
 
 -- | Option reader which converts a string (given on command line) to a concrete style.
@@ -125,6 +127,10 @@ citeParser =
                   <> short 'f'
                   <> value textFormat
                   <> helpDoc (Just formatHelp)
+              )
+            <*> switch
+              ( long "use-git-email"
+                  <> help "Use email from `git config` to fetch metadata"
               )
         )
   where
