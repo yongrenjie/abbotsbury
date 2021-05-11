@@ -43,7 +43,7 @@ copyHtmlAsRtf htmlText =
       "darwin" -> do
         (Just in1, _, _, ph) <-
           createProcess
-            (shell "textutil -convert rtf -stdin -stdout -format html | pbcopy -Prefer rtf")
+            (shell "textutil -convert rtf -stdin -stdout -inputencoding UTF-8 -format html | pbcopy -Prefer rtf")
               { std_in = CreatePipe
               }
         TIO.hPutStr in1 htmlText
