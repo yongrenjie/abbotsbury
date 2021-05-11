@@ -5,11 +5,12 @@
 --
 -- In particular:
 --
---  * 'Abbotsbury.Work' describes the data types which @abbotsbury@ uses.
---  * 'Abbotsbury.Crossref' describes how to create @Work@s by fetching data
---     from Crossref.
---  * 'Abbotsbury.Cite' has information about how to generate citations from
---     @Work@s.
+--  * "Abbotsbury.Work" describes the @Work@, which is the fundamental data type
+--    which @abbotsbury@ uses.
+--  * "Abbotsbury.Crossref" describes how to create @Work@s by fetching data
+--    from Crossref.
+--  * "Abbotsbury.Cite" has information about how to generate citations from
+--    @Work@s.
 
 module Abbotsbury
   ( Abbotsbury.Crossref.fetchWork,

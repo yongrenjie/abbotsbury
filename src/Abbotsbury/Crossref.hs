@@ -1,4 +1,25 @@
-module Abbotsbury.Crossref where
+-- | This module provides the functionality which allows fetching metadata from
+-- Crossref and parsing them into 'Work's.
+--
+-- Note that all the @fetchWork...@ functions take an extra @Text@ argument,
+-- which is supposed to be your email address. The reason for this is
+-- politeness. Crossref asks that users of their API provide some form of
+-- contact information in their requests:
+-- <https://github.com/CrossRef/rest-api-doc#etiquette>
+-- The positive side of this is that you get redirected to a 'polite' pool,
+-- which is [slightly faster and more reliable](https://status.crossref.org/).
+module Abbotsbury.Crossref
+  ( -- $exceptions_note
+    Abbotsbury.Crossref.Internal.CrossrefException,
+    Abbotsbury.Crossref.Internal.getDoiFromException,
+    fetchWork,
+    fetchWorkWithOptions,
+    fetchWorks,
+    fetchWorksWithOptions,
+    defaultJournalFix,
+    emptyJournalFix,
+  )
+where
 
 import Abbotsbury.Crossref.Internal
 import Abbotsbury.Work
@@ -10,23 +31,41 @@ import Data.Text (Text)
 import qualified Network.HTTP.Client as NHC
 import qualified Network.HTTP.Client.TLS as NHCT
 
--- The Crossref JSON schema is documented at
--- https://github.com/Crossref/rest-api-doc/blob/master/api_format.md.
+-- $exceptions_note
+-- The following functions :w
+--
 
 -- | Convert a DOI into a full-fledged Work by fetching metadata from Crossref.
 --
--- In practice, Crossref data is fetched and parsed in a series of functions. In theory they could
--- easily be lumped into this one function, but it seems easier to organise them in smaller
--- functions.
--- Note that this fixes "common" errors in Crossref's "short-container-title" entry (which are often
--- incorrect), according to a hardcoded Map of journal title replacements (see `defaultJournalFix`).
--- Also, this function creates a new HTTP manager every time it is called. This is meant to be
--- simple default behaviour: if you want something different, you can use `fetchWorkWithOptions` and
--- pass appropriate arguments.
+-- Note that this function uses a hardcoded Map of journal title replacements
+-- (see 'defaultJournalFix') to fix common errors in Crossref's
+-- @short-container-title@ entries (which are often incorrect).  Also, this
+-- function creates a new HTTP manager every time it is called. This is meant to
+-- be simple default behaviour: if you want something different, you can use
+-- 'fetchWorkWithOptions' and pass appropriate arguments.
+--
+-- Assuming you have a working Internet connection:
+--
+-- >>> nrmp <- fetchWork "your@email.com" "10.1038/s43586-021-00024-3"
+-- >>> nrmp
+-- Right (Work {_workType = JournalArticle, _title = "Parallel nuclear magnetic resonance spectroscopy", _authors = Author {_given = Just "\274riks", _family = "Kup\269e"} :| [Author {_given = Just "Lucio", _family = "Frydman"},Author {_given = Just "Andrew G.", _family = "Webb"},Author {_given = Just "Jonathan R. J.", _family = "Yong"},Author {_given = Just "Tim D. W.", _family = "Claridge"}], _journalLong = "Nature Reviews Methods Primers", _journalShort = "Nat. Rev. Methods Primers", _year = 2021, _volume = "1", _issue = "1", _pages = "", _doi = "10.1038/s43586-021-00024-3", _isbn = "", _articleNumber = "27"})
+-- >>> nope <- fetchWork "your@email.com" "this_doi_doesnt_exist"
+-- >>> nope
+-- Left (CRHttpException "this_doi_doesnt_exist" (HttpExceptionRequest Request {
+--    (long HTTP exception output elided...)
+-- }) "Resource not found.")))
+--
+-- In practice, this function calls on a number of smaller functions, which are
+-- described in "Abbotsbury.Crossref.Internal".
 fetchWork ::
-  -- | Your email address. This is mandatory for making a polite request to the Crossref API.
+  -- | Your email address. This is mandatory for making a polite request to the
+  -- Crossref API.
   Text ->
-  -- | The DOI of interest.
+  -- | The DOI of interest. @abbotsbury@ only really works with journal
+  -- articles, for which DOIs are a good identifier. Some books have DOIs (and
+  -- in fact it is possible to search Crossref by ISBN), but the metadata
+  -- available on Crossref for books is quite patchy. Hence, for now, this only
+  -- really works with DOIs.
   DOI ->
   IO (Either CrossrefException Work)
 fetchWork = fetchWorkWithOptions Nothing defaultJournalFix

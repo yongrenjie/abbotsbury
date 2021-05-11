@@ -7,6 +7,7 @@
     _journalShort: Org. Lett.
     _workType: JournalArticle
     _title: A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides
+    _isbn: ''
     _authors:
     - _given: Steven J.
       _family: Mansfield
@@ -33,6 +34,7 @@
     _journalShort: Angew. Chem. Int. Ed.
     _workType: JournalArticle
     _title: Elimination of Zero-Quantum Interference in Two-Dimensional NMR Spectra
+    _isbn: ''
     _authors:
     - _given: Michael J.
       _family: Thrippleton
@@ -56,6 +58,7 @@
     _journalShort: J. Chem. Educ.
     _workType: JournalArticle
     _title: 'Orbitals: Some Fiction and Some Facts'
+    _isbn: ''
     _authors:
     - _given: Jochen
       _family: Autschbach
@@ -74,6 +77,7 @@
     _journalShort: Nat. Rev. Methods Primers
     _workType: JournalArticle
     _title: Parallel nuclear magnetic resonance spectroscopy
+    _isbn: ''
     _authors:
     - _given: Ēriks
       _family: Kupče
