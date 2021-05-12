@@ -20,7 +20,6 @@ import           Internal.Monad
 import           Lens.Micro.Platform
 import           Reference
 import           System.Process
-import           Text.Megaparsec                ( eof )
 
 prefix :: Text
 prefix = "cite: "
