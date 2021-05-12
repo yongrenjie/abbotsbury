@@ -75,18 +75,18 @@ import           Network.HTTP.Client            ( )
 -- (<https://cassi.cas.org>). However, Crossref metadata often contains
 -- abbreviated journal names which are not in accordance with the CASSI
 -- abbreviations. Thus, 'fetchWork'' and 'fetchWorks'' take a @Map Text Text@ as
--- a parameter: this is a @Map@ where the keys are the short journal names that
--- Crossref gives you, and the values are the /correct/ short journal names. For
--- example, if Crossref gives the incorrect abbreviation
+-- a parameter: this is a @Map@ where the keys are the long (i.e. unabbreviated)
+-- journal names that Crossref gives you, and the values are the /correct/ short
+-- journal names. For example, if you want to specify that
 -- 
--- > Nat Rev Chem
+-- > Nature Reviews Chemistry
 --
--- and you really want it to be (this is based on a real example)
+-- should always be abbreviated as
 --
 -- > Nat. Rev. Chem.
 --
--- then you should pass @M.fromList [("Nat Rev Chem", "Nat. Rev. Chem.")]@ as
--- the argument to 'fetchWork''.
+-- then you should pass @M.fromList [("Nature Reviews Chemistry", "Nat. Rev.
+-- Chem.")]@ as the argument to 'fetchWork''.
 --
 -- @abbotsbury@ itself already has collected a bunch of common mistakes (mainly
 -- for chemistry-focused journals) which the author or others have noticed.

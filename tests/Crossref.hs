@@ -66,11 +66,11 @@ testNoJournalShort = testCase "parseCrossrefMessage - no short journal name"
     work @?= Right TW.glaserS1998
 
 testfixJShortNRMP :: TestTree
-testfixJShortNRMP = testCase "fixJournalShortInWork - 2021 NRMP"
+testfixJShortNRMP = testCase "fixJournalShort - 2021 NRMP"
                              checkFixedNRMPJSON
  where
   checkFixedNRMPJSON :: Assertion
   checkFixedNRMPJSON = do
     work <- parseCrossrefJsonFromFile "tests/test-data/nrmp.json"
-    let fixedWork = fixJournalShortInWork defaultJournalFix <$> work
+    let fixedWork = fixJournalShort defaultJournalFix <$> work
     fixedWork @?= Right TW.nrmpCorrected

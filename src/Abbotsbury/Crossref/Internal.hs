@@ -271,32 +271,27 @@ separateInitials t = T.concat . zipWith f [1 ..] . T.unpack $ t
       "" -> Nothing
       xs -> Just (T.head xs)
 
--- | "Short" journal names should be abbreviated according to the Chemical Abstracts Service Source
--- Index (CASSI), accessible at https://cassi.cas.org/. However, Crossref JSON data occasionally:
--- (1) does not have the "short-container-title" entry, meaning that no short journal name is
--- provided (in this case abbotsbury uses the full name); or
--- (2) has incorrect or unhelpful entries in this field, which lead to incorrect citations.
+-- | "Short" journal names should be abbreviated according to the Chemical
+-- Abstracts Service Source Index (CASSI), accessible at https://cassi.cas.org/.
+-- However, Crossref JSON data occasionally: (1) does not have the
+-- "short-container-title" entry, meaning that no short journal name is provided
+-- (in this case abbotsbury uses the full name); or (2) has incorrect or
+-- unhelpful entries in this field, which lead to incorrect citations.
 --
--- In both cases the actual "short name" that abbotsbury finds is not correct. This function
--- attempts to correct for that. It's important that the keys of the Map are the **actual short
--- names** that abbotsbury provides. For example, if you expected to get "Nature Chem." but got
--- "Nat. Chem.", then pass `Map.fromList [("Nat. Chem.", "Nature Chem.")] as the first argument.
-fixJournalShort
-  ::
-  -- | A Map of (actual short name, expected short name) pairs.
-     Map Text Text
-  ->
-  -- | The actual "short journal name" that abbotsbury found.
-     Text
-  ->
-  -- | The correct name if the actual name was found in the Map; otherwise the actual name.
-     Text
-fixJournalShort m wrong = fromMaybe wrong (m M.!? wrong)
-
--- | The same as fixJournalShort, but can be applied to an entire Work. This simply returns the
--- original Work if the Work does not have a _journalShort attribute.
-fixJournalShortInWork :: Map Text Text -> Work -> Work
-fixJournalShortInWork m work = work { _journalShort = right_journalShort }
+-- In both cases the actual "short name" that abbotsbury finds is not correct.
+-- This function attempts to correct for that. The @Map Text Text@ passed as
+-- input should have the /full journal titles/ as the keys, and the
+-- /abbreviations/ as the values. For example, if you want @"Nature Chemistry"@
+-- to always be abbreviated as @"Nature Chem."@, then then pass
+-- @Map.fromList [("Nature Chemistry", "Nature Chem.")]@ as the first argument.
+--
+-- If the 'Work' passed to this function doesn't have a full title found in the
+-- @Map@, then the abbreviation is left untouched, i.e. it will be whatever
+-- Crossref gave: or if Crossref didn't give anything, then the full name will
+-- be used as the abbreviation.
+fixJournalShort :: Map Text Text -> Work -> Work
+fixJournalShort m work = work { _journalShort = correctedShort }
  where
-  wrong_journalShort = _journalShort work
-  right_journalShort = fixJournalShort m wrong_journalShort
+  long = _journalLong work
+  origShort = _journalShort work
+  correctedShort = fromMaybe origShort (m M.!? long)

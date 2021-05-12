@@ -30,7 +30,7 @@ import qualified Network.HTTP.Client.TLS       as NHCT
 
 -- | Convert a DOI into a full-fledged Work by fetching metadata from Crossref.
 --
--- Note that this function uses a hardcoded Map of journal title replacements
+-- Note that this function uses a hardcoded Map of journal title abbreviations
 -- (see 'defaultJournalFix') to fix common errors in Crossref's
 -- @short-container-title@ entries (which are often incorrect).  Also, this
 -- function creates a new HTTP 'Network.HTTP.Client.Manager' every time it is
@@ -87,7 +87,7 @@ fetchWork'
   -- to be created.
      Maybe NHC.Manager
   ->
-  -- | Map of (actual short journal name, expected short journal name).
+  -- | @Map@ of @(full journal title, correctly abbreviated journal title)@.
      Map Text Text
   ->
   -- | Your email address. This is mandatory for making a polite request.
@@ -108,7 +108,7 @@ fetchWork' maybeManager fixMap email doi' = do
   let eitherErrorWork =
         eitherErrorJson >>= getJsonMessage doi' >>= parseCrossrefMessage doi'
   -- Perform journal replacements
-  pure $ fmap (fixJournalShortInWork fixMap) eitherErrorWork
+  pure $ fmap (fixJournalShort fixMap) eitherErrorWork
 
 -- | The same as 'fetchWork'', but concurrently fetches metadata for a series of
 -- DOIs (it uses the same HTTP manager for all DOIs).
@@ -118,7 +118,7 @@ fetchWorks'
   -- to be created.
      Maybe NHC.Manager
   ->
-  -- | @Map@ of (actual short journal name, expected short journal name).
+  -- | @Map@ of @(full journal title, correctly abbreviated journal title)@.
      Map Text Text
   ->
   -- | Your email address. This is mandatory for making a polite request.
@@ -149,12 +149,12 @@ fetchWorks' maybeManager fixMap email dois = if null dois
                 >>= getJsonMessage doi'
                 >>= parseCrossrefMessage doi'
         -- Perform journal replacements and return it to the MVar.
-        putMVar mvar $ fmap (fixJournalShortInWork fixMap) eitherErrorWork
+        putMVar mvar $ fmap (fixJournalShort fixMap) eitherErrorWork
       )
     mapM takeMVar mvars
 
--- | A predefined list of @(actual, expected)@ journal short names which can be
--- used as an input to 'fixJournalShort' and 'fixJournalShortInWork'.
+-- | A predefined list of @(full journal name, abbreviated journal name)@ which
+-- can be used as an input to 'fixJournalShort'.
 defaultJournalFix :: Map Text Text
 defaultJournalFix = M.fromList
   [ ( "Proceedings of the National Academy of Sciences"
@@ -166,21 +166,21 @@ defaultJournalFix = M.fromList
   , ( "Progress in Nuclear Magnetic Resonance Spectroscopy"
     , "Prog. Nucl. Magn. Reson. Spectrosc."
     )
-  , ("Magn Reson Chem"                   , "Magn. Reson. Chem.")
-  , ("Chemical Physics Letters"          , "Chem. Phys. Lett.")
-  , ("Biochemistry Journal"              , "Biochem. J.")
-  , ("Journal of Magnetic Resonance, Series A", "J. Magn. Reson., Ser. A")
-  , ("Journal of Magnetic Resonance, Series B", "J. Magn. Reson., Ser. B")
-  , ("J Biomol NMR"                      , "J. Biomol. NMR")
+  , ("Magnetic Resonance in Chemistry"             , "Magn. Reson. Chem.")
+  , ("Chemical Physics Letters"                    , "Chem. Phys. Lett.")
+  , ("Biochemistry Journal"                        , "Biochem. J.")
+  , ("Journal of Magnetic Resonance, Series A"     , "J. Magn. Reson., Ser. A")
+  , ("Journal of Magnetic Resonance, Series B"     , "J. Magn. Reson., Ser. B")
+  , ("Journal of Biomolecular NMR"                 , "J. Biomol. NMR")
   , ("Annual Reports on NMR Spectroscopy", "Annu. Rep. NMR Spectrosc.")
-  , ("Angewandte Chemie International Edition", "Angew. Chem. Int. Ed.")
-  , ("Nat Commun"                        , "Nat. Commun.")
-  , ("Sci Rep"                           , "Sci. Rep.")
-  , ("Nucleic Acids Research"            , "Nucleic Acids Res.")
-  , ("Journal of Molecular Biology"      , "J. Mol. Biol.")
+  , ("Angewandte Chemie International Edition"     , "Angew. Chem. Int. Ed.")
+  , ("Nature Communications"                       , "Nat. Commun.")
+  , ("Scientific Reports"                          , "Sci. Rep.")
+  , ("Nucleic Acids Research"                      , "Nucleic Acids Res.")
+  , ("Journal of Molecular Biology"                , "J. Mol. Biol.")
   , ("Journal of Chemical Informatics and Modeling", "J. Chem. Inf. Model.")
-  , ("Journal of Computational Chemistry", "J. Comp. Chem.")
-  , ("Nat Rev Methods Primers"           , "Nat. Rev. Methods Primers")
+  , ("Journal of Computational Chemistry"          , "J. Comp. Chem.")
+  , ("Nature Reviews Methods Primers", "Nat. Rev. Methods Primers")
   ]
 
 -- | An empty @Map@, provided here as a convenience to users (passing this as
