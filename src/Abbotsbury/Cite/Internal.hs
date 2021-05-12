@@ -58,3 +58,15 @@ data CitationPart
   | Italic CitationPart
   | Link Text CitationPart
   deriving (Eq, Show)
+
+-- | A more descriptive substitute for @CText@.
+plain :: Text -> CitationPart
+plain = CText
+
+-- | Helper function to create a @Bold (CText t)@.
+bold :: Text -> CitationPart
+bold = Bold . CText
+
+-- | Helper function to create an @Italic (CText t)@.
+italic :: Text -> CitationPart
+italic = Italic . CText

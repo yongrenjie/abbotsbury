@@ -43,33 +43,33 @@ articleConstructorACS work = L.intercalate
   titleP =
     let t   = work ^. title
         end = if (not . T.null $ t) && (T.last t == '.') then "" else "."
-    in  [CText $ (work ^. title) <> end]
+    in  [plain $ (work ^. title) <> end]
   journalInfoP = formatJInfoACS work
-  doiP         = [CText "DOI: ", mkDoiUri (work ^. doi), CText "."]
+  doiP         = [plain "DOI: ", mkDoiUri (work ^. doi), plain "."]
 
 mkDoiUri :: DOI -> CitationPart
-mkDoiUri doi' = Link ("https://doi.org/" <> doi') (CText doi')
+mkDoiUri doi' = Link ("https://doi.org/" <> doi') (plain doi')
 
 formatJInfoACS :: Work -> [CitationPart]
 formatJInfoACS work = L.intercalate [space]
                                     [theJName, theYear, theVolInfo, thePages]
  where
-  theJName = [Italic $ CText $ work ^. journalShort]
-  theYear  = [Bold $ CText (T.pack (show (work ^. year) ++ ","))]
+  theJName = [italic (work ^. journalShort)]
+  theYear  = [bold (T.pack (show (work ^. year) ++ ","))]
   thePages = case (work ^. pages, work ^. articleNumber) of
-    ("", "") -> [CText "."]
-    ("", aN) -> [CText ("No. " <> aN <> ".")]
-    (pg, _ ) -> [CText (pg <> ".")]
+    ("", "") -> [plain "."]
+    ("", aN) -> [plain ("No. " <> aN <> ".")]
+    (pg, _ ) -> [plain (pg <> ".")]
   -- Whether the pagination part is empty will determine the punctuation used at the end of the
   -- volume info.
   endPunct :: Text
-  endPunct   = if thePages == [CText "."] then "" else ","
+  endPunct   = if thePages == [plain "."] then "" else ","
   theVolInfo = case (work ^. volume, work ^. issue) of
     (""    , ""    ) -> []
-    (""    , theIss) -> [CText $ "No. " <> theIss <> endPunct]
-    (theVol, ""    ) -> [Italic (CText (theVol <> endPunct))]
+    (""    , theIss) -> [plain ("No. " <> theIss <> endPunct)]
+    (theVol, ""    ) -> [italic (theVol <> endPunct)]
     (theVol, theIss) ->
-      [Italic (CText theVol), CText $ " (" <> theIss <> ")" <> endPunct]
+      [italic theVol, plain (" (" <> theIss <> ")" <> endPunct)]
 
 space :: CitationPart
-space = CText " "
+space = plain " "

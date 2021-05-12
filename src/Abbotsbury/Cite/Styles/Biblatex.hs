@@ -44,7 +44,7 @@ bibStyle = Style { articleConstructor = articleConstructorBib }
 
 -- | In practice, we do most of the work as Text, before converting it to CitationPart.
 articleConstructorBib :: Work -> [CitationPart]
-articleConstructorBib work = [CText (latexify t)]
+articleConstructorBib work = [plain (latexify t)]
  where
   t :: Text
   t =
