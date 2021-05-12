@@ -86,6 +86,7 @@ executable abbot
     Commands
     Commands.Add
     Commands.Cite
+    Commands.Delete
     Commands.List
     Commands.Open
     Commands.Shared

@@ -41,7 +41,7 @@ data AbbotCmd = AbbotCmd
   }
   deriving (Show)
 
-data BaseCommand = Help | List | Cite | Open | Sort | Add
+data BaseCommand = Help | List | Cite | Open | Sort | Add | Delete
   deriving (Ord, Eq, Show)
 
 -- | A command takes several sources of input:
@@ -115,6 +115,7 @@ pSingleCmd = do
                  | t `elem` ["so", "sort"] -> pure Sort
                  | t `elem` ["c", "cite"] -> pure Cite
                  | t `elem` ["a", "add"] -> pure Add
+                 | t `elem` ["d", "del", "delete"] -> pure Delete
                  | otherwise -> fail "command not recognised"
   -- For a single command, the arguments cannot include the character '|',
   -- because it is exclusively used in pipes. We need to have a better way

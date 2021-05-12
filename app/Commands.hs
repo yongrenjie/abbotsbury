@@ -7,6 +7,7 @@ where
 
 import Commands.Add
 import Commands.Cite
+import Commands.Delete
 import Commands.List
 import Commands.Open
 import Commands.Shared
@@ -31,6 +32,7 @@ runCmdWith cmd input =
           Open -> runOpen args input
           Sort -> runSort args input
           Add -> runAdd args input
+          Delete -> runDelete args input
         -- Composed commands.
         Composed cmd1 cmd2 -> do
           SCmdOutput refs2 var2 <- runCmdWith (Single cmd1) input

@@ -32,7 +32,6 @@ import System.Console.ANSI (getTerminalSize)
 import System.Directory (doesFileExist)
 import Text.Megaparsec
   ( eof,
-    errorBundlePretty,
     parse,
   )
 
