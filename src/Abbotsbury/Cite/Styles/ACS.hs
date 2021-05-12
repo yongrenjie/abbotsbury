@@ -29,47 +29,44 @@ import           Lens.Micro
 acsStyle :: Style
 acsStyle = Style { articleConstructor = articleConstructorACS }
 
-articleConstructorACS :: Work -> [CitationPart]
-articleConstructorACS work = L.intercalate
-  [space]
-  [authorP, titleP, journalInfoP, doiP]
+articleConstructorACS :: Work -> CitationPart
+articleConstructorACS work = mconcat
+  $ L.intersperse space [authorP, titleP, journalInfoP, doiP]
  where
-  authorP, titleP, journalInfoP, doiP :: [CitationPart]
-  authorP =
-    [ CText $ T.intercalate
-        "; "
-        (fmap (formatAuthor FamilyInitials) (NE.toList $ work ^. authors))
-    ]
+  authorP, titleP, journalInfoP, doiP :: CitationPart
+  authorP = plain $ T.intercalate
+    "; "
+    (fmap (formatAuthor FamilyInitials) (NE.toList $ work ^. authors))
   titleP =
     let t   = work ^. title
         end = if (not . T.null $ t) && (T.last t == '.') then "" else "."
-    in  [plain $ (work ^. title) <> end]
+    in  plain $ (work ^. title) <> end
   journalInfoP = formatJInfoACS work
-  doiP         = [plain "DOI: ", mkDoiUri (work ^. doi), plain "."]
+  doiP         = plain "DOI: " <> mkDoiUri (work ^. doi) <> plain "."
+  mkDoiUri :: DOI -> CitationPart
+  mkDoiUri doi' = Link ("https://doi.org/" <> doi') (plain doi')
 
-mkDoiUri :: DOI -> CitationPart
-mkDoiUri doi' = Link ("https://doi.org/" <> doi') (plain doi')
-
-formatJInfoACS :: Work -> [CitationPart]
-formatJInfoACS work = L.intercalate [space]
-                                    [theJName, theYear, theVolInfo, thePages]
+formatJInfoACS :: Work -> CitationPart
+formatJInfoACS work = mconcat
+  $ L.intersperse space [theJName, theYear, theVolInfo, thePages]
  where
-  theJName = [italic (work ^. journalShort)]
-  theYear  = [bold (T.pack (show (work ^. year) ++ ","))]
+  theJName = italic (work ^. journalShort)
+  theYear  = bold (T.pack (show (work ^. year) ++ ","))
   thePages = case (work ^. pages, work ^. articleNumber) of
-    ("", "") -> [plain "."]
-    ("", aN) -> [plain ("No. " <> aN <> ".")]
-    (pg, _ ) -> [plain (pg <> ".")]
-  -- Whether the pagination part is empty will determine the punctuation used at the end of the
-  -- volume info.
-  endPunct :: Text
-  endPunct   = if thePages == [plain "."] then "" else ","
+    ("", "") -> plain "."
+    ("", aN) -> plain ("No. " <> aN <> ".")
+    (pg, _ ) -> plain (pg <> ".")
+  -- Whether the pagination part is empty will determine the punctuation used at
+  -- the end of the volume info.
+  endPunct   = if thePages == plain "." then "" else ","
   theVolInfo = case (work ^. volume, work ^. issue) of
-    (""    , ""    ) -> []
-    (""    , theIss) -> [plain ("No. " <> theIss <> endPunct)]
-    (theVol, ""    ) -> [italic (theVol <> endPunct)]
+    (""    , ""    ) -> mempty
+    (""    , theIss) -> plain ("No. " <> theIss <> endPunct)
+    (theVol, ""    ) -> italic (theVol <> endPunct)
     (theVol, theIss) ->
-      [italic theVol, plain (" (" <> theIss <> ")" <> endPunct)]
+      italic theVol <> space <> plain (addParen theIss) <> plain endPunct
+  addParen :: Text -> Text
+  addParen t = "(" <> t <> ")"
 
 space :: CitationPart
 space = plain " "

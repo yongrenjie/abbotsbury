@@ -42,9 +42,10 @@ import           Lens.Micro
 bibStyle :: Style
 bibStyle = Style { articleConstructor = articleConstructorBib }
 
--- | In practice, we do most of the work as Text, before converting it to CitationPart.
-articleConstructorBib :: Work -> [CitationPart]
-articleConstructorBib work = [plain (latexify t)]
+-- | In practice, we do all of the work as "Data.Text.Text", before converting
+-- it to a 'CitationPart'.
+articleConstructorBib :: Work -> CitationPart
+articleConstructorBib work = plain (latexify t)
  where
   t :: Text
   t =

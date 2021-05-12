@@ -1,7 +1,15 @@
 module Abbotsbury.Cite.Internal where
 
 import           Abbotsbury.Work
+import           Data.Sequence                  ( (<|)
+                                                , (><)
+                                                , Seq(..)
+                                                , (|>)
+                                                )
+import qualified Data.Sequence                 as Seq
 import           Data.Text                      ( Text )
+import qualified Data.Text                     as T
+import           Lens.Micro
 
 -- | A 'Style' is a citation style, i.e. a set of rules which defines what text
 -- is to be used and how it is to be formatted. This is roughly analogous with
@@ -16,7 +24,7 @@ import           Data.Text                      ( Text )
 -- 'CitationPart' is not exported from the top-level "Abbotsbury" module: you
 -- will have to import it from "Abbotsbury.Cite.Internal".
 data Style = Style
-  { articleConstructor :: Work -> [CitationPart]
+  { articleConstructor :: Work -> CitationPart
   }
 
 -- | A 'Format' dictates how the abstract formatting is to be realised, which is
@@ -57,7 +65,29 @@ data CitationPart
   | Bold CitationPart
   | Italic CitationPart
   | Link Text CitationPart
+  | CSeq (Seq CitationPart)
   deriving (Eq, Show)
+
+instance Semigroup CitationPart where
+  (<>) :: CitationPart -> CitationPart -> CitationPart
+  -- Symmetric cases.
+  CText  t1  <> CText  t2  = CText (t1 <> t2)
+  Bold   cp1 <> Bold   cp2 = Bold (cp1 <> cp2)
+  Italic cp1 <> Italic cp2 = Italic (cp1 <> cp2)
+  CSeq   cs1 <> CSeq   cs2 = CSeq (cs1 >< cs2)
+  -- Appending or prepending to a CSeq.
+  CSeq   cs  <> other      = case cs of
+    Empty        -> other
+    anythingElse -> CSeq (anythingElse |> other)
+  other <> CSeq cs = case cs of
+    Empty        -> other
+    anythingElse -> CSeq (other <| anythingElse)
+  -- Anything else, just form a new Seq.
+  other1 <> other2 = CSeq (Seq.fromList [other1, other2])
+
+instance Monoid CitationPart where
+  mempty = CText ""
+  mappend = (<>)
 
 -- | A more descriptive substitute for @CText@.
 plain :: Text -> CitationPart
@@ -70,3 +100,33 @@ bold = Bold . CText
 -- | Helper function to create an @Italic (CText t)@.
 italic :: Text -> CitationPart
 italic = Italic . CText
+
+-- | Using a citation style, generate a 'CitationPart' (i.e. Abbotsbury's
+-- internal abstract representation of formatted text) which represents the
+-- entire citation.
+makeCitationPart :: Style -> Work -> CitationPart
+makeCitationPart style work = case wt of
+  JournalArticle -> articleConstructor style work
+  _              -> CText ("work type " <> tshow wt <> " not supported yet")
+ where
+  wt    = work ^. workType
+  tshow = T.pack . show
+
+-- | Using a specific output 'Format', generate text that has concrete
+-- formatting from a 'CitationPart' (which could be a "Data.Sequence.Seq" of
+-- 'CitationPart's).
+formatCitationPart
+  ::
+  -- | The citation output format to be used.
+     Format
+  ->
+  -- | The citation part to format.
+     CitationPart
+  -> Text
+formatCitationPart fmt@(Format plainFormatter boldFormatter italicFormatter linkFormatter) part
+  = case part of
+    (CText  t      ) -> plainFormatter t
+    (Bold   part'  ) -> boldFormatter (formatCitationPart fmt part')
+    (Italic part'  ) -> italicFormatter (formatCitationPart fmt part')
+    (Link uri part') -> linkFormatter uri (formatCitationPart fmt part')
+    (CSeq parts')    -> foldMap (formatCitationPart fmt) parts'
