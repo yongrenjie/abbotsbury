@@ -41,18 +41,24 @@ runDelete args input = do
     (throwErrorWithPrefix
       ("reference(s) " <> intercalateCommas badRefnos <> " not found")
     )
+  -- Check that arguments are valid (and figure out which refs to keep/delete)
+  refnosToDelete <- case (varin input, IS.null refnos) of
+    (Nothing , True ) -> throwErrorWithPrefix "no references selected"
+    (Nothing , False) -> pure refnos
+    (Just set, True ) -> pure set
+    (Just _, False) ->
+      throwErrorWithPrefix "cannot specify refnos and a pipe simultaneously"
   -- If we reached here, all is good...
-  let remainingRefs = IM.elems (refs `IM.withoutKeys` refnos)
-      refsout       = IM.fromList $ zip [1 ..] remainingRefs
-  -- Also make sure to delete all the PDFs
-  let refsToBeDeleted = IM.elems (refs `IM.restrictKeys` refnos)
+  let refsToKeep   = IM.elems $ refs `IM.withoutKeys` refnosToDelete
+      refsToDelete = IM.elems $ refs `IM.restrictKeys` refnosToDelete
+      refsout      = IM.fromList $ zip [1 ..] refsToKeep
       filesToDelete =
-        [ getPDFPath t cwd ref | t <- [FullText, SI], ref <- refsToBeDeleted ]
+        [ getPDFPath t cwd ref | t <- [FullText, SI], ref <- refsToDelete ]
   liftIO $ forM_ filesToDelete removeFileIfExists
-  -- Return the new list of references.
+  -- Return the new list of references, and don't pipe anything through.
   pure $ SCmdOutput refsout Nothing
- where
-  removeFileIfExists :: FilePath -> IO ()
-  removeFileIfExists f =
-    removeFile f
-      `catch` (\e -> if isDoesNotExistError e then pure () else throwIO e)
+
+removeFileIfExists :: FilePath -> IO ()
+removeFileIfExists f =
+  removeFile f
+    `catch` (\e -> if isDoesNotExistError e then pure () else throwIO e)
