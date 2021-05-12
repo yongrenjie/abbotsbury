@@ -37,6 +37,5 @@ runList args input = do
   -- If we reached here, everything is good
   let refnosToPrint =
         if IS.null refnos then IS.fromList [1 .. numRefs] else refnos
-  liftIO $ TIO.putStrLn =<< prettifyRefs cwd
-                                         (IM.restrictKeys refs refnosToPrint)
+  liftIO $ TIO.putStrLn =<< prettify cwd (IM.restrictKeys refs refnosToPrint)
   pure $ SCmdOutput refs (Just refnosToPrint)

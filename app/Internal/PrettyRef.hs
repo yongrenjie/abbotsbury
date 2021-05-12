@@ -1,5 +1,5 @@
 module Internal.PrettyRef
-  ( module Internal.PrettyRef
+  ( prettify
   ) where
 
 import           Abbotsbury.Cite.Helpers.Author
@@ -11,9 +11,11 @@ import           Data.IntMap                    ( IntMap )
 import qualified Data.IntMap                   as IM
 import qualified Data.IntSet                   as IS
 import           Data.List                      ( foldl'
+                                                , maximumBy
                                                 , zip5
                                                 )
 import qualified Data.List.NonEmpty            as NE
+import           Data.Ord                       ( comparing )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
@@ -54,49 +56,48 @@ totalSizes fss = sum $ map ($ fss) [numberF, authorF, yearF, journalF, titleF]
 -- | Calculate the correct field sizes based on the terminal size.
 getFieldSizes :: IntMap Reference -> IO FieldSizes
 getFieldSizes refs = do
+  -- Useful things.
+  let refsList = IM.elems refs
+      longestBy :: (Reference -> Text) -> Int
+      longestBy key = maximum $ fmap (T.length . key) refsList
   -- Number field.
   let maxRef   = fst $ IM.findMax refs
-      numberF' = length (show maxRef) + fieldPadding
+      numberF' = fieldPadding + length (show maxRef)
   -- Author field.
-  let
-    getMaxAuthorLength :: Reference -> Int
-    getMaxAuthorLength =
-      maximum . fmap (T.length . formatAuthorForList) . (^. (work . authors))
-    authorF' = fieldPadding + maximum (map getMaxAuthorLength (IM.elems refs))
+  let getLongestAuthor :: Reference -> Text
+      getLongestAuthor ref = maximumBy
+        (comparing T.length)
+        (formatAuthorForList <$> ref ^. (work . authors))
+      authorF' = fieldPadding + longestBy getLongestAuthor
   -- Year field.
   let yearF' = fieldPadding + 4
   -- Journal field.
-  let longestJName =
-        maximum (map (T.length . getShortestJournalName) (IM.elems refs))
-      longestJInfo = maximum (map (T.length . getVolInfo) (IM.elems refs))
+  let longestJName = longestBy getShortestJournalName
+      longestJInfo = longestBy getVolInfo
       journalF'    = fieldPadding + max longestJName longestJInfo
   -- Title field. Our first guess is to just use up the remaining space.
   Just (_, ncols) <- getTerminalSize
-  let titleF1 = ncols - numberF' - authorF' - yearF' - journalF'
+  let titleF1      = ncols - numberF' - authorF' - yearF' - journalF'
       -- We enforce an upper limit, which is the longest title / DOI /
       -- availability string.
-      longestTitle =
-        maximum $ map (T.length . (^. (work . title))) (IM.elems refs)
-      longestDOI  = maximum $ map (T.length . (^. (work . doi))) (IM.elems refs)
-      availLength = 40
-      upperLimit  = maximum [longestTitle, longestDOI, availLength]
-      titleF2     = min titleF1 upperLimit
+      longestTitle = longestBy (^. (work . title))
+      longestDOI   = longestBy (^. (work . doi))
+      availLength  = 40
+      upperLimit   = maximum [longestTitle, longestDOI, availLength]
+      titleF2      = min titleF1 upperLimit
   -- We also enforce a lower limit, which is the availability string itself: or else
   -- the ANSI escape sequences tend to get messed up.
   let titleF' = max availLength titleF2
   pure $ FieldSizes numberF' authorF' yearF' journalF' titleF'
 
--- | Construct pretty-printed text from a set of references to be displayed on the screen.
--- The output of this text can be directly passed to (the Text version of) putStrLn.
-prettifyRefs
-  ::
-  -- | Current working directory.
-     FilePath
-  ->
-  -- | The references to be printed.
-     IntMap Reference
+-- | Construct pretty-printed text from a set of references to be displayed on
+-- the screen. The output of this text can be directly passed to
+-- 'Data.Text.IO.putStrLn'.
+prettify
+  :: FilePath
+  -> IntMap Reference
   -> IO Text
-prettifyRefs cwd refs = if IM.null refs
+prettify cwd refs = if IM.null refs
   then pure ""
   else do
     fss <- liftIO $ getFieldSizes refs
@@ -105,29 +106,20 @@ prettifyRefs cwd refs = if IM.null refs
     let text = headText <> "\n" <> T.intercalate "\n\n" refsText <> "\n" -- extra blank line looks nice.
     pure text
 
--- | Generate a pretty header for the reference list. This function should only ever be called by
--- prettifyRefs.
-prettifyHead
-  ::
-  -- | The sizes of each field in the output. Must be precalculated using getFieldSizes.
-     FieldSizes -> Text
+-- | Generate a pretty header for the reference list. This function should only
+-- ever be called by 'prettify'.
+prettifyHead :: FieldSizes -> Text
 prettifyHead fss =
   setBold (formatLine fss ("#", "Authors", "Year", "Journal", "Title and DOI"))
     <> "\n"
     <> setBold (T.replicate (totalSizes fss) "-")
 
--- | Generate a pretty header for one single reference. This function should only ever be called by
--- prettifyRefs.
+-- | Generate a pretty header for one single reference. This function should
+-- only ever be called by 'prettify'.
 prettifyOneRef
-  ::
-  -- | The sizes of each field in the output. Must be precalculated using getFieldSizes.
-     FieldSizes
-  ->
-  -- | Current working directory.
-     FilePath
-  ->
-  -- | The refno and the reference to be printed. Most easily generated using IM.assocs.
-     (Int, Reference)
+  :: FieldSizes
+  -> FilePath
+  -> (Int, Reference)  -- ^ Refno and ref, generated using 'Data.IntMap.assocs'
   -> IO Text
 prettifyOneRef fss cwd (index, ref) = do
   let tagString = case ref ^. tags of
@@ -141,8 +133,7 @@ prettifyOneRef fss cwd (index, ref) = do
         NE.toList $ fmap formatAuthorForList (ref ^. (work . authors))
       authorColumn = if length authorColumn1 <= 5
         then authorColumn1
-        else -- Inefficient but probably not important.
-             take 3 authorColumn1 ++ ["...", last authorColumn1]
+        else take 3 authorColumn1 ++ ["...", last authorColumn1]
       yearColumn    = [T.pack . show $ ref ^. (work . year)]
       journalColumn = [getShortestJournalName ref, getVolInfo ref]
       titleColumn =
@@ -153,16 +144,11 @@ prettifyOneRef fss cwd (index, ref) = do
       -- Clone of Python's itertools.zip_longest(fillvalue="").
       zipLongest5
         :: [Text]
-        -> -- unpadded number column
-           [Text]
-        -> -- unpadded author column
-           [Text]
-        -> -- unpadded year column
-           [Text]
-        -> -- unpadded journal column
-           [Text]
-        -> -- unpadded title Column
-           [(Text, Text, Text, Text, Text)]
+        -> [Text]
+        -> [Text]
+        -> [Text]
+        -> [Text]
+        -> [(Text, Text, Text, Text, Text)]
       zipLongest5 as bs cs ds es =
         let maxLen = maximum $ map length [as, bs, cs, ds, es]
             pad xs = xs ++ repeat ""
