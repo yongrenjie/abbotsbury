@@ -14,13 +14,11 @@ module Abbotsbury.Work
     DOI
   , ISBN
   ,
-
     -- * Fundamental data types
     WorkType(..)
   , Work(..)
   , Author(..)
   ,
-
     -- * Lenses
     workType
   , title
@@ -94,14 +92,6 @@ data WorkType
 -- | A @Work@ represents one single work from Crossref, whether it is a journal
 -- article, book, or any other type of work. Lenses are provided for each field.
 --
--- Defining a work as a simple record type like this unfortunately leads to many
--- redundant fields: for example, a journal article does not have an ISBN, and a
--- book does not have a long or short journal name. However, this representation
--- has been chosen, as the alternative (@data Work = Article {...} | Book {...}
--- | ...@) would require @Prism@s to navigate, and I would rather not have
--- @lens@ as a dependency (@abbotsbury@ uses
--- [microlens](http://hackage.haskell.org/package/microlens)).
---
 -- TODO: Add more fields here for other information (e.g. editors). See
 -- <https://github.com/Crossref/rest-api-doc/blob/master/api_format.md>.
 data Work = Work
@@ -109,7 +99,7 @@ data Work = Work
   , _title         :: Text
   , _publisher     :: Text
   ,
-    -- | There has to be at least one author!.
+    -- | There has to be at least one author!
     _authors       :: NonEmpty Author
   ,
     -- | The full name of the journal, e.g. "Journal of the American Chemical
@@ -123,7 +113,8 @@ data Work = Work
     _journalShort  :: Text
   , _year          :: Int
   ,
-    -- The volume and issue cannot be Ints, because sometimes they are a range.
+    -- | The volume and issue cannot be simple Ints, because sometimes they are
+    -- a range.
     _volume        :: Text
   , _issue         :: Text
   , _pages         :: Text

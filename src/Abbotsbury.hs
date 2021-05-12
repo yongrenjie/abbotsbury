@@ -18,7 +18,30 @@
 
 module Abbotsbury
   ( -- * The core datatypes
-    module Abbotsbury.Work
+    -- $work
+    Abbotsbury.Work.DOI
+  , Abbotsbury.Work.ISBN
+  , Abbotsbury.Work.WorkType(..)
+  , Abbotsbury.Work.Work(..)
+  , Abbotsbury.Work.Author(..)
+  ,
+    -- ** Lenses
+    -- $work-lenses
+    Abbotsbury.Work.workType
+  , Abbotsbury.Work.title
+  , Abbotsbury.Work.publisher
+  , Abbotsbury.Work.authors
+  , Abbotsbury.Work.journalLong
+  , Abbotsbury.Work.journalShort
+  , Abbotsbury.Work.year
+  , Abbotsbury.Work.volume
+  , Abbotsbury.Work.issue
+  , Abbotsbury.Work.pages
+  , Abbotsbury.Work.doi
+  , Abbotsbury.Work.isbn
+  , Abbotsbury.Work.articleNumber
+  , Abbotsbury.Work.given
+  , Abbotsbury.Work.family
     -- * Fetching metadata from Crossref
     -- ** Getting and parsing raw JSON data
     -- $crossref-parse
@@ -55,6 +78,31 @@ import           Abbotsbury.Crossref
 import           Abbotsbury.Crossref.Internal
 import           Abbotsbury.Work
 import           Network.HTTP.Client            ( )
+
+-- $work
+-- @abbotsbury@'s core datatype is a 'Work', which is simply a record type which
+-- contains every relevant field needed for citations (it ignores all the excess
+-- metadata from Crossref). The other important datatype is an 'Author', which
+-- generally refers to any person who contributed to the 'Work'.
+--
+-- In theory, 'Work's can be constructed manually by entering each field:
+-- however, in practice it is much easier to fetch the data from Crossref using
+-- the 'fetchWork' family of functions. This function, however, only works with
+-- 'JournalArticle's and not other types of works (yet). Likewise, citation only
+-- works with 'JournalArticle's for now.
+--
+-- Defining a work as a simple record type like this unfortunately leads to many
+-- redundant fields: for example, a journal article does not have an ISBN, and a
+-- book does not have a long or short journal name. However, this representation
+-- has been chosen, as the alternative (@data Work = Article {...} | Book {...}
+-- | ...@) would require @Prism@s to navigate, and I would rather not have
+-- @lens@ as a dependency (@abbotsbury@ uses
+-- [microlens](http://hackage.haskell.org/package/microlens)).
+
+-- $work-lenses
+-- The following lenses are provided for convenience. You don't have to use them
+-- if you don't want to: the record fields are simply the same as these but
+-- prefixed with an underscore.
 
 -- $crossref-parse
 -- The following functions provide ways to directly fetch metadata for a given
