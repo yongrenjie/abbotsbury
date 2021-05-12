@@ -93,7 +93,9 @@ executable abbot
     Commands.Sort
     Internal.Copy
     Internal.MInputT
+    Internal.Monad
     Internal.Path
+    Internal.PrettyRef
     Internal.Style
     Options
     Reference
@@ -107,7 +109,6 @@ executable abbot
     , microlens-platform
     , directory , filepath >=1.3.0.0 , process , time
     , exceptions , transformers , mtl
-    , prettyprinter
     , yaml
   ghc-options:
     -threaded

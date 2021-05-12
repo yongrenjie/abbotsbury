@@ -1,19 +1,24 @@
 module Internal.Copy where
 
-import qualified Control.Exception             as CE
-import           Control.Monad
+import           Control.Exception              ( SomeException
+                                                , handle
+                                                )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
-import           System.IO
-import           System.Info
-import           System.Process
+import           System.IO                      ( stderr )
+import           System.Info                    ( os )
+import           System.Process                 ( CreateProcess(std_in)
+                                                , StdStream(CreatePipe)
+                                                , createProcess
+                                                , shell
+                                                )
 
 -- | Copies text to the clipboard, silently ignoring ALL exceptions.
 copy :: Text -> IO ()
 copy t =
-  CE.handle
-      (\(e :: CE.SomeException) ->
+  handle
+      (\(e :: SomeException) ->
         TIO.hPutStrLn stderr "abbot: copy to clipboard failed"
       )
     $ case os of
@@ -32,8 +37,8 @@ copy t =
 -- https://www.ostricher.com/2015/08/from-markdown-to-pastable-formatted-text-in-os-x-terminal/
 copyHtmlAsRtf :: Text -> IO ()
 copyHtmlAsRtf htmlText =
-  CE.handle
-      (\(e :: CE.SomeException) ->
+  handle
+      (\(e :: SomeException) ->
         TIO.hPutStrLn stderr "abbot: RTF copy to clipboard failed"
       )
     $ case os of

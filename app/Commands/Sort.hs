@@ -3,10 +3,6 @@ module Commands.Sort
   ) where
 
 import           Commands.Shared
-import           Control.Applicative            ( (<|>)
-                                                , liftA3
-                                                )
-import           Control.Monad.Except
 import           Data.Char                      ( isUpper )
 import qualified Data.IntMap                   as IM
 import           Data.List                      ( sortBy )
@@ -15,13 +11,11 @@ import           Data.Ord                       ( comparing )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
+import           Internal.Monad
 import           Lens.Micro.Platform
 import           Reference
 import           Text.Megaparsec                ( anySingle
-                                                , eof
-                                                , errorBundlePretty
                                                 , lookAhead
-                                                , parse
                                                 )
 
 prefix :: Text
@@ -30,19 +24,14 @@ prefix = "sort: "
 throwErrorWithPrefix :: Text -> ExceptT Text IO a
 throwErrorWithPrefix e = throwError $ prefix <> e
 
--- |
--- A @SortCriterion@ represents a criterion by which the list of references may be
--- sorted.
-data SortCriterion = SortCriterion SortKey
-                       -- ^ The key to use for sorting.
-                                           SortOrder
-      -- ^ Whether to sort in ascending or descending order.
+-- | A @SortCriterion@ represents a criterion by which the list of references
+-- may be sorted.
+data SortCriterion = SortCriterion SortKey SortOrder
 
--- |
--- There are currently three keys by which the references may be sorted.
+-- | There are currently three keys by which the references may be sorted.
 data SortKey
-  = -- | Sorting by year, using the journal name and then first author's family name to
-    -- break ties.
+  = -- | Sorting by year, using the journal name and then first author's family
+    -- name to break ties.
     SKYearJournalAuthor
   | -- | Sorting by the time a reference was last opened.
     SKTimeOpened
@@ -66,8 +55,7 @@ showT (SortCriterion key order) = showKey key <> showOrder order
   showOrder Ascending  = ""
   showOrder Descending = " (reversed)"
 
--- |
--- Sorts the currently loaded database of references.
+-- | Sorts the currently loaded database of references.
 --
 -- Command-line usage:
 --
@@ -102,17 +90,17 @@ runSort args input = do
   liftIO $ TIO.putStrLn ("sorted references by " <> showT criterion)
   pure $ SCmdOutput (IM.fromList $ zip [1 ..] sortedRefs) Nothing
 
--- |
--- Parser for command-line arguments that determines what sort criterion is to be used.
+-- | Parser for command-line arguments that determines what sort criterion is to
+-- be used.
 pSort :: Parser SortCriterion
 pSort = do
-  -- Check the first character to see if it is uppercase (which indicates descending
-  -- order). If it isn't present, then lookAhead will fail and we can return a lowercase
-  -- character to signify the default, i.e. ascending order.
+  -- Check the first character to see if it is uppercase (which indicates
+  -- descending order). If it isn't present, then lookAhead will fail and we can
+  -- return a lowercase character to signify the default, i.e. ascending order.
   firstChar <- lookAhead anySingle <|> pure 'y'
   let sortOrder = if isUpper firstChar then Descending else Ascending
   -- Get the sort key.
-  sortKey <- pOneFormat abbrevs (Just SKTimeAdded) <* eof
+  sortKey <- pOneFormat abbrevs (Just SKTimeAdded)
   -- Return.
   pure $ SortCriterion sortKey sortOrder
  where
@@ -125,15 +113,10 @@ pSort = do
     , ("a"     , SKTimeAdded)
     ]
 
--- |
--- Generates the comparison function to use for reference sorting.
+-- | Generates the comparison function to use for reference sorting.
 getComparisonFn
-  ::
-  -- | The sort criterion to be used.
-     SortCriterion
-  ->
-  -- | The comparison function.
-     (Reference -> Reference -> Ordering)
+  :: SortCriterion  -- ^ The sort criterion to be used.
+  -> (Reference -> Reference -> Ordering)  -- ^ The comparison function.
 getComparisonFn (SortCriterion key order) ref1 ref2 =
   let flipOrder :: Ordering -> Ordering
       flipOrder LT = GT
@@ -147,10 +130,8 @@ getComparisonFn (SortCriterion key order) ref1 ref2 =
         SKTimeOpened        -> comparing (view timeOpened) ref1 ref2
         SKTimeAdded         -> comparing (view timeAdded) ref1 ref2
         SKYearJournalAuthor -> comparing
-          (liftA3 (,,)
-                  (view $ work . year)
-                  (view $ work . journalLong)
-                  (view $ work . authors . ix 0 . family)
+          ((,,) <$> view (work . year) <*> view (work . journalLong) <*> view
+            (work . authors . ix 0 . family)
           )
           ref1
           ref2

@@ -7,22 +7,18 @@ import           Commands.Shared
 import           Control.Exception              ( catch
                                                 , throwIO
                                                 )
-import           Control.Monad
-import           Control.Monad.Except
 import           Data.IntMap                    ( IntMap )
 import qualified Data.IntMap                   as IM
 import           Data.IntSet                    ( IntSet )
 import qualified Data.IntSet                   as IS
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
+import           Internal.Monad
 import           Internal.Path
 import           Lens.Micro.Platform
 import           Reference
 import           System.Directory               ( removeFile )
 import           System.IO.Error                ( isDoesNotExistError )
-import           Text.Megaparsec                ( eof
-                                                , parse
-                                                )
 
 prefix :: Text
 prefix = "delete: "
@@ -37,7 +33,7 @@ runDelete args input = do
   -- If no refs present, error immediately
   when (IM.null refs) (throwErrorWithPrefix "no references found")
   -- Parse arguments
-  refnos <- parseInCommand (pRefnos <* eof) args prefix
+  refnos <- parseInCommand pRefnos args prefix
   -- First, check for any refnos that don't exist
   let badRefnos = refnos IS.\\ IM.keysSet refs
   unless

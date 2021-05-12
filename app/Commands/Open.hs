@@ -3,17 +3,14 @@ module Commands.Open
   ) where
 
 import           Commands.Shared
-import           Control.Monad.Except
 import           Data.Bifunctor                 ( bimap )
 import qualified Data.IntMap                   as IM
--- import           Data.IntMap                    ( IntMap )
 import           Data.IntSet                    ( IntSet )
 import qualified Data.IntSet                   as IS
 import           Data.List                      ( foldl'
                                                 , nub
                                                 , partition
                                                 )
--- import           Data.Map                       ( Map )
 import qualified Data.Map                      as M
 import           Data.Set                       ( Set )
 import qualified Data.Set                      as S
@@ -21,6 +18,7 @@ import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           Data.Time.Clock                ( getCurrentTime )
+import           Internal.Monad
 import           Internal.Path                  ( PDFType(..)
                                                 , getPDFPath
                                                 )
@@ -29,10 +27,6 @@ import           Reference
 import           System.Exit                    ( ExitCode(..) )
 import           System.Process                 ( proc
                                                 , readCreateProcessWithExitCode
-                                                )
-import           Text.Megaparsec                ( eof
-                                                , errorBundlePretty
-                                                , parse
                                                 )
 
 data OpenFormat
@@ -116,7 +110,7 @@ runOpen args input = do
   pure $ SCmdOutput updatedRefs Nothing
 
 pOpen :: Parser (IntSet, Set OpenFormat)
-pOpen = ((,) <$> pRefnos <*> pFormats abbrevs (Just OpenFullText)) <* eof
+pOpen = (,) <$> pRefnos <*> pFormats abbrevs (Just OpenFullText)
  where
   abbrevs = M.fromList
     [ ("p"  , OpenFullText)

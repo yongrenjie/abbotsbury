@@ -4,7 +4,6 @@ module Commands.Cite
 
 import           Abbotsbury.Cite
 import           Commands.Shared
-import           Control.Monad.Except
 import           Data.Either                    ( isLeft )
 import           Data.IntMap                    ( IntMap )
 import qualified Data.IntMap                   as IM
@@ -17,10 +16,11 @@ import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           Internal.Copy
+import           Internal.Monad
 import           Lens.Micro.Platform
 import           Reference
 import           System.Process
-import           Text.Megaparsec
+import           Text.Megaparsec                ( eof )
 
 prefix :: Text
 prefix = "cite: "
@@ -74,7 +74,7 @@ runCite args input = do
   pure $ SCmdOutput refs Nothing
 
 pCite :: Parser (IntSet, ReplCiteRules)
-pCite = ((,) <$> pRefnos <*> pOneFormatCaseSens abbrevs (Just Biblatex)) <* eof
+pCite = (,) <$> pRefnos <*> pOneFormatCaseSens abbrevs (Just Biblatex)
  where
   abbrevs = M.fromList
     [ ("T", AcsText)

@@ -11,7 +11,7 @@ import           Commands.List
 import           Commands.Open
 import           Commands.Shared
 import           Commands.Sort
-import           Control.Monad.Except           ( throwError )
+import           Internal.Monad
 
 -- | Execute a command given an input.
 -- Note that this only handles effects *outside* the main loop, i.e.

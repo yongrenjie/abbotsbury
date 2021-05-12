@@ -3,17 +3,24 @@ module Internal.Path
   , System.Directory.setCurrentDirectory
   ) where
 
-import           Control.Monad.Except
 import           Data.IntMap                    ( IntMap )
 import qualified Data.IntMap                   as IM
 import           Data.List                      ( isInfixOf )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import           Data.Yaml
+import           Internal.Monad
 import           Lens.Micro.Platform
 import           Reference
-import           System.Directory
-import           System.FilePath
+import           System.Directory               ( canonicalizePath
+                                                , getHomeDirectory
+                                                , setCurrentDirectory
+                                                )
+import           System.FilePath                ( (</>)
+                                                , dropTrailingPathSeparator
+                                                , joinPath
+                                                , splitPath
+                                                )
 
 -- | Expands relative paths and tildes in directories. Tilde expansion does not
 -- work with arbitrary users (`~user/path/to/file`), only the currently logged

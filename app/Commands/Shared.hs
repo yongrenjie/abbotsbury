@@ -2,7 +2,6 @@ module Commands.Shared
   ( module Commands.Shared
   ) where
 
-import           Control.Monad.Except
 import           Data.Char
 import           Data.IntMap                    ( IntMap )
 import           Data.IntSet                    ( IntSet )
@@ -15,9 +14,9 @@ import           Data.Set                       ( Set )
 import qualified Data.Set                      as S
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
--- import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           Data.Void                      ( Void )
+import           Internal.Monad
 import           Internal.Style                 ( makeError )
 import           Reference
 import           Text.Megaparsec
@@ -200,7 +199,7 @@ parseInCommand
   -- | The name of the command (plus a colon and space) for error reporting.
      Text
   -> ExceptT Text IO r
-parseInCommand parser args prefix = case parse parser "" args of
+parseInCommand parser args prefix = case parse (parser <* eof) "" args of
   Left  bundle -> throwError $ prefix <> T.pack (errorBundlePretty bundle)
   Right x      -> pure x
 
