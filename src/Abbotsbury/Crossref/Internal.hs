@@ -8,9 +8,7 @@ import qualified Data.Aeson.Types              as DAT
 import           Data.Bifunctor                 ( first )
 import           Data.ByteString.Lazy           ( ByteString )
 import qualified Data.List.NonEmpty            as NE
-import           Data.Map                       ( Map )
 import qualified Data.Map                      as M
-import           Data.Maybe                     ( fromMaybe )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import           Data.Text.Encoding             ( encodeUtf8 )
@@ -25,15 +23,23 @@ import           Network.URI                    ( escapeURIString
 -- | Fetching data from Crossref can fail for a number of reasons. In this case we either throw a
 -- CrossrefException (from fetchCrossrefJson), or we put it
 data CrossrefException
-  = CRHttpException DOI NHC.HttpException -- HTTP errors, e.g. no Internet connection.
-  | CRJsonException DOI Text -- Got the JSON from Crossref, but it was not valid JSON. The Text is from Aeson and says what went wrong.
-  | CRUnknownWorkException DOI WorkType -- Abbotsbury right now only parses journal articles. If you request metadata about a book (for example) this error will be returned.
-  | CROtherException DOI Text -- Something else went wrong.
+  -- | HTTP errors, which includes non-404 responses (i.e. DOI not found).
+  = CRHttpException DOI NHC.HttpException
+  -- | Got the JSON from Crossref, but it was not valid JSON. The @Text@ is
+  -- provided by Aeson and says what went wrong.
+  | CRJsonException DOI Text
+  -- | @abbotsbury@ right now only parses journal articles. If you request
+  -- metadata about a book (for example) this error will be returned.
+  | CRUnknownWorkException DOI WorkType 
+  -- | Something else went wrong.
+  | CROtherException DOI Text
   deriving (Show)
 
 instance CE.Exception CrossrefException
 
--- | NHC.HttpException doesn't have an Eq clause, so we just skip checking it.
+-- | "Network.HTTP.Client.HttpException" doesn't have an @Eq@ instance, so we
+-- just don't check it, and assume that any two @CRHttpException@s with the same
+-- DOIs are equal.
 instance Eq CrossrefException where
   (==) :: CrossrefException -> CrossrefException -> Bool
   CRHttpException doi1 _  == CRHttpException doi2 _  = doi1 == doi2
@@ -146,14 +152,18 @@ identifyWorkType doi' messageVal = do
 parseCrossrefMessage
   :: DOI
   ->
+  -- | @True@ to use internal list of journal abbreviations and fall back on
+  -- Crossref, or @False@ just take Crossref data at face value.
+     Bool
+  ->
   -- | The 'message' component of the Crossref JSON data.
      Value
   -> Either CrossrefException Work -- Either an error message or the Work.
-parseCrossrefMessage doi' messageVal = do
+parseCrossrefMessage doi' useInternalAbbrevs messageVal = do
   -- Figure out which parser to use.
   wType  <- identifyWorkType doi' messageVal
   parser <- case wType of
-    JournalArticle -> Right parseJournalArticle
+    JournalArticle -> Right (parseJournalArticle useInternalAbbrevs)
     Book           -> Right parseBook
     _              -> Left (CRUnknownWorkException doi' wType)
   -- Run the appropriate parser on the message Value.
@@ -162,8 +172,8 @@ parseCrossrefMessage doi' messageVal = do
   first (CRJsonException doi' . T.pack) parsedWork
 
 -- | The parser which parses JournalArticles.
-parseJournalArticle :: Object -> DAT.Parser Work
-parseJournalArticle messageObj = do
+parseJournalArticle :: Bool -> Object -> DAT.Parser Work
+parseJournalArticle useInternalAbbrevs messageObj = do
   -- Title
   let _workType = JournalArticle
   _title <- normalize NFC
@@ -182,9 +192,15 @@ parseJournalArticle messageObj = do
     safeHead "could not get journal title from container-title key"
     $  messageObj
     .: "container-title"
-  _journalShort <- safeHead "" (messageObj .: "short-container-title")
-    <|> pure _journalLong
-  -- Year (prefer print publish date over online publish date as the former is the one usually used)
+  -- Take the abbreviation from the Map if possible. Otherwise fall back on
+  -- Crossref short-container-title, and if that isn't present, fall back on
+  -- Crossref container-title.
+  _journalShort <- case (useInternalAbbrevs, getJournalAbbrev _journalLong) of
+    (True, Just short) -> pure short
+    _ ->
+      safeHead "" (messageObj .: "short-container-title") <|> pure _journalLong
+  -- Year (prefer print publish date over online publish date as the former is
+  -- the one usually used)
   publishedObj <-
     messageObj .: "published-print" <|> messageObj .: "published-online"
   _year <- safeHead "year not found in date-parts"
@@ -271,27 +287,35 @@ separateInitials t = T.concat . zipWith f [1 ..] . T.unpack $ t
       "" -> Nothing
       xs -> Just (T.head xs)
 
--- | "Short" journal names should be abbreviated according to the Chemical
--- Abstracts Service Source Index (CASSI), accessible at https://cassi.cas.org/.
--- However, Crossref JSON data occasionally: (1) does not have the
--- "short-container-title" entry, meaning that no short journal name is provided
--- (in this case abbotsbury uses the full name); or (2) has incorrect or
--- unhelpful entries in this field, which lead to incorrect citations.
---
--- In both cases the actual "short name" that abbotsbury finds is not correct.
--- This function attempts to correct for that. The @Map Text Text@ passed as
--- input should have the /full journal titles/ as the keys, and the
--- /abbreviations/ as the values. For example, if you want @"Nature Chemistry"@
--- to always be abbreviated as @"Nature Chem."@, then then pass
--- @Map.fromList [("Nature Chemistry", "Nature Chem.")]@ as the first argument.
---
--- If the 'Work' passed to this function doesn't have a full title found in the
--- @Map@, then the abbreviation is left untouched, i.e. it will be whatever
--- Crossref gave: or if Crossref didn't give anything, then the full name will
--- be used as the abbreviation.
-fixJournalShort :: Map Text Text -> Work -> Work
-fixJournalShort m work = work { _journalShort = correctedShort }
- where
-  long = _journalLong work
-  origShort = _journalShort work
-  correctedShort = fromMaybe origShort (m M.!? long)
+-- brittany-disable-next-binding
+
+-- | A predefined list of @(full journal name, abbreviated journal name)@ which
+-- can be used as an input to 'fixJournalShort'.
+getJournalAbbrev :: Text -> Maybe Text
+getJournalAbbrev long = M.lookup long abbrevMap
+  where
+    abbrevMap = M.fromList
+      [ ("Angewandte Chemie International Edition"              , "Angew. Chem. Int. Ed."              )
+      , ("Annual Reports on NMR Spectroscopy"                   , "Annu. Rep. NMR Spectrosc."          )
+      , ("Biochemistry Journal"                                 , "Biochem. J."                        )
+      , ("Chemical Physics Letters"                             , "Chem. Phys. Lett."                  )
+      , ("Communications Chemistry"                             , "Commun. Chem."                      )
+      , ("Journal of Biomolecular NMR"                          , "J. Biomol. NMR"                     )
+      , ("Journal of Chemical Informatics and Modeling"         , "J. Chem. Inf. Model."               )
+      , ("Journal of Computational Chemistry"                   , "J. Comp. Chem."                     )
+      , ("Journal of Magnetic Resonance (1969)"                 , "J. Magn. Reson."                    )
+      , ("Journal of Magnetic Resonance"                        , "J. Magn. Reson."                    )
+      , ("Journal of Magnetic Resonance, Series A"              , "J. Magn. Reson., Ser. A"            )
+      , ("Journal of Magnetic Resonance, Series B"              , "J. Magn. Reson., Ser. B"            )
+      , ("Journal of Molecular Biology"                         , "J. Mol. Biol."                      )
+      , ("Magnetic Resonance in Chemistry"                      , "Magn. Reson. Chem."                 )
+      , ("Nature Chemistry"                                     , "Nat. Chem."                         )
+      , ("Nature Communications"                                , "Nat. Commun."                       )
+      , ("Nature Reviews Chemistry"                             , "Nat. Rev. Chem."                    )
+      , ("Nature Reviews Methods Primers"                       , "Nat. Rev. Methods Primers"          )
+      , ("Nucleic Acids Research"                               , "Nucleic Acids Res."                 )
+      , ("Proceedings of the National Academy of Sciences"      , "Proc. Natl. Acad. Sci. U. S. A."    )
+      , ("Progress in Nuclear Magnetic Resonance Spectroscopy"  , "Prog. Nucl. Magn. Reson. Spectrosc.")
+      , ("Scientific Reports"                                   , "Sci. Rep."                          )
+      , ("The Journal of Chemical Physics"                      , "J. Chem. Phys."                     )
+      ]

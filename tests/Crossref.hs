@@ -19,7 +19,7 @@ import qualified TestWorks                     as TW
 tests :: TestTree
 tests = testGroup
   "Crossref"
-  [testOL, testNRMP, testNoFirstName, testNoJournalShort, testfixJShortNRMP]
+  [testOL, testNRMP, testNoFirstName, testNoJournalShort]
 
 auth :: (Text, Text) -> Author
 auth (gvn, fmy) = Author (Just gvn) fmy
@@ -28,7 +28,7 @@ parseCrossrefJsonFromFile :: FilePath -> IO (Either CrossrefException Work)
 parseCrossrefJsonFromFile fp = do
   let blankDOI = ""
   jsonValue <- fromJust . Aeson.decode <$> BL.readFile fp
-  pure $ getJsonMessage blankDOI jsonValue >>= parseCrossrefMessage blankDOI
+  pure $ getJsonMessage blankDOI jsonValue >>= parseCrossrefMessage blankDOI True
 
 testOL :: TestTree
 testOL = testCase "parseCrossrefMessage - 2019 OL" checkOLJSON
@@ -45,7 +45,7 @@ testNRMP = testCase "parseCrossrefMessage - 2021 NRMP" checkNRMPJSON
   checkNRMPJSON = do
     work <- parseCrossrefJsonFromFile "tests/test-data/nrmp.json"
     work
-      @?= Right (TW.nrmpCorrected & journalShort .~ "Nat Rev Methods Primers")
+      @?= Right TW.nrmpCorrected
 
 testNoFirstName :: TestTree
 testNoFirstName = testCase "parseCrossrefMessage - author without first name"
@@ -64,13 +64,3 @@ testNoJournalShort = testCase "parseCrossrefMessage - no short journal name"
   checkNoJournalShortJSON = do
     work <- parseCrossrefJsonFromFile "tests/test-data/science_oct.json"
     work @?= Right TW.glaserS1998
-
-testfixJShortNRMP :: TestTree
-testfixJShortNRMP = testCase "fixJournalShort - 2021 NRMP"
-                             checkFixedNRMPJSON
- where
-  checkFixedNRMPJSON :: Assertion
-  checkFixedNRMPJSON = do
-    work <- parseCrossrefJsonFromFile "tests/test-data/nrmp.json"
-    let fixedWork = fixJournalShort defaultJournalFix <$> work
-    fixedWork @?= Right TW.nrmpCorrected

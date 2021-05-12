@@ -17,10 +17,13 @@
 --  * "Abbotsbury.Cite" generates citations from @Work@s.
 
 module Abbotsbury
-  ( -- * Fetching metadata from Crossref
+  ( -- * The core datatypes
+    module Abbotsbury.Work
+    -- * Fetching metadata from Crossref
     -- ** Getting and parsing raw JSON data
     -- $crossref-parse
-    Abbotsbury.Crossref.fetchWork
+    -- $crossref-journalfix
+  , Abbotsbury.Crossref.fetchWork
   , Abbotsbury.Crossref.fetchWorks
   , Abbotsbury.Crossref.fetchWork'
   , Abbotsbury.Crossref.fetchWorks'
@@ -29,11 +32,6 @@ module Abbotsbury
     -- $crossref-exceptions
     Abbotsbury.Crossref.Internal.CrossrefException(..)
   , Abbotsbury.Crossref.Internal.getDoiFromException
-  ,
-    -- ** Manually fixing errors in Crossref metadata
-    -- $crossref-journalfix
-    Abbotsbury.Crossref.defaultJournalFix
-  , Abbotsbury.Crossref.emptyJournalFix
   ,
     -- * Citation generation
     -- $cite-overview
@@ -55,6 +53,7 @@ module Abbotsbury
 import           Abbotsbury.Cite
 import           Abbotsbury.Crossref
 import           Abbotsbury.Crossref.Internal
+import           Abbotsbury.Work
 import           Network.HTTP.Client            ( )
 
 -- $crossref-parse
@@ -63,38 +62,63 @@ import           Network.HTTP.Client            ( )
 -- use: these basically act as versions of 'fetchWork'' and 'fetchWorks'', but
 -- with "default settings".
 
+-- $crossref-journalfix
+-- Journal names should always be abbreviated according to CASSI
+-- (<https://cassi.cas.org>). However, Crossref metadata often contains
+-- abbreviated journal names which are not in accordance with the CASSI
+-- abbreviations. (Actually, this is not Crossref's fault; it is the fault of
+-- the publisher who deposits metadata with Crossref, but to an end user like
+-- us, this distinction is immaterial.)
+--
+-- To deal with this, 'fetchWork'' and 'fetchWorks'' take a @Bool@ as a
+-- parameter. If this is @True@, then @abbotsbury@ will use an internally
+-- compiled @Map@ of abbreviated journal names to find the CASSI-compliant
+-- abbreviations. If the internal @Map@ does not contain the requested journal,
+-- then it will fall back on Crossref's data. If it is instead set to @False@,
+-- then @abbotsbury@ will just use the Crossref data directly.
+-- 
+-- The basic (no-apostrophe) functions 'fetchWork' and 'fetchWorks' use the
+-- internal @Map@ by default. If you obtain incorrect metadata in the @Work@
+-- (i.e. the journal doesn't appear in @abbotsbury@'s internal @Map@), then
+-- then you can manually replace the @journalShort@ field, as demonstrated below
+-- (with lenses, although you can do this with plain old record update syntax).
+-- Alternatively, [submit a pull request
+-- :-)](https://github.com/yongrenjie/abbotsbury/)
+-- 
+-- Note that this following example uses 'fetchWork'' because @abbotsbury@'s
+-- internal @Map@ of abbreviations already contains the corrected form for /Nature/
+-- /Communications/.
+--
+-- >>> import Lens.Micro         -- for (&), (^.), and (.~)
+-- >>> Right natComm <- fetchWork' Nothing False "your@email.com" "10.1038/s41467-021-21936-4"
+-- >>> natComm
+-- Work {_workType = JournalArticle, _title = "Direct catalytic asymmetric synthesis of \945-chiral
+-- bicyclo[1.1.1]pentanes", _publisher = "Springer Science and Business Media LLC", _authors =
+-- Author {_given = Just "Marie L. J.", _family = "Wong"} :| [Author {_given = Just "Alistair J.",
+-- _family = "Sterling"},Author {_given = Just "James J.", _family = "Mousseau"},Author {_given =
+-- Just "Fernanda", _family = "Duarte"},Author {_given = Just "Edward A.", _family = "Anderson"}],
+-- _journalLong = "Nature Communications", _journalShort = "Nat Commun", _year = 2021, _volume =
+-- "12", _issue = "1", _pages = "", _doi = "10.1038/s41467-021-21936-4", _isbn = "", _articleNumber
+-- = "1644"}
+-- >>> natComm ^. journalShort   -- this is wrong, there should be periods
+-- "Nat Commun"
+-- >>> natComm & journalShort .~ "Nat. Commun."
+-- Work {_workType = JournalArticle, _title = "Direct catalytic asymmetric synthesis of \945-chiral
+-- bicyclo[1.1.1]pentanes", _publisher = "Springer Science and Business Media LLC", _authors =
+-- Author {_given = Just "Marie L. J.", _family = "Wong"} :| [Author {_given = Just "Alistair J.",
+-- _family = "Sterling"},Author {_given = Just "James J.", _family = "Mousseau"},Author {_given =
+-- Just "Fernanda", _family = "Duarte"},Author {_given = Just "Edward A.", _family = "Anderson"}],
+-- _journalLong = "Nature Communications", _journalShort = "Nat. Commun.", _year = 2021, _volume =
+-- "12", _issue = "1", _pages = "", _doi = "10.1038/s41467-021-21936-4", _isbn = "", _articleNumber
+-- = "1644"}
+
 -- $crossref-exceptions
 -- If 'fetchWork' and co. fail, then they will return a @Left
 -- CrossrefException@. The possible exceptions are as follows. Often, the most
 -- important question is which DOI led to an exception: this can be obtained
 -- using 'getDoiFromException'. (You can also pattern-match on the
--- 'CrossrefException' value, but that's a bit verbose.)
-
--- $crossref-journalfix
--- Journal names should always be abbreviated according to CASSI
--- (<https://cassi.cas.org>). However, Crossref metadata often contains
--- abbreviated journal names which are not in accordance with the CASSI
--- abbreviations. Thus, 'fetchWork'' and 'fetchWorks'' take a @Map Text Text@ as
--- a parameter: this is a @Map@ where the keys are the long (i.e. unabbreviated)
--- journal names that Crossref gives you, and the values are the /correct/ short
--- journal names. For example, if you want to specify that
--- 
--- > Nature Reviews Chemistry
---
--- should always be abbreviated as
---
--- > Nat. Rev. Chem.
---
--- then you should pass @M.fromList [("Nature Reviews Chemistry", "Nat. Rev.
--- Chem.")]@ as the argument to 'fetchWork''.
---
--- @abbotsbury@ itself already has collected a bunch of common mistakes (mainly
--- for chemistry-focused journals) which the author or others have noticed.
--- These mistakes, and the fixes for them, are collected in 'defaultJournalFix'.
--- Thus, if you have fixes that you want to add, you can use the functions from
--- "Data.Map" (such as 'Data.Map.union') to add them to 'defaultJournalFix'.
--- Alternatively, [submit a pull request
--- :-)](https://github.com/yongrenjie/abbotsbury/)
+-- 'CrossrefException' value, but that's a bit verbose, and that's pretty much
+-- what 'getDoiFromException' does for you anyway.)
 
 -- $cite-overview
 -- Only this one single function is needed for citation generation. It takes two
