@@ -22,6 +22,23 @@ import           Data.Text.Normalize            ( NormalizationMode(..)
                                                 )
 import           Lens.Micro
 
+-- | This generates a BibLaTeX entry. The output 'Format' chosen doesn't affect
+-- the BibLaTeX entry in any way, so that can be arbitrarily selected.
+--
+-- >>> import qualified Data.Text.IO as TIO
+-- >>> Right orgLett <- fetchWork "your@email.com" "10.1021/acs.orglett.9b00971"
+-- >>> TIO.putStrLn $ cite bibStyle textFormat orgLett
+-- @article{MansfieldOL2019,
+--     doi = {10.1021/acs.orglett.9b00971},
+--     author = {Mansfield, Steven J.\ and Smith, Russell C.\ and Yong, Jonathan R.\ J.\ and Garry,
+-- Olivia L.\ and Anderson, Edward A.},
+--     journal = {Org.\ Lett.},
+--     title = {A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides},
+--     year = {2019},
+--     volume = {21},
+--     number = {8},
+--     pages = {2918-2922},
+-- }
 bibStyle :: Style
 bibStyle = Style { articleConstructor = articleConstructorBib }
 

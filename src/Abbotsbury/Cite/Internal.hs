@@ -3,32 +3,55 @@ module Abbotsbury.Cite.Internal where
 import           Abbotsbury.Work
 import           Data.Text                      ( Text )
 
--- | A Style refers to the citation style, i.e. ACS, Wiley (here called ACIE), RSC, etc.
+-- | A 'Style' is a citation style, i.e. a set of rules which defines what text
+-- is to be used and how it is to be formatted. This is roughly analogous with
+-- the idea of a CSL file.
+--
+-- BibLaTeX entries also count as a 'style': please see the module-level
+-- Haddocks of "Abbotsbury" for an explanation.
+--
+-- A 'Style' can be created by specifying a series of rules which convert a
+-- 'Work' to a list of 'CitationPart's, which are abstract representations of
+-- formatted text. This is quite intricate, so is not really covered here. Also,
+-- 'CitationPart' is not exported from the top-level "Abbotsbury" module: you
+-- will have to import it from "Abbotsbury.Cite.Internal".
 data Style = Style
   { articleConstructor :: Work -> [CitationPart]
   }
 
--- | A Format refers to the output file format, i.e. what kind of markup is to be applied to the
--- result. Note that the formatting is entirely orthogonal to the citation style (which is encoded
--- as Style). For example, an ACS-style citation (Style = ACS) can be formatted in plain text (for
--- use in Word), in RST (for use in Sphinx etc.) and so on.
+-- | A 'Format' dictates how the abstract formatting is to be realised, which is
+-- entirely orthogonal to the citation 'Style' itself. For example, different
+-- 'Format's render bold text in different ways: 'plainFormat' ignores it,
+-- 'markdownFormat' surrounds it in @**@, and so on.
 --
--- A Format can be specified completely by providing four functions which describe how plain text,
--- bolded text, italic text, and hyperlinks are to be rendered.
+-- A 'Format' can be specified completely by providing four functions which
+-- describe how plain text, bolded text, italic text, and hyperlinks are to be
+-- rendered.
 --
--- Once the full list of CitationParts has been generated (by applying the various Style rules), we
--- can then convert all the CitationParts into Text using the correct formatter.
+-- For example, this is (roughly) the definition of 'markdownFormat':
+--
+-- @
+-- markdownFormat :: Format
+-- markdownFormat = Format
+--   { plainFormatter  = id
+--   , boldFormatter   = \\t -> "**" <> t <> "**"
+--   , italicFormatter = \\t -> "**" <> t <> "**"
+--   , linkFormatter   = \\url disp -> "[" <> disp <> "](" <> url <> ")"
+--   }
+-- @
 data Format = Format
-  { plainFormatter  :: Text -> Text
+  { -- | This is almost always 'id'.
+    plainFormatter  :: Text -> Text
   , boldFormatter   :: Text -> Text
   , italicFormatter :: Text -> Text
   ,
-    -- | The first argument is the URI. The second argument is the displayed text.
+    -- | The first argument is the URL. The second argument is the displayed
+    -- text.
     linkFormatter   :: Text -> Text -> Text
   }
 
--- | "Formatted" parts of a citation, which can later be converted to real Text objects based on the
--- CiteFormat used.
+-- | An abstract representation of formatted text, which can later be converted
+-- to real "Data.Text.Text" objects based on the 'Format' used.
 data CitationPart
   = CText Text
   | Bold CitationPart
