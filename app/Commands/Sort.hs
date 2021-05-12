@@ -7,11 +7,13 @@ import           Data.Char                      ( isUpper )
 import qualified Data.IntMap                   as IM
 import           Data.List                      ( sortBy )
 import qualified Data.Map                      as M
+import           Data.Maybe                     ( isJust )
 import           Data.Ord                       ( comparing )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           Internal.Monad
+import           Internal.PrettyRef
 import           Lens.Micro.Platform
 import           Reference
 import           Text.Megaparsec                ( anySingle
@@ -38,8 +40,7 @@ data SortKey
   | -- | Sorting by the time a reference was last added.
     SKTimeAdded
 
--- |
--- The sort order.
+-- | The sort order.
 data SortOrder = Ascending | Descending
 
 -- | Convert a 'SortCriterion' into a Text instance which is displayed to the user when
@@ -71,24 +72,34 @@ showT (SortCriterion key order) = showKey key <> showOrder order
 --
 -- To sort by descending order, capitalise the first letter.
 -- If no criterion is specified, then defaults to @year@ in ascending order.
-runSort
-  ::
-  -- | Arguments passed to the 'sort' command.
-     Args
-  ->
-  -- | The inputs to the 'sort' command.
-     CmdInput
-  -> CmdOutput
+runSort :: Args -> CmdInput -> CmdOutput
 runSort args input = do
   let refs = refsin input
+      vIn  = varin input
+      cwd  = cwdin input
   -- If no refs present, error immediately
   when (IM.null refs) (throwErrorWithPrefix "no references found")
   -- Parse arguments: detect whether reversed order is desired...
   criterion <- parseInCommand pSort args prefix
-  let originalRefs = IM.elems refs -- no refnos
-  let sortedRefs = sortBy (getComparisonFn criterion) originalRefs
-  liftIO $ TIO.putStrLn ("sorted references by " <> showT criterion)
-  pure $ SCmdOutput (IM.fromList $ zip [1 ..] sortedRefs) Nothing
+  -- Determine which refs to output
+  let refsToSort = IM.assocs $ case vIn of
+        Just vIn' -> refs `IM.restrictKeys` vIn'
+        Nothing   -> refs
+  -- If data was piped into 'sort' (i.e. vIn is Just _), then we *shouldn't*
+  -- renumber the global reference list. Otherwise, if 'sort' was the only (or
+  -- first) command, then we should.
+  let sortedRefs = sortBy (getComparisonFn criterion) refsToSort
+  let sortedRenumberedRefs = if isJust vIn
+        then sortedRefs   -- was piped into, local sort only
+        else zip [1 ..] (map snd sortedRefs) -- global sort
+  -- Print the sorted refs.
+  liftIO $ TIO.putStrLn =<< prettify cwd sortedRenumberedRefs
+  -- The reference list we return should only be modified if 'sort' wasn't piped
+  -- into.
+  let refsout = if isJust vIn
+        then refs        -- was piped into, local sort only
+        else IM.fromList sortedRenumberedRefs  -- global sort
+  pure $ SCmdOutput refsout vIn
 
 -- | Parser for command-line arguments that determines what sort criterion is to
 -- be used.
@@ -116,8 +127,8 @@ pSort = do
 -- | Generates the comparison function to use for reference sorting.
 getComparisonFn
   :: SortCriterion  -- ^ The sort criterion to be used.
-  -> (Reference -> Reference -> Ordering)  -- ^ The comparison function.
-getComparisonFn (SortCriterion key order) ref1 ref2 =
+  -> ((Int, Reference) -> (Int, Reference) -> Ordering)  -- ^ The comparison function.
+getComparisonFn (SortCriterion key order) (_, ref1) (_, ref2) =
   let flipOrder :: Ordering -> Ordering
       flipOrder LT = GT
       flipOrder GT = LT

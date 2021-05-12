@@ -46,3 +46,24 @@
     _doi: 10.1021/ed200673w
   _tags:
   - nmr
+- _timeOpened: 2021-05-12T15:54:39.758567Z
+  _timeAdded: 2021-05-12T15:54:39.758567Z
+  _work:
+    _volume: '42'
+    _pages: 3938-3941
+    _journalLong: Angewandte Chemie International Edition
+    _journalShort: Angew. Chem. Int. Ed.
+    _publisher: Wiley
+    _workType: JournalArticle
+    _title: Elimination of Zero-Quantum Interference in Two-Dimensional NMR Spectra
+    _isbn: ''
+    _authors:
+    - _given: Michael J.
+      _family: Thrippleton
+    - _given: James
+      _family: Keeler
+    _issue: '33'
+    _year: 2003
+    _articleNumber: ''
+    _doi: 10.1002/anie.200351947
+  _tags: []

@@ -34,6 +34,22 @@ import           Text.Megaparsec                ( eof
                                                 , parse
                                                 )
 
+-- | Construct pretty-printed text from a set of references to be displayed on
+-- the screen. The output of this text can be directly passed to
+-- 'Data.Text.IO.putStrLn'.
+prettify
+  :: FilePath
+  -> [(Int, Reference)]
+  -> IO Text
+prettify cwd refs = if null refs
+  then pure ""
+  else do
+    fieldSizes <- liftIO $ getFieldSizes refs
+    let headText = prettifyHead fieldSizes
+    refsText <- liftIO $ mapM (prettifyOneRef fieldSizes cwd) refs
+    -- Extra blank line looks nice.
+    pure $ headText <> "\n" <> T.intercalate "\n\n" refsText <> "\n"
+
 -- | Get the field sizes for pretty-printing. Note that the title field is also
 -- responsible for the DOI, as well as the availability columns. Note that the
 -- first four field sizes include the padding.
@@ -54,15 +70,16 @@ totalSizes :: FieldSizes -> Int
 totalSizes fss = sum $ map ($ fss) [numberF, authorF, yearF, journalF, titleF]
 
 -- | Calculate the correct field sizes based on the terminal size.
-getFieldSizes :: IntMap Reference -> IO FieldSizes
-getFieldSizes refs = do
+getFieldSizes :: [(Int, Reference)] -> IO FieldSizes
+getFieldSizes refnosAndRefs = do
   -- Useful things.
-  let refsList = IM.elems refs
+  let refnos = map fst refnosAndRefs
+      refs = map snd refnosAndRefs
       longestBy :: (Reference -> Text) -> Int
-      longestBy key = maximum $ fmap (T.length . key) refsList
+      longestBy key = maximum $ fmap (T.length . key) refs
   -- Number field.
-  let maxRef   = fst $ IM.findMax refs
-      numberF' = fieldPadding + length (show maxRef)
+  let maxRefno = maximum refnos
+      numberF' = fieldPadding + length (show maxRefno)
   -- Author field.
   let getLongestAuthor :: Reference -> Text
       getLongestAuthor ref = maximumBy
@@ -89,22 +106,6 @@ getFieldSizes refs = do
   -- the ANSI escape sequences tend to get messed up.
   let titleF' = max availLength titleF2
   pure $ FieldSizes numberF' authorF' yearF' journalF' titleF'
-
--- | Construct pretty-printed text from a set of references to be displayed on
--- the screen. The output of this text can be directly passed to
--- 'Data.Text.IO.putStrLn'.
-prettify
-  :: FilePath
-  -> IntMap Reference
-  -> IO Text
-prettify cwd refs = if IM.null refs
-  then pure ""
-  else do
-    fss <- liftIO $ getFieldSizes refs
-    let headText = prettifyHead fss
-    refsText <- liftIO $ mapM (prettifyOneRef fss cwd) (IM.assocs refs)
-    let text = headText <> "\n" <> T.intercalate "\n\n" refsText <> "\n" -- extra blank line looks nice.
-    pure text
 
 -- | Generate a pretty header for the reference list. This function should only
 -- ever be called by 'prettify'.
