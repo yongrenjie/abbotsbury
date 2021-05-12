@@ -1,11 +1,11 @@
 module Abbotsbury.Cite.Helpers.Author where
 
-import Abbotsbury.Cite.Internal
-import Abbotsbury.LatexEscapes
-import Abbotsbury.Work
-import Data.Text (Text)
-import qualified Data.Text as T
-import Lens.Micro
+import           Abbotsbury.Cite.Internal
+import           Abbotsbury.LatexEscapes
+import           Abbotsbury.Work
+import           Data.Text                      ( Text )
+import qualified Data.Text                     as T
+import           Lens.Micro
 
 -- Note that these AuthorStyles are merely helper functions. We can't and shouldn't hard code them
 -- into a Style, because it won't be extensible by other people.
@@ -26,14 +26,14 @@ formatAuthorAsCPart fmt auth = CText (formatAuthor fmt auth)
 -- as a CitationPart.
 formatAuthor :: AuthorStyle -> Author -> Text
 formatAuthor fmt auth =
-  let fam = auth ^. family
+  let fam          = auth ^. family
       makeInitials = joinInitialsWith " " "-" "." . getInitials
-   in case auth ^. given of
-        Nothing -> fam
+  in  case auth ^. given of
+        Nothing  -> fam
         Just gvn -> case fmt of
           FamilyInitials -> fam <> ", " <> makeInitials gvn
           InitialsFamily -> makeInitials gvn <> " " <> fam
-          BibLaTeX -> latexify (fam <> ", " <> gvn)
+          BibLaTeX       -> latexify (fam <> ", " <> gvn)
 
 -- | Extracts the initials from a given name. The elements of the outermost list are separated by
 -- spaces; the elements of each inner list are separated by hyphens.
@@ -50,6 +50,5 @@ getInitials =
 
 joinInitialsWith :: Text -> Text -> Text -> [[Char]] -> Text
 joinInitialsWith spaceReplace hyphenReplace dotReplace =
-  T.intercalate spaceReplace . map (T.intercalate hyphenReplace)
-    . (fmap . fmap)
-      (`T.cons` dotReplace)
+  T.intercalate spaceReplace . map (T.intercalate hyphenReplace) . (fmap . fmap)
+    (`T.cons` dotReplace)

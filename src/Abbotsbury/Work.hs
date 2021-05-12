@@ -11,38 +11,39 @@
 -- module "Abbotsbury".
 module Abbotsbury.Work
   ( -- * Type synonyms
-    DOI,
-    ISBN,
+    DOI
+  , ISBN
+  ,
 
     -- * Fundamental data types
-    WorkType (..),
-    Work (..),
-    Author (..),
+    WorkType(..)
+  , Work(..)
+  , Author(..)
+  ,
 
     -- * Lenses
-    workType,
-    title,
-    publisher,
-    authors,
-    journalLong,
-    journalShort,
-    year,
-    volume,
-    issue,
-    pages,
-    doi,
-    isbn,
-    articleNumber,
-    given,
-    family,
-  )
-where
+    workType
+  , title
+  , publisher
+  , authors
+  , journalLong
+  , journalShort
+  , year
+  , volume
+  , issue
+  , pages
+  , doi
+  , isbn
+  , articleNumber
+  , given
+  , family
+  ) where
 
-import Data.Aeson
-import Data.List.NonEmpty (NonEmpty)
-import Data.Text (Text)
-import GHC.Generics
-import Lens.Micro
+import           Data.Aeson
+import           Data.List.NonEmpty             ( NonEmpty )
+import           Data.Text                      ( Text )
+import           GHC.Generics
+import           Lens.Micro
 
 -- | A type synonym for Digital Object Identifiers (DOIs). Given that abbotsbury
 -- doesn't provide a "smart constructor" for DOIs, it seems that the sensible
@@ -104,26 +105,31 @@ data WorkType
 -- TODO: Add more fields here for other information (e.g. editors). See
 -- <https://github.com/Crossref/rest-api-doc/blob/master/api_format.md>.
 data Work = Work
-  { _workType :: WorkType,
-    _title :: Text,
-    _publisher :: Text,
+  { _workType      :: WorkType
+  , _title         :: Text
+  , _publisher     :: Text
+  ,
     -- | There has to be at least one author!.
-    _authors :: NonEmpty Author,
+    _authors       :: NonEmpty Author
+  ,
     -- | The full name of the journal, e.g. "Journal of the American Chemical
     -- Society".
-    _journalLong :: Text,
+    _journalLong   :: Text
+  ,
     -- | The short name of the journal, e.g. "J. Am. Chem. Soc.". This short
     -- form should be taken from [CASSI](https://cassi.cas.org/); however,
     -- Crossref often has incorrect information for this field, which motivates
     -- the 'fixJournalShort' function.
-    _journalShort :: Text,
-    _year :: Int,
+    _journalShort  :: Text
+  , _year          :: Int
+  ,
     -- The volume and issue cannot be Ints, because sometimes they are a range.
-    _volume :: Text,
-    _issue :: Text,
-    _pages :: Text,
-    _doi :: DOI,
-    _isbn :: ISBN,
+    _volume        :: Text
+  , _issue         :: Text
+  , _pages         :: Text
+  , _doi           :: DOI
+  , _isbn          :: ISBN
+  ,
     -- | Some online-only articles do not have page numbers, and are indexed by
     -- article numbers instead.
     _articleNumber :: Text
@@ -136,56 +142,57 @@ data Work = Work
 -- This will allow us to deal with editors, etc. more properly.
 data Author = Author
   { -- | Not everyone has a given name.
-    _given :: Maybe Text,
+    _given  :: Maybe Text
+  ,
     -- | But everyone has at least one name.
     _family :: Text
   }
   deriving (Generic, Show, Ord, Eq)
 
 workType :: Lens' Work WorkType
-workType = lens _workType (\w x -> w {_workType = x})
+workType = lens _workType (\w x -> w { _workType = x })
 
 title :: Lens' Work Text
-title = lens _title (\w x -> w {_title = x})
+title = lens _title (\w x -> w { _title = x })
 
 publisher :: Lens' Work Text
-publisher = lens _publisher (\w x -> w {_publisher = x})
+publisher = lens _publisher (\w x -> w { _publisher = x })
 
 authors :: Lens' Work (NonEmpty Author)
-authors = lens _authors (\w x -> w {_authors = x})
+authors = lens _authors (\w x -> w { _authors = x })
 
 journalLong :: Lens' Work Text
-journalLong = lens _journalLong (\w x -> w {_journalLong = x})
+journalLong = lens _journalLong (\w x -> w { _journalLong = x })
 
 journalShort :: Lens' Work Text
-journalShort = lens _journalShort (\w x -> w {_journalShort = x})
+journalShort = lens _journalShort (\w x -> w { _journalShort = x })
 
 year :: Lens' Work Int
-year = lens _year (\w x -> w {_year = x})
+year = lens _year (\w x -> w { _year = x })
 
 volume :: Lens' Work Text
-volume = lens _volume (\w x -> w {_volume = x})
+volume = lens _volume (\w x -> w { _volume = x })
 
 issue :: Lens' Work Text
-issue = lens _issue (\w x -> w {_issue = x})
+issue = lens _issue (\w x -> w { _issue = x })
 
 pages :: Lens' Work Text
-pages = lens _pages (\w x -> w {_pages = x})
+pages = lens _pages (\w x -> w { _pages = x })
 
 doi :: Lens' Work DOI
-doi = lens _doi (\w x -> w {_doi = x})
+doi = lens _doi (\w x -> w { _doi = x })
 
 isbn :: Lens' Work ISBN
-isbn = lens _isbn (\w x -> w {_isbn = x})
+isbn = lens _isbn (\w x -> w { _isbn = x })
 
 articleNumber :: Lens' Work Text
-articleNumber = lens _articleNumber (\w x -> w {_articleNumber = x})
+articleNumber = lens _articleNumber (\w x -> w { _articleNumber = x })
 
 given :: Lens' Author (Maybe Text)
-given = lens _given (\a g -> a {_given = g})
+given = lens _given (\a g -> a { _given = g })
 
 family :: Lens' Author Text
-family = lens _family (\a f -> a {_family = f})
+family = lens _family (\a f -> a { _family = f })
 
 instance ToJSON WorkType where
   toEncoding = genericToEncoding defaultOptions

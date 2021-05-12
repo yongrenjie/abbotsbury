@@ -2,25 +2,24 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Reference
-  ( module Reference,
-    module Abbotsbury.Work,
-  )
-where
+  ( module Reference
+  , module Abbotsbury.Work
+  ) where
 
-import Abbotsbury.Work
-import Data.Aeson
-import Data.Text (Text)
-import Data.Time.Clock
-import GHC.Generics
-import Lens.Micro.Platform
+import           Abbotsbury.Work
+import           Data.Aeson
+import           Data.Text                      ( Text )
+import           Data.Time.Clock
+import           GHC.Generics
+import           Lens.Micro.Platform
 
 type Tag = Text
 
 data Reference = Reference
-  { _work :: Work,
-    _tags :: [Tag],
-    _timeAdded :: UTCTime,
-    _timeOpened :: UTCTime
+  { _work       :: Work
+  , _tags       :: [Tag]
+  , _timeAdded  :: UTCTime
+  , _timeOpened :: UTCTime
   }
   deriving (Generic, Show)
 

@@ -1,7 +1,7 @@
 module Abbotsbury.Cite.Internal where
 
-import Abbotsbury.Work
-import Data.Text (Text)
+import           Abbotsbury.Work
+import           Data.Text                      ( Text )
 
 -- | A Style refers to the citation style, i.e. ACS, Wiley (here called ACIE), RSC, etc.
 data Style = Style
@@ -19,11 +19,12 @@ data Style = Style
 -- Once the full list of CitationParts has been generated (by applying the various Style rules), we
 -- can then convert all the CitationParts into Text using the correct formatter.
 data Format = Format
-  { plainFormatter :: Text -> Text,
-    boldFormatter :: Text -> Text,
-    italicFormatter :: Text -> Text,
+  { plainFormatter  :: Text -> Text
+  , boldFormatter   :: Text -> Text
+  , italicFormatter :: Text -> Text
+  ,
     -- | The first argument is the URI. The second argument is the displayed text.
-    linkFormatter :: Text -> Text -> Text
+    linkFormatter   :: Text -> Text -> Text
   }
 
 -- | "Formatted" parts of a citation, which can later be converted to real Text objects based on the

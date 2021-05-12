@@ -1,31 +1,28 @@
 module Internal.Copy where
 
-import qualified Control.Exception as CE
-import Control.Monad
-import Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
-import System.IO
-import System.Info
-import System.Process
+import qualified Control.Exception             as CE
+import           Control.Monad
+import           Data.Text                      ( Text )
+import qualified Data.Text                     as T
+import qualified Data.Text.IO                  as TIO
+import           System.IO
+import           System.Info
+import           System.Process
 
 -- | Copies text to the clipboard, silently ignoring ALL exceptions.
 copy :: Text -> IO ()
 copy t =
   CE.handle
-    ( \(e :: CE.SomeException) ->
+      (\(e :: CE.SomeException) ->
         TIO.hPutStrLn stderr "abbot: copy to clipboard failed"
-    )
+      )
     $ case os of
-      "darwin" -> do
-        (Just hIn, _, _, _) <-
-          createProcess
-            (shell "pbcopy")
-              { std_in = CreatePipe
-              }
-        TIO.hPutStr hIn t
-      _ ->
-        TIO.hPutStrLn
+        "darwin" -> do
+          (Just hIn, _, _, _) <- createProcess (shell "pbcopy")
+            { std_in = CreatePipe
+            }
+          TIO.hPutStr hIn t
+        _ -> TIO.hPutStrLn
           stderr
           ("abbot: copy not supported on operating system " <> T.pack os)
 
@@ -36,23 +33,24 @@ copy t =
 copyHtmlAsRtf :: Text -> IO ()
 copyHtmlAsRtf htmlText =
   CE.handle
-    ( \(e :: CE.SomeException) ->
+      (\(e :: CE.SomeException) ->
         TIO.hPutStrLn stderr "abbot: RTF copy to clipboard failed"
-    )
+      )
     $ case os of
-      "darwin" -> do
-        (Just in1, _, _, ph) <-
-          createProcess
-            (shell "textutil -convert rtf -stdin -stdout -inputencoding UTF-8 -format html | pbcopy -Prefer rtf")
+        "darwin" -> do
+          (Just in1, _, _, ph) <- createProcess
+            (shell
+                "textutil -convert rtf -stdin -stdout -inputencoding UTF-8 -format html | pbcopy -Prefer rtf"
+              )
               { std_in = CreatePipe
               }
-        TIO.hPutStr in1 htmlText
-      _ ->
-        TIO.hPutStrLn
+          TIO.hPutStr in1 htmlText
+        _ -> TIO.hPutStrLn
           stderr
           ("abbot: copy not supported on operating system " <> T.pack os)
 
 -- | Helper function which surrounds each line with <p>...</p> and runs copyHtmlAsRtf on the whole
 -- thing.
 copyHtmlLinesAsRtf :: [Text] -> IO ()
-copyHtmlLinesAsRtf = copyHtmlAsRtf . T.concat . map (\t -> "<p>" <> t <> "</p>")
+copyHtmlLinesAsRtf =
+  copyHtmlAsRtf . T.concat . map (\t -> "<p>" <> t <> "</p>")

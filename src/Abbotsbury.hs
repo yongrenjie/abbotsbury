@@ -20,38 +20,42 @@ module Abbotsbury
   ( -- * Fetching metadata from Crossref
     -- ** Getting and parsing raw JSON data
     -- $crossref-parse
-    Abbotsbury.Crossref.fetchWork,
-    Abbotsbury.Crossref.fetchWorks,
-    Abbotsbury.Crossref.fetchWork',
-    Abbotsbury.Crossref.fetchWorks',
+    Abbotsbury.Crossref.fetchWork
+  , Abbotsbury.Crossref.fetchWorks
+  , Abbotsbury.Crossref.fetchWork'
+  , Abbotsbury.Crossref.fetchWorks'
+  ,
     -- ** What could go wrong
     -- $crossref-exceptions
-    Abbotsbury.Crossref.Internal.CrossrefException (..),
-    Abbotsbury.Crossref.Internal.getDoiFromException,
+    Abbotsbury.Crossref.Internal.CrossrefException(..)
+  , Abbotsbury.Crossref.Internal.getDoiFromException
+  ,
     -- ** Manually fixing errors in Crossref metadata
     -- $crossref-journalfix
-    Abbotsbury.Crossref.defaultJournalFix,
-    Abbotsbury.Crossref.emptyJournalFix,
+    Abbotsbury.Crossref.defaultJournalFix
+  , Abbotsbury.Crossref.emptyJournalFix
+  ,
     -- * Citation generation
     -- $cite-overview
-    Abbotsbury.Cite.cite,
+    Abbotsbury.Cite.cite
+  ,
     -- ** Citation styles
-    Abbotsbury.Cite.Style (..),
-    Abbotsbury.Cite.acsStyle,
-    Abbotsbury.Cite.bibStyle,
+    Abbotsbury.Cite.Style(..)
+  , Abbotsbury.Cite.acsStyle
+  , Abbotsbury.Cite.bibStyle
+  ,
     -- ** Output formats
-    Abbotsbury.Cite.Format (..),
-    Abbotsbury.Cite.textFormat,
-    Abbotsbury.Cite.markdownFormat,
-    Abbotsbury.Cite.restructuredFormat,
-    Abbotsbury.Cite.htmlFormat,
-  )
-where
+    Abbotsbury.Cite.Format(..)
+  , Abbotsbury.Cite.textFormat
+  , Abbotsbury.Cite.markdownFormat
+  , Abbotsbury.Cite.restructuredFormat
+  , Abbotsbury.Cite.htmlFormat
+  ) where
 
-import Abbotsbury.Cite
-import Abbotsbury.Crossref
-import Abbotsbury.Crossref.Internal
-import Network.HTTP.Client ()
+import           Abbotsbury.Cite
+import           Abbotsbury.Crossref
+import           Abbotsbury.Crossref.Internal
+import           Network.HTTP.Client            ( )
 
 -- $crossref-parse
 -- The following functions provide ways to directly fetch metadata for a given
