@@ -10,7 +10,7 @@ import qualified Data.IntMap as IM
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time.Clock (getCurrentTime)
-import Path
+import Internal.Path
   ( PDFType (..),
     getPDFPath,
   )

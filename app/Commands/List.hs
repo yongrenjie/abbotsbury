@@ -19,12 +19,12 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Lens.Micro.Platform
-import Path
+import Internal.Path
   ( PDFType (..),
     getPDFPath,
   )
 import Reference
-import Style
+import Internal.Style
   ( setBold,
     setColor,
   )

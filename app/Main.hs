@@ -34,6 +34,12 @@ import Internal.MInputT
     mRunInputT,
     mWithInterrupt,
   )
+import Internal.Path
+  ( expandDirectory,
+    readRefs,
+    saveRefs,
+    setCurrentDirectory,
+  )
 import Lens.Micro.Platform (Lens', lens, use, (.=))
 import Options
   ( AbbotCiteOptions (AbbotCiteOptions),
@@ -43,15 +49,9 @@ import Options
     parserInfo,
   )
 import Options.Applicative (customExecParser)
-import Path
-  ( expandDirectory,
-    readRefs,
-    saveRefs,
-    setCurrentDirectory,
-  )
 import Paths_abbotsbury (version)
 import Reference (Reference)
-import Style (makeError, setBold, setColor, setItalic)
+import Internal.Style (makeError, setBold, setColor, setItalic)
 import System.Environment (lookupEnv)
 import System.Exit (exitFailure, exitSuccess)
 import System.IO (stderr)

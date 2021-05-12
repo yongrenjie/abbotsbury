@@ -1,5 +1,5 @@
-module Path
-  ( module Path,
+module Internal.Path
+  ( module Internal.Path,
     System.Directory.setCurrentDirectory,
   )
 where

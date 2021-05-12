@@ -1,5 +1,5 @@
-module Style
-  ( module Style,
+module Internal.Style
+  ( module Internal.Style,
   )
 where
 

@@ -12,7 +12,7 @@ import qualified Data.IntSet as IS
 import Data.Text (Text)
 import qualified Data.Text as T
 import Lens.Micro.Platform
-import Path
+import Internal.Path
 import Reference
 import System.Directory (removeFile)
 import System.IO.Error (isDoesNotExistError)
