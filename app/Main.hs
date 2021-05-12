@@ -5,6 +5,9 @@ import           Abbotsbury                     ( cite
                                                 , getDoiFromException
                                                 )
 import           Commands                       ( runCmdWith )
+import           Control.Exception              ( IOException
+                                                , catch
+                                                )
 import           Commands.Shared                ( CmdInput(CmdInput)
                                                 , ReplCmd(Cd, Nop, Quit)
                                                 , SCmdOutput(SCmdOutput)
@@ -118,74 +121,77 @@ main = do
 -- are implemented elsewhere.
 loop :: MInputT (StateT LoopState IO) ()
 loop =
-  let
-    exit = pure ()
-    save = do
-      refs <- use references
-      curD <- use curDir
-      unless (null refs) (liftIO $ saveRefs refs curD)
-  in
-    mHandleInterrupt loop $ do
-      curD <- use curDir
-      dirC <- use dirChanged
+  let exit = pure ()
+      save = do
+        refs <- use references
+        curD <- use curDir
+        unless (null refs) (liftIO $ saveRefs refs curD)
+  in  mHandleInterrupt loop $ do
+        curD <- use curDir
+        dirC <- use dirChanged
 
-      -- If the directory was changed, read in new data, then turn off the flag
-      when dirC $ do
-        newRefs <- liftIO . runExceptT $ readRefs curD
-        case newRefs of
-          Right nrefs -> do
-            references .= nrefs
-            unless
-              (null nrefs)
-              (mOutputStrLn
-                ("Read in " ++ show (length nrefs) ++ " references.")
-              )
-          Left errmsg -> printErr errmsg
-      dirChanged .= False
+        -- If the directory was changed, read in new data, then turn off the flag
+        when dirC $ do
+          newRefs <- liftIO . runExceptT $ readRefs curD
+          case newRefs of
+            Right nrefs -> do
+              references .= nrefs
+              unless
+                (null nrefs)
+                (mOutputStrLn
+                  ("Read in " ++ show (length nrefs) ++ " references.")
+                )
+            Left errmsg -> printErr errmsg
+        dirChanged .= False
 
-      -- Show the prompt and get the command
-      cwd   <- liftIO $ expandDirectory curD
-      input <- prompt cwd
+        -- Show the prompt and get the command
+        cwd   <- liftIO $ expandDirectory curD
+        input <- prompt cwd
 
-      -- Parse and run the command
-      case fmap T.pack input of
-        Nothing      -> save >> exit -- Ctrl-D
-        Just cmdArgs -> case runReplParser cmdArgs of
-          Left _ ->
-            printErr ("command '" <> cmdArgs <> "' not recognised") >> loop
-          -- Special commands that we need to handle in main loop
-          Right Nop     -> loop
-          Right Quit    -> mOutputStrLn "quitting..." >> save >> exit
-          Right (Cd fp) -> do
-            -- Check for 'cd -'
-            newD <- if fp == "-"
-              then use oldDir
-              else liftIO $ expandDirectory $ T.unpack fp
-            -- If the new directory is different, then change the working directory
-            when (newD /= curD) $ catchIOError
-              (do
-                save
-                liftIO (setCurrentDirectory newD)
-                curDir .= newD
-                oldDir .= curD
-                dirChanged .= True
-              )
-              (\_ -> printErr (T.pack newD <> ": no such directory"))
-            loop
-          -- All other commands
-          Right otherCmd -> do
-            currentDir  <- use curDir
-            currentRefs <- use references
-            let cmdInput = CmdInput currentDir currentRefs Nothing
-            -- TODO: In principle, all IO exceptions should be caught here, as
-            -- they are not exhaustively encoded in the ExceptT error type.
-            cmdOutput <- liftIO . runExceptT $ runCmdWith otherCmd cmdInput
-            case cmdOutput of
-              Left  err                    -> printErr err >> loop
-              Right (SCmdOutput newRefs _) -> do
-                references .= newRefs
-                save
-                loop
+        -- Parse and run the command
+        case fmap T.pack input of
+          Nothing      -> save >> exit -- Ctrl-D
+          Just cmdArgs -> case runReplParser cmdArgs of
+            Left _ ->
+              printErr ("command '" <> cmdArgs <> "' not recognised") >> loop
+            -- Special commands that we need to handle in main loop
+            Right Nop     -> loop
+            Right Quit    -> mOutputStrLn "quitting..." >> save >> exit
+            Right (Cd fp) -> do
+              -- Check for 'cd -'
+              newD <- if fp == "-"
+                then use oldDir
+                else liftIO $ expandDirectory (T.unpack fp)
+              -- If the new directory is different, then change the working directory
+              when (newD /= curD) $ catchIOError
+                (do
+                  save
+                  liftIO (setCurrentDirectory newD)
+                  curDir .= newD
+                  oldDir .= curD
+                  dirChanged .= True
+                )
+                (\_ -> printErr (T.pack newD <> ": no such directory"))
+              loop
+            -- All other commands
+            Right otherCmd -> do
+              currentDir  <- use curDir
+              currentRefs <- use references
+              let cmdInput = CmdInput currentDir currentRefs Nothing
+              -- Run the command. If an IOException occurs, display it and
+              -- continue the programme.
+              cmdOutput <- liftIO $ catch
+                (runExceptT (runCmdWith otherCmd cmdInput))
+                (\(e :: IOException) -> do
+                  TIO.putStrLn . makeError . T.pack . show $ e
+                  pure $ Right (SCmdOutput currentRefs Nothing)
+                )
+              case cmdOutput of
+                Left  err                    -> printErr err >> loop
+                Right (SCmdOutput newRefs _) -> do
+                  references .= newRefs
+                  save
+                  loop
 
 -- | Generates the prompt for the main loop.
 prompt :: FilePath -> MInputT (StateT LoopState IO) (Maybe String)
