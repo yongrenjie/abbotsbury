@@ -29,22 +29,8 @@ import           System.Process                 ( proc
                                                 , readCreateProcessWithExitCode
                                                 )
 
-data OpenFormat
-  = OpenFullText
-  | OpenSI
-  | OpenWebURL
-  deriving (Ord, Eq, Show)
-
 prefix :: Text
 prefix = "open: "
-
-throwErrorWithPrefix :: Text -> ExceptT Text IO a
-throwErrorWithPrefix e = throwError $ prefix <> e
-
-showT :: OpenFormat -> Text
-showT OpenFullText = "full text"
-showT OpenSI       = "SI"
-showT OpenWebURL   = "web URL"
 
 runOpen :: Args -> CmdInput -> CmdOutput
 runOpen args input = do
@@ -110,6 +96,17 @@ pOpen = (,) <$> pRefnos <*> pFormats abbrevs (Just OpenFullText)
     , ("w"  , OpenWebURL)
     , ("web", OpenWebURL)
     ]
+
+data OpenFormat
+  = OpenFullText
+  | OpenSI
+  | OpenWebURL
+  deriving (Ord, Eq, Show)
+
+showT :: OpenFormat -> Text
+showT OpenFullText = "full text"
+showT OpenSI       = "SI"
+showT OpenWebURL   = "web URL"
 
 getOpenLink
   :: OpenFormat

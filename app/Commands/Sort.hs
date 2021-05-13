@@ -23,39 +23,6 @@ import           Text.Megaparsec                ( anySingle
 prefix :: Text
 prefix = "sort: "
 
-throwErrorWithPrefix :: Text -> ExceptT Text IO a
-throwErrorWithPrefix e = throwError $ prefix <> e
-
--- | A @SortCriterion@ represents a criterion by which the list of references
--- may be sorted.
-data SortCriterion = SortCriterion SortKey SortOrder
-
--- | There are currently three keys by which the references may be sorted.
-data SortKey
-  = -- | Sorting by year, using the journal name and then first author's family
-    -- name to break ties.
-    SKYearJournalAuthor
-  | -- | Sorting by the time a reference was last opened.
-    SKTimeOpened
-  | -- | Sorting by the time a reference was last added.
-    SKTimeAdded
-
--- | The sort order.
-data SortOrder = Ascending | Descending
-
--- | Convert a 'SortCriterion' into a Text instance which is displayed to the user when
--- sorting is performed.
-showT :: SortCriterion -> T.Text
-showT (SortCriterion key order) = showKey key <> showOrder order
- where
-  showKey :: SortKey -> T.Text
-  showKey SKYearJournalAuthor = "year, journal, author"
-  showKey SKTimeOpened        = "time opened"
-  showKey SKTimeAdded         = "time added"
-  showOrder :: SortOrder -> T.Text
-  showOrder Ascending  = ""
-  showOrder Descending = " (reversed)"
-
 -- | Sorts the currently loaded database of references.
 --
 -- Command-line usage:
@@ -123,6 +90,36 @@ pSort = do
     , ("added" , SKTimeAdded)
     , ("a"     , SKTimeAdded)
     ]
+
+-- | A @SortCriterion@ represents a criterion by which the list of references
+-- may be sorted.
+data SortCriterion = SortCriterion SortKey SortOrder
+
+-- | There are currently three keys by which the references may be sorted.
+data SortKey
+  = -- | Sorting by year, using the journal name and then first author's family
+    -- name to break ties.
+    SKYearJournalAuthor
+  | -- | Sorting by the time a reference was last opened.
+    SKTimeOpened
+  | -- | Sorting by the time a reference was last added.
+    SKTimeAdded
+
+-- | The sort order.
+data SortOrder = Ascending | Descending
+
+-- | Convert a 'SortCriterion' into a Text instance which is displayed to the user when
+-- sorting is performed.
+showT :: SortCriterion -> T.Text
+showT (SortCriterion key order) = showKey key <> showOrder order
+ where
+  showKey :: SortKey -> T.Text
+  showKey SKYearJournalAuthor = "year, journal, author"
+  showKey SKTimeOpened        = "time opened"
+  showKey SKTimeAdded         = "time added"
+  showOrder :: SortOrder -> T.Text
+  showOrder Ascending  = ""
+  showOrder Descending = " (reversed)"
 
 -- | Generates the comparison function to use for reference sorting.
 getComparisonFn

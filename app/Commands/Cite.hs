@@ -24,9 +24,6 @@ import           System.Process
 prefix :: Text
 prefix = "cite: "
 
-throwErrorWithPrefix :: Text -> ExceptT Text IO a
-throwErrorWithPrefix e = throwError $ prefix <> e
-
 data ReplCiteRules
   = AcsText
   | AcsMarkdown

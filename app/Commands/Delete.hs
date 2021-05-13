@@ -23,9 +23,6 @@ import           System.IO.Error                ( isDoesNotExistError )
 prefix :: Text
 prefix = "delete: "
 
-throwErrorWithPrefix :: Text -> ExceptT Text IO a
-throwErrorWithPrefix e = throwError $ "delete: " <> e
-
 runDelete :: Args -> CmdInput -> CmdOutput
 runDelete args input = do
   let refs = refsin input

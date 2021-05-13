@@ -9,7 +9,7 @@ import           Control.Exception              ( IOException
                                                 , catch
                                                 )
 import           Commands.Shared                ( CmdInput(CmdInput)
-                                                , ReplCmd(Cd, Nop, Quit)
+                                                , AbbotCmd(Cd, Nop, Quit)
                                                 , SCmdOutput(SCmdOutput)
                                                 , runReplParser
                                                 )

@@ -15,9 +15,6 @@ import           Reference
 prefix :: Text
 prefix = "list: "
 
-throwErrorWithPrefix :: Text -> ExceptT Text IO a
-throwErrorWithPrefix e = throwError $ prefix <> e
-
 runList :: Args -> CmdInput -> CmdOutput
 runList args input = do
   -- If no refs present, error immediately

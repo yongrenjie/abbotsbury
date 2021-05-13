@@ -17,7 +17,7 @@ import           Internal.Monad
 -- | Execute a command given an input.
 -- Note that this only handles effects *outside* the main loop, i.e.
 -- Nop, Quit, and Cd should all do nothing.
-runCmdWith :: ReplCmd -> CmdInput -> CmdOutput
+runCmdWith :: AbbotCmd -> CmdInput -> CmdOutput
 runCmdWith cmd input =
   let nop = SCmdOutput (refsin input) Nothing
   in  case cmd of
@@ -25,7 +25,7 @@ runCmdWith cmd input =
         Quit                        -> pure nop
         (Cd _)                      -> pure nop
         -- Just one command...
-        Single (AbbotCmd base args) -> case base of
+        Single (SingleCmd base args) -> case base of
           Help   -> runHelp args >> pure nop
           List   -> runList args input
           Cite   -> runCite args input
@@ -36,7 +36,7 @@ runCmdWith cmd input =
           Edit   -> runEdit args input
           Fetch  -> runFetch args input
         -- Composed commands.
-        Composed cmd1 cmd2 -> do
-          SCmdOutput refs2 var2 <- runCmdWith (Single cmd1) input
+        Composed single1 other2 -> do
+          SCmdOutput refs2 var2 <- runCmdWith (Single single1) input
           let input2 = CmdInput (cwdin input) refs2 var2
-          runCmdWith (Single cmd2) input2
+          runCmdWith other2 input2

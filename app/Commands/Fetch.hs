@@ -15,9 +15,6 @@ import           Reference
 prefix :: Text
 prefix = "fetch: "
 
-throwErrorWithPrefix :: Text -> ExceptT Text IO a
-throwErrorWithPrefix e = throwError $ prefix <> e
-
 runFetch :: Args -> CmdInput -> CmdOutput
 runFetch args input = do
-  throwErrorWithPrefix "not implemented yet"
+  throwError (prefix <> "not implemented yet")

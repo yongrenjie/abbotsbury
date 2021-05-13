@@ -28,15 +28,15 @@ import qualified Text.Megaparsec.Char.Lexer    as L
 
 -- | Quit and Cd are separate from the rest because we don't want them to be
 -- 'pipeable'.  They are dealt with by the main loop.
-data ReplCmd
+data AbbotCmd
   = Nop
   | Quit
   | Cd Text
-  | Single AbbotCmd -- Just one command.
-  | Composed AbbotCmd AbbotCmd -- Two commands joined by a pipe.
+  | Single SingleCmd -- Just one command.
+  | Composed SingleCmd AbbotCmd -- Two commands joined by a pipe.
   deriving (Show)
 
-data AbbotCmd = AbbotCmd
+data SingleCmd = SingleCmd
   { cbase :: BaseCommand
   , cargs :: Text
   }
@@ -90,12 +90,12 @@ replSpace = L.space space1 (L.skipLineComment "--") empty
 replLexeme :: Parser a -> Parser a
 replLexeme = L.lexeme replSpace
 
-runReplParser :: Text -> Either (ParseErrorBundle Text Void) ReplCmd
-runReplParser = runParser pRepl ""
+runReplParser :: Text -> Either (ParseErrorBundle Text Void) AbbotCmd
+runReplParser = runParser pAbbotCmd ""
 
 -- | Parser for the abbotsbury command line.
-pRepl :: Parser ReplCmd
-pRepl = do
+pAbbotCmd :: Parser AbbotCmd
+pAbbotCmd = do
   let pArgs = replLexeme $ takeWhileP (Just "arguments") isPrint
   void space -- consume leading space
   cmd <- replLexeme $ choice
@@ -108,7 +108,7 @@ pRepl = do
   eof
   return cmd
 
-pSingleCmd :: Parser AbbotCmd
+pSingleCmd :: Parser SingleCmd
 pSingleCmd = do
   baseCmdText <- replLexeme $ takeWhile1P (Just "alphabetical letter") isAlpha
   base        <- case baseCmdText of
@@ -127,13 +127,13 @@ pSingleCmd = do
   -- to deal with this, to be honest.
   args <- replLexeme
     $ takeWhileP (Just "arguments") (\c -> isPrint c && c /= '|')
-  pure $ AbbotCmd base args
+  pure $ SingleCmd base args
 
-pComposedCmd :: Parser ReplCmd
+pComposedCmd :: Parser AbbotCmd
 pComposedCmd = do
   cmd1 <- replLexeme pSingleCmd
   void $ replLexeme (char '|')
-  cmd2 <- replLexeme pSingleCmd
+  cmd2 <- replLexeme pAbbotCmd
   pure $ Composed cmd1 cmd2
 
 -- | Parse a series of reference numbers. The format is:

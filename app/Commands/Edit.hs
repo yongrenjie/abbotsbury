@@ -40,9 +40,6 @@ import           System.Process                 ( CreateProcess(std_in, std_out)
 prefix :: Text
 prefix = "edit: "
 
-throwErrorWithPrefix :: Text -> ExceptT Text IO a
-throwErrorWithPrefix e = throwError $ prefix <> e
-
 runEdit :: Args -> CmdInput -> CmdOutput
 runEdit args input = do
   let cwd  = cwdin input
@@ -50,9 +47,9 @@ runEdit args input = do
   -- If no refs present, error immediately
   errorOnNoRefs prefix input
   -- Parse arguments
-  argsRefnos       <- parseInCommand pRefnos args prefix
+  argsRefnos   <- parseInCommand pRefnos args prefix
   -- Figure out which refnos to edit
-  refnosToEdit        <- getActiveRefnos prefix argsRefnos input
+  refnosToEdit <- getActiveRefnos prefix argsRefnos input
   -- Check for any refnos that don't exist
   errorOnInvalidRefnos prefix refnosToEdit input
   -- Get the Works.
@@ -72,19 +69,20 @@ runEdit args input = do
         }
       waitForProcess ph
   when (exitCode /= ExitSuccess)
-       (throwErrorWithPrefix "vim exited with failure")
+       (throwError (prefix <> "vim exited with failure"))
   -- Decode the YAML.
   eitherExcWorks     <- liftIO $ decodeFileEither tmpfile
   -- Check for parse errors. The type annotation specifies which instance of
   -- FromJSON to use.
-  newWorks :: [Work] <- case eitherExcWorks of
-    Left  e  -> throwErrorWithPrefix . T.pack . prettyPrintParseException $ e
-    Right ws -> pure ws
+  newWorks :: [Work] <- mEither
+    eitherExcWorks
+    (throwError . (prefix <>) . T.pack . prettyPrintParseException)
+    pure
   -- Make sure it's still the same number of references...
   when
     (length newWorks /= length worksToEdit)
-    (throwErrorWithPrefix
-      "number of references not the same; discarding changes"
+    (throwError
+      (prefix <> "number of references not the same; discarding changes")
     )
   -- Edit the reference list.
   let newRefnosWorks = zip (IS.toList refnosToEdit) newWorks

@@ -18,7 +18,7 @@ runHelp args = case runReplParser args of
     (Cd     _    ) -> TIO.putStrLn "Change the working directory."
     (Single acmd ) -> TIO.putStrLn (getHelpText $ cbase acmd)
     (Composed _ _) -> TIO.putStrLn
-      "That's a composed command, but it hasn't been implemented yet!"
+      "That's a pipe..."
  where
   getHelpText :: BaseCommand -> Text
   getHelpText = \case

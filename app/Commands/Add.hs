@@ -21,15 +21,12 @@ import           System.Process
 prefix :: Text
 prefix = "add: "
 
-throwErrorWithPrefix :: Text -> ExceptT Text IO a
-throwErrorWithPrefix e = throwError $ prefix <> e
-
 runAdd :: Args -> CmdInput -> CmdOutput
 runAdd args input = do
   let refs = refsin input
       dois = T.words args -- Argument parsing here is trivial.
       -- Error out if no DOIs were given.
-  when (null dois) $ throwErrorWithPrefix "no DOIs supplied"
+  when (null dois) $ throwError (prefix <> "no DOIs supplied")
   -- TODO: minimal verification of DOI legitimacy, to prevent spurious requests.
   -- Try to get the email to use for Crossref.
   email <- getEmailForCrossref
@@ -39,7 +36,8 @@ runAdd args input = do
   forM_
     exceptions
     (\e -> printError
-      (  "add: could not get Crossref data for DOI '"
+      (  prefix
+      <> "could not get Crossref data for DOI '"
       <> getDoiFromException e
       <> "'"
       )
@@ -60,8 +58,9 @@ getEmailForCrossref = do
   case (maybeEnvvar, maybeGit) of
     (Just e , _      ) -> pure $ T.pack e
     (Nothing, Just e') -> pure $ T.pack e'
-    _                  -> throwErrorWithPrefix
-      (  "no email was specified. "
+    _                  -> throwError
+      (  prefix
+      <> "no email was specified. "
       <> "Please set either the ABBOT_EMAIL environment variable, "
       <> "or set an email in your .gitconfig file."
       )
