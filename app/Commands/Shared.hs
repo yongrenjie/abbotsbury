@@ -26,8 +26,8 @@ import qualified Text.Megaparsec.Char.Lexer    as L
 
 -- * Data types
 
--- | Quit and Cd are separate from the rest because we don't want them to be 'pipeable'.
--- They are dealt with by the main loop.
+-- | Quit and Cd are separate from the rest because we don't want them to be
+-- 'pipeable'.  They are dealt with by the main loop.
 data ReplCmd
   = Nop
   | Quit
@@ -47,12 +47,13 @@ data BaseCommand = Help | List | Cite | Open | Sort
   deriving (Ord, Eq, Show)
 
 -- | A command takes several sources of input:
---  1) cwdin: the current working directory
---  2) refsin: the current reference list
---  3) varin: 'variable input', i.e. 'stdin' piped from a previous command. If there is no previous
---  command or if the previous command returns no input, then this is Nothing. This does not
---  *replace* refsin (i.e. it does not modify the reference list), but rather acts as a *filter* on
---  the reference list which the next command may choose to obey (or not).
+--  1) @cwdin@: the current working directory
+--  2) @refsin@: the current reference list
+--  3) @varin@: 'variable input', i.e. something analogous to stdin piped from a
+--  previous command. If there is no previous command or if the previous command
+--  returns no input, then this is @Nothing@. This does not *replace* @refsin@
+--  (i.e.  it does not modify the reference list), but rather acts as a *filter*
+--  on the reference list which the next command may choose to obey (or not).
 data CmdInput = CmdInput
   { cwdin  :: FilePath
   , refsin :: IntMap Reference
@@ -60,10 +61,11 @@ data CmdInput = CmdInput
   }
   deriving Show
 
--- | A command can perform several IO actions, which ultimately return either
--- an error message (Left), OR a successful return with SCmdOutput, comprising
+-- | A command can perform several IO actions, which ultimately return either an
+-- error message (Left), OR a successful return with SCmdOutput, comprising
 -- 1) the final state of the reference list, plus
--- 2) an optional set of refnos (which can be piped to another command, see `CmdInput`)
+-- 2) an optional set of refnos (which can be piped to another command, see
+-- 'CmdInput')
 type CmdOutput = ExceptT Text IO SCmdOutput
 
 data SCmdOutput = SCmdOutput
@@ -72,8 +74,8 @@ data SCmdOutput = SCmdOutput
   }
   deriving Show
 
--- | We don't want to hardcode the types of the arguments, because they will
--- be different for each command. Each command, when run, will parse their
+-- | We don't want to hardcode the types of the arguments, because they will be
+-- different for each command. Each command, when run, will parse their
 -- arguments using a particular parser.
 type Args = Text
 
@@ -96,12 +98,10 @@ pRepl :: Parser ReplCmd
 pRepl = do
   let pArgs = replLexeme $ takeWhileP (Just "arguments") isPrint
   void space -- consume leading space
-  -- It's very awkward that 'cd' must come before the rest, because otherwise
-  -- the 'c' is parsed as being a cite command.
   cmd <- replLexeme $ choice
-    [ Cd <$> (replLexeme (string' "cd") >> pArgs)
-    , try pComposedCmd
-    , Single <$> pSingleCmd
+    [ try pComposedCmd
+    , try (Single <$> pSingleCmd)
+    , Cd <$> (replLexeme (string' "cd") >> pArgs)
     , Quit <$ choice (map string' ["quit", "q"])
     , Nop <$ eof
     ]
@@ -112,15 +112,15 @@ pSingleCmd :: Parser AbbotCmd
 pSingleCmd = do
   baseCmdText <- replLexeme $ takeWhile1P (Just "alphabetical letter") isAlpha
   base        <- case baseCmdText of
-    t | t `elem` ["h", "help"]          -> pure Help
-      | t `elem` ["l", "ls", "list"]    -> pure List
-      | t `elem` ["so", "sort"]         -> pure Sort
+    t | t `elem` ["a", "add"]           -> pure Add
       | t `elem` ["c", "cite"]          -> pure Cite
-      | t `elem` ["a", "add"]           -> pure Add
-      | t `elem` ["o", "op", "open"]    -> pure Open
       | t `elem` ["d", "del", "delete"] -> pure Delete
       | t `elem` ["e", "edit"]          -> pure Edit
       | t `elem` ["f", "fetch"]         -> pure Fetch
+      | t `elem` ["h", "help"]          -> pure Help
+      | t `elem` ["l", "ls", "list"]    -> pure List
+      | t `elem` ["o", "op", "open"]    -> pure Open
+      | t `elem` ["so", "sort"]         -> pure Sort
       | otherwise                       -> fail "command not recognised"
   -- For a single command, the arguments cannot include the character '|',
   -- because it is exclusively used in pipes. We need to have a better way
@@ -155,9 +155,9 @@ pRefnos = IS.unions <$> many (pNum <* pSeparator)
   pSeparator :: Parser ()
   pSeparator = void $ takeWhileP Nothing (\c -> isSpace c || c == ',')
 
--- | Parse a series of objects of type a, which are represented by (one or more)
--- Text values. If there is a default value, it can be passed as the second parameter,
--- otherwise pass Nothing.
+-- | Parse a series of objects of type @a@, which are represented by (one or
+-- more) @Text@ values. If there is a default value, it can be passed as the
+-- second parameter, otherwise pass @Nothing@.
 pFormats :: forall a . Ord a => Map Text a -> Maybe a -> Parser (Set a)
 pFormats abbrevs defval = do
   let parsers :: [Parser a]
@@ -165,38 +165,40 @@ pFormats abbrevs defval = do
                     (sortOn (Down . fst) $ M.assocs abbrevs)
   fs <- many $ choice parsers
   case fs of
-    -- No formats parsed; look at the default value to see if we should return something
+    -- No formats parsed; look at the default value to see if we should return
+    -- something
     [] -> pure $ maybe S.empty S.singleton defval
     -- Formats parsed; convert it to a set and return it
     _  -> pure $ S.fromList fs
 
--- | Parse a single object of type a, which is represented by (one or more)
--- Text values. If there is a default value, it can be passed as the second parameter,
--- otherwise pass Nothing.
+-- | Parse a single object of type @a@, which is represented by (one or more)
+-- @Text@ values. If there is a default value, it can be passed as the second
+-- parameter, otherwise pass @Nothing@.
 pOneFormat :: forall a . Map Text a -> Maybe a -> Parser a
 pOneFormat abbrevs defval =
   let formatParsers :: [Parser a]
       formatParsers = map (\(k, v) -> v <$ try (string' k))
                           (sortOn (Down . fst) $ M.assocs abbrevs)
+      -- in this binding, one pure is for [], one for Parser
       defaultParser :: [Parser a]
-      defaultParser = maybe [] (pure . pure) defval -- one pure for [], one for Parser
+      defaultParser = maybe [] (pure . pure) defval
   in  choice (formatParsers ++ defaultParser)
 
--- | Parse a single object of type a, which is represented by (one or more)
--- Text values. If there is a default value, it can be passed as the second parameter,
--- otherwise pass Nothing.
--- This code duplication isn't great, but I'm too lazy to fix it for now.
+-- | Parse a single object of type @a@, which is represented by (one or more)
+-- @Text@ values. If there is a default value, it can be passed as the second
+-- parameter, otherwise pass @Nothing@. This code duplication isn't great, but
+-- I'm too lazy to fix it for now.
 pOneFormatCaseSens :: forall a . Map Text a -> Maybe a -> Parser a
 pOneFormatCaseSens abbrevs defval =
   let formatParsers :: [Parser a]
       formatParsers = map (\(k, v) -> v <$ try (string k))
                           (sortOn (Down . fst) $ M.assocs abbrevs)
       defaultParser :: [Parser a]
-      defaultParser = maybe [] (pure . pure) defval -- one pure for [], one for Parser
+      defaultParser = maybe [] (pure . pure) defval
   in  choice (formatParsers ++ defaultParser)
 
--- | Run a parser and throwError if it doesn't parse nicely. Otherwise return the result. This just
--- simplifies the code in the runCmd family of functions.
+-- | Run a parser and @throwError@ if it doesn't parse nicely. Otherwise return
+-- the result.
 parseInCommand
   ::
   -- | The parser to run.
@@ -214,7 +216,8 @@ parseInCommand parser args prefix = case parse (parser <* eof) "" args of
 
 -- * Assorted helper functions
 
--- | Make a Text containing a comma-separated list of refnos. Useful for error messages.
+-- | Make a @Text@ containing a comma-separated list of refnos. Useful for error
+-- messages.
 intercalateCommas :: IntSet -> Text
 intercalateCommas = T.intercalate "," . map (T.pack . show) . IS.toList
 
@@ -227,7 +230,12 @@ mEither :: Monad m => Either a b -> (a -> m c) -> (b -> m c) -> m c
 mEither (Left  a) f1 _  = f1 a
 mEither (Right b) _  f2 = f2 b
 
-getActiveRefnos :: Text -> IntSet -> CmdInput -> ExceptT Text IO IntSet
+-- | Figure out whether to get the refnos from the arguments, or from the varin.
+getActiveRefnos
+  :: Text -- ^ A prefix to add to any error messages thrown.
+  -> IntSet -- ^ The refnos parsed from the arguments.
+  -> CmdInput -- ^ The input passed to the command.
+  -> ExceptT Text IO IntSet
 getActiveRefnos prefix argsRefnos input =
   case (varin input, IS.null argsRefnos) of
     (Nothing     , True ) -> throwError (prefix <> "no references selected")
@@ -236,12 +244,21 @@ getActiveRefnos prefix argsRefnos input =
     (Just vRefnos, False) ->
       throwError (prefix <> "cannot specify refnos and a pipe simultaneously")
 
-errorOnNoRefs :: Text -> CmdInput -> ExceptT Text IO ()
+-- | Error if the reference list is empty.
+errorOnNoRefs
+  :: Text -- ^ A prefix to add to any error messages thrown.
+  -> CmdInput -- ^ The input passed to the command.
+  -> ExceptT Text IO ()
 errorOnNoRefs prefix input = when
   (IM.null $ refsin input)
   (throwError $ prefix <> "no references available")
 
-errorOnInvalidRefnos :: Text -> IntSet -> CmdInput -> ExceptT Text IO ()
+-- | Error if some refnos don't exist in the reference list.
+errorOnInvalidRefnos
+  :: Text -- ^ A prefix to add to any error messages thrown.
+  -> IntSet -- ^ The set of supposed refnos to act on.
+  -> CmdInput -- ^ The input passed to the command.
+  -> ExceptT Text IO ()
 errorOnInvalidRefnos prefix refnos input = do
   let badRefnos = refnos IS.\\ IM.keysSet (refsin input)
   unless
