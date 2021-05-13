@@ -115,6 +115,7 @@ pSingleCmd = do
       | t `elem` ["so", "sort"]         -> pure Sort
       | t `elem` ["c", "cite"]          -> pure Cite
       | t `elem` ["a", "add"]           -> pure Add
+      | t `elem` ["o", "op", "open"]    -> pure Open
       | t `elem` ["d", "del", "delete"] -> pure Delete
       | t `elem` ["e", "edit"]          -> pure Edit
       | otherwise                       -> fail "command not recognised"
