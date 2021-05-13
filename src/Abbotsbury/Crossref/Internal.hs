@@ -178,8 +178,9 @@ parseJournalArticle useInternalAbbrevs messageObj = do
   let _workType = JournalArticle
   _title <- normalize NFC
     <$> safeHead "could not get title" (messageObj .: "title")
-  -- Publisher (can be blank)
+  -- Publisher and their location (can be blank)
   _publisher   <- messageObj .:? "publisher" .!= ""
+  _publisherLoc <- messageObj .:? "publisher-location" .!= ""
   -- Authors
   _authorArray <- messageObj .: "author"
   _authors     <- do
@@ -219,8 +220,9 @@ parseBook :: Object -> DAT.Parser Work
 parseBook messageObj = do
   let _workType = Book
   _title       <- safeHead "could not get title" $ messageObj .: "title"
-  -- Publisher (can't be blank)
+  -- Publisher and their location
   _publisher   <- messageObj .: "publisher"
+  _publisherLoc <- messageObj .:? "publisher-location" .!= ""
   -- Authors
   _authorArray <- messageObj .: "author"
   _authors     <- do

@@ -21,6 +21,7 @@ module Abbotsbury.Work
   , workType
   , title
   , publisher
+  , publisherLoc
   , authors
   , journalLong
   , journalShort
@@ -117,6 +118,8 @@ data Work = Work
   { _workType      :: WorkType
   , _title         :: Text
   , _publisher     :: Text
+  -- | Publisher location.
+  , _publisherLoc  :: Text
   ,
     -- | There has to be at least one author!
     _authors       :: NonEmpty Author
@@ -173,6 +176,9 @@ title = lens _title (\w x -> w { _title = x })
 
 publisher :: Lens' Work Text
 publisher = lens _publisher (\w x -> w { _publisher = x })
+
+publisherLoc :: Lens' Work Text
+publisherLoc = lens _publisherLoc (\w x -> w { _publisherLoc = x })
 
 authors :: Lens' Work (NonEmpty Author)
 authors = lens _authors (\w x -> w { _authors = x })

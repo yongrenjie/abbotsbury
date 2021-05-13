@@ -5,7 +5,7 @@
     _pages: 1032-1040
     _journalLong: Journal of Chemical Education
     _journalShort: J. Chem. Educ.
-    _publisher: Who Cares
+    _publisher: American Chemical Society (ACS)
     _workType: JournalArticle
     _edition: ''
     _title: 'Orbitals: Some Fiction and Some Facts'
@@ -13,6 +13,7 @@
     _authors:
     - _given: Jochen
       _family: Autschbach
+    _publisherLoc: ''
     _issue: '8'
     _year: 2012
     _articleNumber: ''
@@ -34,6 +35,7 @@
     _authors:
     - _given: Tim D. W.
       _family: Claridge
+    _publisherLoc: Amsterdam
     _issue: ''
     _year: 2016
     _articleNumber: ''
@@ -47,7 +49,7 @@
     _pages: 2918-2922
     _journalLong: Organic Letters
     _journalShort: Org. Lett.
-    _publisher: Who Cares
+    _publisher: American Chemical Society (ACS)
     _workType: JournalArticle
     _edition: ''
     _title: A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides
@@ -63,6 +65,7 @@
       _family: Garry
     - _given: Edward A.
       _family: Anderson
+    _publisherLoc: ''
     _issue: '8'
     _year: 2019
     _articleNumber: ''
@@ -92,6 +95,7 @@
       _family: Yong
     - _given: Tim D. W.
       _family: Claridge
+    _publisherLoc: ''
     _issue: '1'
     _year: 2021
     _articleNumber: '27'
