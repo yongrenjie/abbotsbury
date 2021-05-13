@@ -6,6 +6,7 @@ import           Commands.Add
 import           Commands.Cite
 import           Commands.Delete
 import           Commands.Edit
+import           Commands.Fetch
 import           Commands.Help
 import           Commands.List
 import           Commands.Open
@@ -33,6 +34,7 @@ runCmdWith cmd input =
           Add    -> runAdd args input
           Delete -> runDelete args input
           Edit   -> runEdit args input
+          Fetch  -> runFetch args input
         -- Composed commands.
         Composed cmd1 cmd2 -> do
           SCmdOutput refs2 var2 <- runCmdWith (Single cmd1) input
