@@ -6,21 +6,19 @@
 -- Copyright : (C) 2021 Jonathan Yong
 -- License   : MIT
 --
--- This module defines the core datatypes of @abbotsbury@, in particular, the
--- 'Work'. If you are looking for usage guidance, please go to the top-level
--- module "Abbotsbury".
+-- This module defines the core datatypes of @abbotsbury@. All of the
+-- functionality here is re-exported by the top-level module ("Abbotsbury").
 module Abbotsbury.Work
-  ( -- * Type synonyms
+  ( -- * The core datatypes
+    -- $work-datatypes
     DOI
   , ISBN
-  ,
-    -- * Fundamental data types
-    WorkType(..)
+  , WorkType(..)
   , Work(..)
   , Author(..)
-  ,
     -- * Lenses
-    workType
+    -- $work-lenses
+  , workType
   , title
   , publisher
   , authors
@@ -42,6 +40,26 @@ import           Data.List.NonEmpty             ( NonEmpty )
 import           Data.Text                      ( Text )
 import           GHC.Generics
 import           Lens.Micro
+
+-- $work-datatypes
+-- @abbotsbury@'s core datatype is a 'Work', which is simply a record type which
+-- contains every relevant field needed for citations (it ignores all the excess
+-- metadata from Crossref). The other important datatype is an 'Author', which
+-- generally refers to any person who contributed to the 'Work'.
+--
+-- In theory, 'Work's can be constructed manually by entering each field:
+-- however, in practice it is much easier to fetch the data from Crossref using
+-- the 'fetchWork' family of functions. This function, however, only works with
+-- 'JournalArticle's and not other types of works (yet). Likewise, citation only
+-- works with 'JournalArticle's for now.
+--
+-- Defining a work as a simple record type like this unfortunately leads to many
+-- redundant fields: for example, a journal article does not have an ISBN, and a
+-- book does not have a long or short journal name. However, this representation
+-- has been chosen, as the alternative (@data Work = Article {...} | Book {...}
+-- | ...@) would require @Prism@s to navigate, and I would rather not have
+-- @lens@ as a dependency (@abbotsbury@ uses
+-- [microlens](http://hackage.haskell.org/package/microlens)).
 
 -- | A type synonym for Digital Object Identifiers (DOIs). Given that abbotsbury
 -- doesn't provide a "smart constructor" for DOIs, it seems that the sensible
@@ -139,6 +157,11 @@ data Author = Author
     _family :: Text
   }
   deriving (Generic, Show, Ord, Eq)
+
+-- $work-lenses
+-- The following lenses are provided for convenience. You don't have to use them
+-- if you don't want to: the record fields are simply the same as these but
+-- prefixed with an underscore.
 
 workType :: Lens' Work WorkType
 workType = lens _workType (\w x -> w { _workType = x })
