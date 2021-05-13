@@ -166,7 +166,11 @@ makeBookColumns fss cwd (index, ref) = do
   let numberColumn  = [T.pack $ show index]
       authorColumn  = getAuthorColumn 5 ref
       yearColumn    = [T.pack . show $ ref ^. (work . year)]
-      journalColumn = ["(book)", ref ^. (work . publisher)]
+      editionText   = ref ^. work . edition
+      editionText2  = if T.null editionText
+                         then "" else editionText <> " ed., "
+      journalColumn = ["(book)",
+                       editionText2 <> ref ^. (work . publisher)]
       titleColumn   = T.chunksOf (titleF fss) (ref ^. (work . title))
           ++ [availString]
           ++ T.chunksOf (titleF fss) (getTagString ref)

@@ -28,6 +28,7 @@ module Abbotsbury.Work
   , volume
   , issue
   , pages
+  , edition
   , doi
   , isbn
   , articleNumber
@@ -136,6 +137,7 @@ data Work = Work
     _volume        :: Text
   , _issue         :: Text
   , _pages         :: Text
+  , _edition       :: Text
   , _doi           :: DOI
   , _isbn          :: ISBN
   ,
@@ -192,6 +194,9 @@ issue = lens _issue (\w x -> w { _issue = x })
 
 pages :: Lens' Work Text
 pages = lens _pages (\w x -> w { _pages = x })
+
+edition :: Lens' Work Text
+edition = lens _edition (\w x -> w { _edition = x })
 
 doi :: Lens' Work DOI
 doi = lens _doi (\w x -> w { _doi = x })

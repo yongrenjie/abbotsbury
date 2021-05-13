@@ -10,7 +10,7 @@ auth :: (Text, Text) -> Author
 auth (gvn, fmy) = Author (Just gvn) fmy
 
 orgLett :: Work
-orgLett = Work wt t pub a jL jS y v i p doi isbn aN
+orgLett = Work wt t pub a jL jS y v i p ed doi isbn aN
  where
   wt = JournalArticle
   t =
@@ -23,6 +23,7 @@ orgLett = Work wt t pub a jL jS y v i p doi isbn aN
   v    = "21"
   i    = "8"
   p    = "2918-2922"
+  ed   = ""
   doi  = "10.1021/acs.orglett.9b00971"
   isbn = ""
   aN   = ""
@@ -34,7 +35,7 @@ orgLett = Work wt t pub a jL jS y v i p doi isbn aN
   anderson  = auth ("Edward A.", "Anderson")
 
 nrmpCorrected :: Work
-nrmpCorrected = Work wt t pub a jL jS y v i p doi isbn aN
+nrmpCorrected = Work wt t pub a jL jS y v i p ed doi isbn aN
  where
   wt   = JournalArticle
   t    = "Parallel nuclear magnetic resonance spectroscopy"
@@ -46,6 +47,7 @@ nrmpCorrected = Work wt t pub a jL jS y v i p doi isbn aN
   v    = "1"
   i    = "1"
   p    = ""
+  ed   = ""
   doi  = "10.1038/s43586-021-00024-3"
   isbn = ""
   aN   = "27"
@@ -57,7 +59,7 @@ nrmpCorrected = Work wt t pub a jL jS y v i p doi isbn aN
   claridge = auth ("Tim D. W.", "Claridge")
 
 noFirstNameN2020 :: Work
-noFirstNameN2020 = Work wt t pub a jL jS y v i p doi isbn aN
+noFirstNameN2020 = Work wt t pub a jL jS y v i p ed doi isbn aN
  where
   wt   = JournalArticle
   t    = "Attention science: some people have only one name"
@@ -69,6 +71,7 @@ noFirstNameN2020 = Work wt t pub a jL jS y v i p doi isbn aN
   v    = ""
   i    = ""
   p    = ""
+  ed   = ""
   doi  = "10.1038/d41586-020-02761-z"
   isbn = ""
   aN   = ""
@@ -77,7 +80,7 @@ noFirstNameN2020 = Work wt t pub a jL jS y v i p doi isbn aN
   ardiantiono = Author Nothing "Ardiantiono"
 
 glaserS1998 :: Work
-glaserS1998 = Work wt t pub a jL jS y v i p doi isbn aN
+glaserS1998 = Work wt t pub a jL jS y v i p ed doi isbn aN
  where
   wt = JournalArticle
   t
@@ -91,6 +94,7 @@ glaserS1998 = Work wt t pub a jL jS y v i p doi isbn aN
   v    = "280"
   i    = "5362"
   p    = "421-424"
+  ed   = ""
   doi  = "10.1126/science.280.5362.421"
   isbn = ""
   aN   = ""
