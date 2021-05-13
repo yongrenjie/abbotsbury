@@ -19,6 +19,27 @@
     _doi: 10.1021/ed200673w
   _tags:
   - nmr
+- _timeOpened: 2021-05-12T16:30:25.08419Z
+  _timeAdded: 2021-05-12T16:30:25.08419Z
+  _work:
+    _volume: ''
+    _pages: ''
+    _journalLong: ''
+    _journalShort: ''
+    _publisher: Elsevier
+    _workType: Book
+    _edition: 3rd
+    _title: High-Resolution NMR Techniques in Organic Chemistry
+    _isbn: 978-0-08-099986-9
+    _authors:
+    - _given: Tim D. W.
+      _family: Claridge
+    _issue: ''
+    _year: 2016
+    _articleNumber: ''
+    _doi: not_a_doi
+  _tags:
+  - nmr
 - _timeOpened: 2021-05-13T13:49:29.450624Z
   _timeAdded: 2021-01-21T00:56:46.676731Z
   _work:
@@ -76,24 +97,3 @@
     _articleNumber: '27'
     _doi: 10.1038/s43586-021-00024-3
   _tags: []
-- _timeOpened: 2021-05-12T16:30:25.08419Z
-  _timeAdded: 2021-05-12T16:30:25.08419Z
-  _work:
-    _volume: ''
-    _pages: ''
-    _journalLong: ''
-    _journalShort: ''
-    _publisher: Elsevier
-    _workType: Book
-    _edition: 3rd
-    _title: High-Resolution NMR Techniques in Organic Chemistry
-    _isbn: 978-0-08-099986-9
-    _authors:
-    - _given: Tim D. W.
-      _family: Claridge
-    _issue: ''
-    _year: 2016
-    _articleNumber: ''
-    _doi: not_a_doi
-  _tags:
-  - nmr

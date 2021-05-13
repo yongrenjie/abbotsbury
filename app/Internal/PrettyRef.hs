@@ -68,7 +68,7 @@ totalSizes fss = sum $ map ($ fss) [numberF, authorF, yearF, journalF, titleF]
 
 -- | A constant.
 headings :: (Text, Text, Text, Text, Text)
-headings = ("#", "Authors", "Year", "Journal/Publisher", "Title/DOI")
+headings = ("  #", "Authors", "Year", "Journal/Publisher", "Title/DOI")
 
 -- | Calculate the correct field sizes based on the terminal size.
 getFieldSizes :: [(Int, Reference)] -> IO FieldSizes
@@ -79,9 +79,10 @@ getFieldSizes refnosAndRefs = do
       refs   = map snd refnosAndRefs
       longestBy :: (Reference -> Text) -> Int
       longestBy key = maximum $ fmap (T.length . key) refs
-  -- Number field.
+  -- Number field. Extra 2 spaces to show the type of reference being listed (a
+  -- one-letter identifier plus a space).
   let maxRefno = maximum refnos
-      numberF' = fieldPadding + length (show maxRefno)
+      numberF' = fieldPadding + 2 + length (show maxRefno)
   -- Author field.
   let getLongestAuthor :: Reference -> Text
       getLongestAuthor ref = maximumBy
@@ -102,7 +103,7 @@ getFieldSizes refnosAndRefs = do
       -- availability string.
       longestTitle = longestBy (^. (work . title))
       longestDOI   = longestBy (^. (work . doi))
-      availLength  = 40
+      availLength  = 40  -- hardcoded
       upperLimit   = maximum [longestTitle, longestDOI, availLength]
       titleF2      = min titleF1 upperLimit
   -- We also enforce a lower limit, which is the availability string itself: or else
@@ -141,7 +142,7 @@ makeArticleColumns fss cwd (index, ref) = do
   -- factorise it out, but at the cost of making the function signature worse.
   availString <- getAvailString cwd ref
   -- Build up the columns first.
-  let numberColumn  = [T.pack $ show index]
+  let numberColumn  = ["A " <> T.pack (show index)]
       authorColumn  = getAuthorColumn 5 ref
       yearColumn    = [T.pack . show $ ref ^. (work . year)]
       journalColumn = [getShortestJournalName ref, getVolInfo ref]
@@ -163,14 +164,13 @@ makeBookColumns fss cwd (index, ref) = do
   -- factorise it out, but at the cost of making the function signature worse.
   availString <- getAvailString cwd ref
   -- Build up the columns first.
-  let numberColumn  = [T.pack $ show index]
+  let numberColumn  = ["B " <> T.pack (show index)]
       authorColumn  = getAuthorColumn 5 ref
       yearColumn    = [T.pack . show $ ref ^. (work . year)]
       editionText   = ref ^. work . edition
       editionText2  = if T.null editionText
-                         then "" else editionText <> " ed., "
-      journalColumn = ["(book)",
-                       editionText2 <> ref ^. (work . publisher)]
+                         then "" else editionText <> " ed."
+      journalColumn = [ref ^. (work . publisher), editionText2]
       titleColumn   = T.chunksOf (titleF fss) (ref ^. (work . title))
           ++ [availString]
           ++ T.chunksOf (titleF fss) (getTagString ref)
