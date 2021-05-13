@@ -9,7 +9,16 @@ cradle:
     - path: "app/Commands.hs"
       component: "abbotsbury:exe:abbot"
 
+    - path: "app/Commands/Add.hs"
+      component: "abbotsbury:exe:abbot"
+
     - path: "app/Commands/Cite.hs"
+      component: "abbotsbury:exe:abbot"
+
+    - path: "app/Commands/Delete.hs"
+      component: "abbotsbury:exe:abbot"
+
+    - path: "app/Commands/Edit.hs"
       component: "abbotsbury:exe:abbot"
 
     - path: "app/Commands/List.hs"
@@ -24,13 +33,31 @@ cradle:
     - path: "app/Commands/Sort.hs"
       component: "abbotsbury:exe:abbot"
 
-    - path: "app/Path.hs"
+    - path: "app/Internal/Copy.hs"
+      component: "abbotsbury:exe:abbot"
+
+    - path: "app/Internal/MInputT.hs"
+      component: "abbotsbury:exe:abbot"
+
+    - path: "app/Internal/Monad.hs"
+      component: "abbotsbury:exe:abbot"
+
+    - path: "app/Internal/Path.hs"
+      component: "abbotsbury:exe:abbot"
+
+    - path: "app/Internal/PrettyRef.hs"
+      component: "abbotsbury:exe:abbot"
+
+    - path: "app/Internal/Style.hs"
+      component: "abbotsbury:exe:abbot"
+
+    - path: "app/Options.hs"
       component: "abbotsbury:exe:abbot"
 
     - path: "app/Reference.hs"
       component: "abbotsbury:exe:abbot"
 
-    - path: "app/Style.hs"
+    - path: "app/Paths_abbotsbury.hs"
       component: "abbotsbury:exe:abbot"
 
     - path: "tests"

@@ -87,6 +87,7 @@ executable abbot
     Commands.Add
     Commands.Cite
     Commands.Delete
+    Commands.Edit
     Commands.List
     Commands.Open
     Commands.Shared
@@ -107,7 +108,7 @@ executable abbot
     , optparse-applicative , ansi-wl-pprint
     , megaparsec
     , microlens-platform
-    , directory , filepath >=1.3.0.0 , process , time
+    , directory , filepath >=1.3.0.0 , process , time , temporary
     , exceptions , transformers , mtl
     , yaml
   ghc-options:

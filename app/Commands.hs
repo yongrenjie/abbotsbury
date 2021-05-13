@@ -2,11 +2,10 @@ module Commands
   ( module Commands
   ) where
 
--- The other two exports are needed for the Main.hs file.
-
 import           Commands.Add
 import           Commands.Cite
 import           Commands.Delete
+import           Commands.Edit
 import           Commands.List
 import           Commands.Open
 import           Commands.Shared
@@ -32,6 +31,7 @@ runCmdWith cmd input =
           Sort   -> runSort args input
           Add    -> runAdd args input
           Delete -> runDelete args input
+          Edit   -> runEdit args input
         -- Composed commands.
         Composed cmd1 cmd2 -> do
           SCmdOutput refs2 var2 <- runCmdWith (Single cmd1) input
