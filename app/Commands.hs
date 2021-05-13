@@ -6,6 +6,7 @@ import           Commands.Add
 import           Commands.Cite
 import           Commands.Delete
 import           Commands.Edit
+import           Commands.Help
 import           Commands.List
 import           Commands.Open
 import           Commands.Shared
