@@ -37,10 +37,7 @@ import           Text.Megaparsec                ( eof
 -- | Construct pretty-printed text from a set of references to be displayed on
 -- the screen. The output of this text can be directly passed to
 -- 'Data.Text.IO.putStrLn'.
-prettify
-  :: FilePath
-  -> [(Int, Reference)]
-  -> IO Text
+prettify :: FilePath -> [(Int, Reference)] -> IO Text
 prettify cwd refs = if null refs
   then pure ""
   else do
@@ -69,12 +66,17 @@ fieldPadding = 2
 totalSizes :: FieldSizes -> Int
 totalSizes fss = sum $ map ($ fss) [numberF, authorF, yearF, journalF, titleF]
 
+-- | A constant.
+headings :: (Text, Text, Text, Text, Text)
+headings = ("#", "Authors", "Year", "Journal/Publisher", "Title/DOI")
+
 -- | Calculate the correct field sizes based on the terminal size.
 getFieldSizes :: [(Int, Reference)] -> IO FieldSizes
 getFieldSizes refnosAndRefs = do
+  let (numberH, authorH, yearH, journalH, titleH) = headings
   -- Useful things.
   let refnos = map fst refnosAndRefs
-      refs = map snd refnosAndRefs
+      refs   = map snd refnosAndRefs
       longestBy :: (Reference -> Text) -> Int
       longestBy key = maximum $ fmap (T.length . key) refs
   -- Number field.
@@ -91,7 +93,8 @@ getFieldSizes refnosAndRefs = do
   -- Journal field.
   let longestJName = longestBy getShortestJournalName
       longestJInfo = longestBy getVolInfo
-      journalF'    = fieldPadding + max longestJName longestJInfo
+      journalF' =
+        fieldPadding + maximum [longestJName, longestJInfo, T.length journalH]
   -- Title field. Our first guess is to just use up the remaining space.
   Just (_, ncols) <- getTerminalSize
   let titleF1      = ncols - numberF' - authorF' - yearF' - journalF'
@@ -110,10 +113,8 @@ getFieldSizes refnosAndRefs = do
 -- | Generate a pretty header for the reference list. This function should only
 -- ever be called by 'prettify'.
 prettifyHead :: FieldSizes -> Text
-prettifyHead fss =
-  setBold (formatLine fss ("#", "Authors", "Year", "Journal", "Title and DOI"))
-    <> "\n"
-    <> setBold (T.replicate (totalSizes fss) "-")
+prettifyHead fss = setBold (formatLine fss headings) <> "\n" <> setBold
+  (T.replicate (totalSizes fss) "-")
 
 -- | Generate a pretty header for one single reference. This function should
 -- only ever be called by 'prettify'.
@@ -122,43 +123,54 @@ prettifyOneRef
   -> FilePath
   -> (Int, Reference)  -- ^ Refno and ref, generated using 'Data.IntMap.assocs'
   -> IO Text
-prettifyOneRef fss cwd (index, ref) = do
-  let tagString = case ref ^. tags of
-        [] -> ""
-        ts -> "[" <> T.intercalate ", " ts <> "]"
-  -- This line is the only thing that requires IO. So annoying.
+prettifyOneRef fss fp (i, ref) = do
+  columns <- case ref ^. (work . workType) of
+    JournalArticle -> makeArticleColumns fss fp (i, ref)
+    Book           -> makeBookColumns fss fp (i, ref)
+    _              -> pure (["unsupported"], [], [], [], [])
+  pure . T.intercalate "\n" . map (formatLine fss) $ zipLongest5 columns
+
+-- | Does the job for an article.
+makeArticleColumns
+  :: FieldSizes
+  -> FilePath
+  -> (Int, Reference)  -- ^ Refno and ref, generated using 'Data.IntMap.assocs'
+  -> IO ([Text], [Text], [Text], [Text], [Text])
+makeArticleColumns fss cwd (index, ref) = do
+  -- This line is the only thing that requires IO. So annoying. I mean, I could
+  -- factorise it out, but at the cost of making the function signature worse.
   availString <- getAvailString cwd ref
   -- Build up the columns first.
-  let numberColumn = [T.pack $ show index]
-      authorColumn1 =
-        NE.toList $ fmap formatAuthorForList (ref ^. (work . authors))
-      authorColumn = if length authorColumn1 <= 5
-        then authorColumn1
-        else take 3 authorColumn1 ++ ["...", last authorColumn1]
+  let numberColumn  = [T.pack $ show index]
+      authorColumn  = getAuthorColumn 5 ref
       yearColumn    = [T.pack . show $ ref ^. (work . year)]
       journalColumn = [getShortestJournalName ref, getVolInfo ref]
       titleColumn =
         T.chunksOf (titleF fss) (ref ^. (work . title))
           ++ [ref ^. (work . doi)]
           ++ [availString]
-          ++ T.chunksOf (titleF fss) tagString
-      -- Clone of Python's itertools.zip_longest(fillvalue="").
-      zipLongest5
-        :: [Text]
-        -> [Text]
-        -> [Text]
-        -> [Text]
-        -> [Text]
-        -> [(Text, Text, Text, Text, Text)]
-      zipLongest5 as bs cs ds es =
-        let maxLen = maximum $ map length [as, bs, cs, ds, es]
-            pad xs = xs ++ repeat ""
-        in  take maxLen (zip5 (pad as) (pad bs) (pad cs) (pad ds) (pad es))
-  pure . T.intercalate "\n" . map (formatLine fss) $ zipLongest5 numberColumn
-                                                                 authorColumn
-                                                                 yearColumn
-                                                                 journalColumn
-                                                                 titleColumn
+          ++ T.chunksOf (titleF fss) (getTagString ref)
+  pure (numberColumn, authorColumn, yearColumn, journalColumn, titleColumn)
+
+-- | Does the job for a Book.
+makeBookColumns
+  :: FieldSizes
+  -> FilePath
+  -> (Int, Reference)  -- ^ Refno and ref, generated using 'Data.IntMap.assocs'
+  -> IO ([Text], [Text], [Text], [Text], [Text])
+makeBookColumns fss cwd (index, ref) = do
+  -- This line is the only thing that requires IO. So annoying. I mean, I could
+  -- factorise it out, but at the cost of making the function signature worse.
+  availString <- getAvailString cwd ref
+  -- Build up the columns first.
+  let numberColumn  = [T.pack $ show index]
+      authorColumn  = getAuthorColumn 5 ref
+      yearColumn    = [T.pack . show $ ref ^. (work . year)]
+      journalColumn = ["(book)", ref ^. (work . publisher)]
+      titleColumn   = T.chunksOf (titleF fss) (ref ^. (work . title))
+          ++ [availString]
+          ++ T.chunksOf (titleF fss) (getTagString ref)
+  pure (numberColumn, authorColumn, yearColumn, journalColumn, titleColumn)
 
 -- | In the 'list' command, we display authors as (e.g.) JRJ Yong.
 formatAuthorForList :: Author -> Text
@@ -168,6 +180,17 @@ formatAuthorForList auth =
         Nothing -> fam
         Just gvn ->
           (joinInitialsWith "" "" "" . getInitials $ gvn) <> " " <> fam
+
+-- | Generate the author column. We don't need to worry about field sizes
+-- because this has been sorted out beforehand.
+getAuthorColumn :: Int -> Reference -> [Text]
+getAuthorColumn n ref = trimIfOverN fullAuthors
+ where
+  fullAuthors = formatAuthorForList <$> ref ^. (work . authors) ^.. each
+  -- It doesn't make sense to trim if n is smaller than 4.
+  trimIfOverN :: [Text] -> [Text]
+  trimIfOverN ts =
+    if n >= 4 && length ts > n then take (n - 2) ts ++ ["...", last ts] else ts
 
 -- | Utility function to generate one line of output according to the field sizes
 -- and the text to be placed there.
@@ -179,6 +202,12 @@ formatLine fss texts = mconcat
   , T.justifyLeft (journalF fss) ' ' (texts ^. _4)
   , T.justifyLeft (titleF fss) ' ' (texts ^. _5)
   ]
+
+-- | Generate a one-liner describing the tags.
+getTagString :: Reference -> Text
+getTagString ref = case ref ^. tags of
+  [] -> ""
+  ts -> "[" <> T.intercalate ", " ts <> "]"
 
 -- | Produce as short a journal name as possible, by removing special characters
 -- (only alphanumeric characters and spaces are retained), as well as using some
@@ -221,4 +250,18 @@ getAvailString cwd ref = do
       makeSymbol x = if x
         then setColor "seagreen" "\x2714"
         else setColor "crimson" "\x2718"
-  pure $ mconcat [makeSymbol fullTextAvail, " pdf ", makeSymbol siAvail, " si"]
+  pure $ case ref ^. (work . workType) of
+    JournalArticle ->
+      mconcat [makeSymbol fullTextAvail, " pdf ", makeSymbol siAvail, " si"]
+    Book -> mconcat [makeSymbol fullTextAvail, " pdf"]
+    _    -> ""
+
+-- | Clone of Python's itertools.zip_longest(fillvalue=""). It's even uncurried.
+-- (That's purely for the sake of convenience, though.)
+zipLongest5
+  :: ([Text], [Text], [Text], [Text], [Text])
+  -> [(Text, Text, Text, Text, Text)]
+zipLongest5 (as, bs, cs, ds, es) =
+  let maxLen = maximum $ map length [as, bs, cs, ds, es]
+      pad xs = xs ++ repeat ""
+  in  take maxLen (zip5 (pad as) (pad bs) (pad cs) (pad ds) (pad es))
