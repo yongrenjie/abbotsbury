@@ -228,9 +228,8 @@ getShortestJournalName =
 -- slightly different output).
 getVolInfo :: Reference -> Text
 getVolInfo ref = T.intercalate ", "
-  $ filter (not . T.null) [theYear, theVolInfo, thePages]
+  $ filter (not . T.null) [theVolInfo, thePages]
  where
-  theYear  = T.pack (show (ref ^. work . year))
   thePages = case (ref ^. work . pages, ref ^. work . articleNumber) of
     ("", "") -> ""
     ("", aN) -> "No. " <> aN <> ""
