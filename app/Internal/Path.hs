@@ -3,6 +3,7 @@ module Internal.Path
   , System.Directory.setCurrentDirectory
   ) where
 
+import           Control.Exception              ( bracket )
 import           Data.IntMap                    ( IntMap )
 import qualified Data.IntMap                   as IM
 import           Data.List                      ( isInfixOf )
@@ -14,12 +15,16 @@ import           Lens.Micro.Platform
 import           Reference
 import           System.Directory               ( canonicalizePath
                                                 , getHomeDirectory
+                                                , getTemporaryDirectory
                                                 , setCurrentDirectory
                                                 )
 import           System.FilePath                ( (</>)
                                                 , dropTrailingPathSeparator
                                                 , joinPath
                                                 , splitPath
+                                                )
+import           System.IO                      ( hClose
+                                                , openTempFile
                                                 )
 
 -- | Expands relative paths and tildes in directories. Tilde expansion does not
@@ -89,6 +94,15 @@ readRefs cwd = do
 saveRefs :: IntMap Reference -> FilePath -> IO ()
 saveRefs refs cwd =
   unless (IM.null refs) (encodeFile (cwd </> yamlFileName) (IM.elems refs))
+
+-- Taken from the 'temporary' package to avoid an extra dependency.
+-- http://hackage.haskell.org/package/temporary
+makeSystemTempFile :: String -> IO FilePath
+makeSystemTempFile template = do
+  tmpdir <- getTemporaryDirectory >>= canonicalizePath
+  bracket (openTempFile tmpdir template)
+      (\(_, hdl) -> hClose hdl)
+      (\(fp, _ ) -> pure fp)
 
 data PDFType
   = FullText

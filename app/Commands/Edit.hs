@@ -11,10 +11,11 @@ import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           Data.Yaml                      ( ParseException
                                                 , prettyPrintParseException
-                                                , decodeEither'
-                                                , encode
+                                                , decodeFileEither
+                                                , encodeFile
                                                 )
 import           Internal.Monad
+import           Internal.Path                  ( makeSystemTempFile )
 import           Lens.Micro.Platform
 import           Reference
 import           System.Exit                    ( ExitCode
@@ -67,43 +68,28 @@ runEdit args input = do
   -- Get the Works.
   let refsToEdit  = IM.elems $ refs `IM.restrictKeys` refnosToEdit
       worksToEdit = map (^. work) refsToEdit
-  eitherExitcodeBs <- liftIO $ withSystemTempFile "abbot_edit.yaml" $ \fp hdl ->
-    do
-      -- Dump the YAML to a tempfile.
-      BS.hPut hdl (encode worksToEdit)
-      hFlush hdl  -- this is necessary otherwise the file will be empty in vim!
-      -- Then open the tempfile in vim, and edit it. The /dev/tty handles are
-      -- required to stop vim from complaining (its stdin and stdout must be
-      -- from and to a terminal).
-      withFile "/dev/tty" ReadMode $ \inH -> do
-        withFile "/dev/tty" WriteMode $ \outH -> do
-          (_, _, _, ph) <- createProcess (proc "vim" [fp])
-            { std_in  = UseHandle inH
-            , std_out = UseHandle outH
-            }
-          exitCode <- waitForProcess ph
-          -- Then read the results of that if vim exited successfully.
-          -- BS.hGetContents hdl seems to give us the *old* data... (you also
-          -- need to `hSeek hdl AbsoluteSeek 0` before that). Not sure why.
-          -- Operating system detail, I guess.
-          case exitCode of
-            ExitSuccess -> pure <$> BS.readFile fp
-            ExitFailure i ->
-              pure $ Left ("vim exited with code " <> T.pack (show i))
-  -- A nice helper function.
-  let mEither :: Monad m => Either a b -> (a -> m c) -> (b -> m c) -> m c
-      mEither (Left  a) f1 _  = f1 a
-      mEither (Right b) _  f2 = f2 b
+  -- Create a temporary file and dump the YAML into it.
+  tmpfile <- liftIO $ makeSystemTempFile "abbot_edit.yaml"
+  liftIO $ encodeFile tmpfile worksToEdit
+  -- Then open the tempfile in vim, and edit it. The /dev/tty handles are
+  -- required to stop vim from complaining (its stdin and stdout must be from
+  -- and to a terminal).
+  exitCode <- liftIO $ withFile "/dev/tty" ReadMode $ \inH -> do
+    withFile "/dev/tty" WriteMode $ \outH -> do
+      (_, _, _, ph) <- createProcess (proc "vim" [tmpfile])
+        { std_in  = UseHandle inH
+        , std_out = UseHandle outH
+        }
+      waitForProcess ph
+  when (exitCode /= ExitSuccess)
+       (throwErrorWithPrefix "vim exited with failure")
   -- Decode the YAML.
-  (eitherErrorWorks :: Either ParseException [Work]) <- mEither
-    eitherExitcodeBs
-    throwErrorWithPrefix
-    (pure . decodeEither')
-  -- Check for parse errors.
-  newWorks <- mEither
-    eitherErrorWorks
-    (throwErrorWithPrefix . T.pack . prettyPrintParseException)
-    pure
+  eitherExcWorks     <- liftIO $ decodeFileEither tmpfile
+  -- Check for parse errors. The type annotation specifies which instance of
+  -- FromJSON to use.
+  newWorks :: [Work] <- case eitherExcWorks of
+    Left  e  -> throwErrorWithPrefix . T.pack . prettyPrintParseException $ e
+    Right ws -> pure ws
   -- Make sure it's still the same number of references...
   when
     (length newWorks /= length worksToEdit)
