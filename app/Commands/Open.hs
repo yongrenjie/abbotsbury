@@ -51,21 +51,11 @@ runOpen args input = do
   let cwd  = cwdin input
       refs = refsin input
   -- If no refs present, error immediately
-  (refnos, formats) <- parseInCommand pOpen args prefix
-  -- First, check for any refnos that don't exist
-  let badRefnos = refnos IS.\\ IM.keysSet refs
-  unless
-    (IS.null badRefnos)
-    (throwErrorWithPrefix
-      ("reference(s) " <> intercalateCommas badRefnos <> " not found")
-    )
+  (argsRefnos, formats) <- parseInCommand pOpen args prefix
   -- Figure out which refnos to open
-  refnosToOpen <- case (varin input, IS.null refnos) of
-    (Nothing , True ) -> throwErrorWithPrefix "no references selected"
-    (Nothing , False) -> pure refnos
-    (Just set, True ) -> pure set
-    (Just set, False) ->
-      throwErrorWithPrefix "cannot specify refnos and a pipe simultaneously"
+  refnosToOpen          <- getActiveRefnos prefix argsRefnos input
+  -- Check for any refnos that don't exist
+  errorOnInvalidRefnos prefix refnosToOpen input
   -- Construct the links to be opened.
   let jobs =
         [ (rno, fmt) | fmt <- S.toList formats, rno <- IS.toList refnosToOpen ]

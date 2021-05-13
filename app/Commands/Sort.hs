@@ -78,7 +78,7 @@ runSort args input = do
       vIn  = varin input
       cwd  = cwdin input
   -- If no refs present, error immediately
-  when (IM.null refs) (throwErrorWithPrefix "no references found")
+  errorOnNoRefs prefix input
   -- Parse arguments: detect whether reversed order is desired...
   criterion <- parseInCommand pSort args prefix
   -- Determine which refs to output

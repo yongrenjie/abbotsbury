@@ -45,26 +45,16 @@ throwErrorWithPrefix e = throwError $ prefix <> e
 
 runEdit :: Args -> CmdInput -> CmdOutput
 runEdit args input = do
-  -- If no refs present, error immediately
-  when (IM.null $ refsin input) (throwErrorWithPrefix "no references found")
   let cwd  = cwdin input
       refs = refsin input
+  -- If no refs present, error immediately
+  errorOnNoRefs prefix input
   -- Parse arguments
-  refnos       <- parseInCommand pRefnos args prefix
+  argsRefnos       <- parseInCommand pRefnos args prefix
   -- Figure out which refnos to edit
-  refnosToEdit <- case (varin input, IS.null refnos) of
-    (Nothing , True ) -> throwErrorWithPrefix "no references selected"
-    (Nothing , False) -> pure refnos
-    (Just set, True ) -> pure set
-    (Just set, False) ->
-      throwErrorWithPrefix "cannot specify refnos and a pipe simultaneously"
+  refnosToEdit        <- getActiveRefnos prefix argsRefnos input
   -- Check for any refnos that don't exist
-  let badRefnos = refnosToEdit IS.\\ IM.keysSet refs
-  unless
-    (IS.null badRefnos)
-    (throwErrorWithPrefix
-      ("reference(s) " <> intercalateCommas badRefnos <> " not found")
-    )
+  errorOnInvalidRefnos prefix refnosToEdit input
   -- Get the Works.
   let refsToEdit  = IM.elems $ refs `IM.restrictKeys` refnosToEdit
       worksToEdit = map (^. work) refsToEdit

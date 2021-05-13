@@ -38,26 +38,16 @@ data ReplCiteRules
 
 runCite :: Args -> CmdInput -> CmdOutput
 runCite args input = do
-  let refs = refsin input
   -- If no refs present, error immediately
-  when (IM.null refs) (throwErrorWithPrefix "no references found")
+  errorOnNoRefs prefix input
   -- Parse arguments
-  (refnos, rules) <- parseInCommand pCite args prefix
-  -- Check for any refnos that don't exist
-  let badRefnos = refnos IS.\\ IM.keysSet refs
-  unless
-    (IS.null badRefnos)
-    (throwErrorWithPrefix
-      ("reference(s) " <> intercalateCommas badRefnos <> " not found")
-    )
+  (argsRefnos, rules) <- parseInCommand pCite args prefix
   -- Figure out which refnos to print
-  refsToCite <- case (varin input, IS.null refnos) of
-    (Nothing , True ) -> throwErrorWithPrefix "no references selected"
-    (Nothing , False) -> pure $ IM.elems (refs `IM.restrictKeys` refnos)
-    (Just set, True ) -> pure $ IM.elems (refs `IM.restrictKeys` set)
-    (Just set, False) ->
-      throwErrorWithPrefix "cannot specify refnos and a pipe simultaneously"
+  refnosToCite        <- getActiveRefnos prefix argsRefnos input
+  -- Check for any refnos that don't exist
+  errorOnInvalidRefnos prefix refnosToCite input
   -- Generate the citation(s)
+  let refsToCite = IM.elems (refsin input `IM.restrictKeys` refnosToCite)
   let (style, format) = getStyleFormat rules
       citations =
         T.intercalate "\n\n" $ map (cite style format . _work) refsToCite
@@ -70,7 +60,7 @@ runCite args input = do
       copyHtmlLinesAsRtf htmlLines
     _ -> copy citations
   -- Return basically nothing
-  pure $ SCmdOutput refs Nothing
+  pure $ SCmdOutput (refsin input) Nothing
 
 pCite :: Parser (IntSet, ReplCiteRules)
 pCite = (,) <$> pRefnos <*> pOneFormatCaseSens abbrevs (Just Biblatex)

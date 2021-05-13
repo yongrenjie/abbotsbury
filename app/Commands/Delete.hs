@@ -31,23 +31,11 @@ runDelete args input = do
   let refs = refsin input
       cwd  = cwdin input
   -- If no refs present, error immediately
-  when (IM.null refs) (throwErrorWithPrefix "no references found")
+  errorOnNoRefs prefix input
   -- Parse arguments
-  refnos <- parseInCommand pRefnos args prefix
-  -- First, check for any refnos that don't exist
-  let badRefnos = refnos IS.\\ IM.keysSet refs
-  unless
-    (IS.null badRefnos)
-    (throwErrorWithPrefix
-      ("reference(s) " <> intercalateCommas badRefnos <> " not found")
-    )
-  -- Check that arguments are valid (and figure out which refs to keep/delete)
-  refnosToDelete <- case (varin input, IS.null refnos) of
-    (Nothing , True ) -> throwErrorWithPrefix "no references selected"
-    (Nothing , False) -> pure refnos
-    (Just set, True ) -> pure set
-    (Just _, False) ->
-      throwErrorWithPrefix "cannot specify refnos and a pipe simultaneously"
+  argsRefnos     <- parseInCommand pRefnos args prefix
+  -- Figure out which refnos to print
+  refnosToDelete <- getActiveRefnos prefix argsRefnos input
   -- If we reached here, all is good...
   let refsToKeep   = IM.elems $ refs `IM.withoutKeys` refnosToDelete
       refsToDelete = IM.elems $ refs `IM.restrictKeys` refnosToDelete

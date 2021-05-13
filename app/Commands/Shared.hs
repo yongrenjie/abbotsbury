@@ -4,6 +4,7 @@ module Commands.Shared
 
 import           Data.Char
 import           Data.IntMap                    ( IntMap )
+import qualified Data.IntMap                   as IM
 import           Data.IntSet                    ( IntSet )
 import qualified Data.IntSet                   as IS
 import           Data.List                      ( sortOn )
@@ -223,3 +224,26 @@ printError text = liftIO $ TIO.putStrLn (makeError text)
 mEither :: Monad m => Either a b -> (a -> m c) -> (b -> m c) -> m c
 mEither (Left  a) f1 _  = f1 a
 mEither (Right b) _  f2 = f2 b
+
+getActiveRefnos :: Text -> IntSet -> CmdInput -> ExceptT Text IO IntSet
+getActiveRefnos prefix argsRefnos input =
+  case (varin input, IS.null argsRefnos) of
+    (Nothing     , True ) -> throwError (prefix <> "no references selected")
+    (Nothing     , False) -> pure argsRefnos
+    (Just vRefnos, True ) -> pure vRefnos
+    (Just vRefnos, False) ->
+      throwError (prefix <> "cannot specify refnos and a pipe simultaneously")
+
+errorOnNoRefs :: Text -> CmdInput -> ExceptT Text IO ()
+errorOnNoRefs prefix input = when
+  (IM.null $ refsin input)
+  (throwError $ prefix <> "no references available")
+
+errorOnInvalidRefnos :: Text -> IntSet -> CmdInput -> ExceptT Text IO ()
+errorOnInvalidRefnos prefix refnos input = do
+  let badRefnos = refnos IS.\\ IM.keysSet (refsin input)
+  unless
+    (IS.null badRefnos)
+    (throwError
+      (prefix <> "reference(s) " <> intercalateCommas badRefnos <> " not found")
+    )
