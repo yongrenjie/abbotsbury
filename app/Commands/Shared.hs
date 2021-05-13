@@ -23,6 +23,8 @@ import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer    as L
 
+-- * Data types
+
 -- | Quit and Cd are separate from the rest because we don't want them to be 'pipeable'.
 -- They are dealt with by the main loop.
 data ReplCmd
@@ -72,6 +74,8 @@ data SCmdOutput = SCmdOutput
 -- be different for each command. Each command, when run, will parse their
 -- arguments using a particular parser.
 type Args = Text
+
+-- * Argument parsing
 
 -- | Setup for command-line parsing.
 type Parser = Parsec Void Text
@@ -204,6 +208,8 @@ parseInCommand parser args prefix = case parse (parser <* eof) "" args of
   Left  bundle -> throwError $ prefix <> T.pack (errorBundlePretty bundle)
   Right x      -> pure x
 
+-- * Assorted helper functions
+
 -- | Make a Text containing a comma-separated list of refnos. Useful for error messages.
 intercalateCommas :: IntSet -> Text
 intercalateCommas = T.intercalate "," . map (T.pack . show) . IS.toList
@@ -211,3 +217,8 @@ intercalateCommas = T.intercalate "," . map (T.pack . show) . IS.toList
 -- | A handy wrapper.
 printError :: Text -> ExceptT Text IO ()
 printError text = liftIO $ TIO.putStrLn (makeError text)
+
+-- | A monadic version of 'either' from base.
+mEither :: Monad m => Either a b -> (a -> m c) -> (b -> m c) -> m c
+mEither (Left  a) f1 _  = f1 a
+mEither (Right b) _  f2 = f2 b
