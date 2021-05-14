@@ -4,12 +4,14 @@ module Internal.Path
   ) where
 
 import           Control.Exception              ( bracket )
+import           Data.Char                      ( isDigit )
 import           Data.IntMap                    ( IntMap )
 import qualified Data.IntMap                   as IM
 import           Data.List                      ( isInfixOf )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import           Data.Yaml
+import           GHC.Records
 import           Internal.Monad
 import           Lens.Micro.Platform
 import           Reference
@@ -128,5 +130,8 @@ getPDFPath pdfType cwd ref = cwd </> dirName </> fileName
   dirName = case pdfType of
     FullText -> "pdf-abbot"
     SI       -> "si-abbot"
+  identifier = case _work ref of
+                    Article a -> getField @"_doi" a
+                    Book b -> T.filter isDigit (getField @"_isbn" b)
   fileName =
-    T.unpack . flip T.append ".pdf" . T.replace "/" "#" $ ref ^. (work . doi)
+    T.unpack . flip T.append ".pdf" . T.replace "/" "#" $ identifier

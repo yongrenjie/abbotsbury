@@ -46,11 +46,7 @@ import           Internal.Style                 ( makeError
                                                 , setColor
                                                 , setItalic
                                                 )
-import           Lens.Micro.Platform            ( (.=)
-                                                , Lens'
-                                                , lens
-                                                , use
-                                                )
+import           Lens.Micro.Platform
 import           Options                        ( AbbotCiteOptions
                                                   ( AbbotCiteOptions
                                                   )
@@ -86,17 +82,6 @@ data LoopState = LoopState
     --  should save and reread the references.
     _references :: IntMap Reference -- The references.
   }
-
--- Template Haskell is cool, but slows down compilation, so we manually generate lenses.
-curDir, oldDir :: Lens' LoopState FilePath
-curDir = lens _curDir (\ls dir -> ls { _curDir = dir })
-oldDir = lens _oldDir (\ls dir -> ls { _oldDir = dir })
-
-dirChanged :: Lens' LoopState Bool
-dirChanged = lens _dirChanged (\ls dir -> ls { _dirChanged = dir })
-
-references :: Lens' LoopState (IntMap Reference)
-references = lens _references (\ls dir -> ls { _references = dir })
 
 -- | Entry point.
 main :: IO ()

@@ -7,6 +7,7 @@ import           Commands.Shared
 import           Data.Char                      ( isAlphaNum
                                                 , isSpace
                                                 )
+import           GHC.Records
 import           Data.IntMap                    ( IntMap )
 import qualified Data.IntMap                   as IM
 import qualified Data.IntSet                   as IS
@@ -87,7 +88,7 @@ getFieldSizes refnosAndRefs = do
   let getLongestAuthor :: Reference -> Text
       getLongestAuthor ref = maximumBy
         (comparing T.length)
-        (formatAuthorForList <$> ref ^. (work . authors))
+        (fmap formatAuthorForList . getField @"_authors" . _work $ ref)
       authorF' = fieldPadding + longestBy getLongestAuthor
   -- Year field.
   let yearF' = fieldPadding + 4
@@ -101,8 +102,8 @@ getFieldSizes refnosAndRefs = do
   let titleF1      = ncols - numberF' - authorF' - yearF' - journalF'
       -- We enforce an upper limit, which is the longest title / DOI /
       -- availability string.
-      longestTitle = longestBy (^. (work . title))
-      longestDOI   = longestBy (^. (work . doi))
+      longestTitle = longestBy (getField @"_title" . _work)
+      longestDOI   = longestBy (getField @"_doi" . _work)
       availLength  = 40  -- hardcoded
       upperLimit   = maximum [longestTitle, longestDOI, availLength]
       titleF2      = min titleF1 upperLimit
@@ -125,10 +126,9 @@ prettifyOneRef
   -> (Int, Reference)  -- ^ Refno and ref, generated using 'Data.IntMap.assocs'
   -> IO Text
 prettifyOneRef fss fp (i, ref) = do
-  columns <- case ref ^. (work . workType) of
-    JournalArticle -> makeArticleColumns fss fp (i, ref)
-    Book           -> makeBookColumns fss fp (i, ref)
-    _              -> pure (["unsupported"], [], [], [], [])
+  columns <- case _work ref of
+    Article a -> makeArticleColumns fss fp (i, ref)
+    Book b    -> makeBookColumns fss fp (i, ref)
   pure . T.intercalate "\n" . map (formatLine fss) $ zipLongest5 columns
 
 -- | Does the job for an article.
@@ -144,11 +144,11 @@ makeArticleColumns fss cwd (index, ref) = do
   -- Build up the columns first.
   let numberColumn  = ["A " <> T.pack (show index)]
       authorColumn  = getAuthorColumn 5 ref
-      yearColumn    = [T.pack . show $ ref ^. (work . year)]
+      yearColumn    = [T.pack . show . getField @"_year" . _work $ ref]
       journalColumn = [getShortestJournalName ref, getVolInfo ref]
       titleColumn =
-        T.chunksOf (titleF fss) (ref ^. (work . title))
-          ++ [ref ^. (work . doi)]
+        T.chunksOf (titleF fss) (getField @"_title" . _work $ ref)
+          ++ [getField @"_doi" . _work $ ref]
           ++ [availString]
           ++ T.chunksOf (titleF fss) (getTagString ref)
   pure (numberColumn, authorColumn, yearColumn, journalColumn, titleColumn)
@@ -253,11 +253,10 @@ getAvailString cwd ref = do
       makeSymbol x = if x
         then setColor "seagreen" "\x2714"
         else setColor "crimson" "\x2718"
-  pure $ case ref ^. (work . workType) of
-    JournalArticle ->
+  pure $ case _work ref of
+    Article a ->
       mconcat [makeSymbol fullTextAvail, " pdf ", makeSymbol siAvail, " si"]
-    Book -> mconcat [makeSymbol fullTextAvail, " pdf"]
-    _    -> ""
+    Book b -> mconcat [makeSymbol fullTextAvail, " pdf"]
 
 -- | Clone of Python's itertools.zip_longest(fillvalue=""). It's even uncurried.
 -- (That's purely for the sake of convenience, though.)
