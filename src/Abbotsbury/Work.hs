@@ -13,37 +13,21 @@ module Abbotsbury.Work
     -- $work-datatypes
     DOI
   , ISBN
-  , WorkType(..)
   , Work(..)
+  , JournalArticle(..)
+  , Book(..)
   , Author(..)
-    -- * Lenses
-    -- $work-lenses
-  , workType
-  , title
-  , publisher
-  , publisherLoc
-  , authors
-  , journalLong
-  , journalShort
-  , year
-  , volume
-  , issue
-  , pages
-  , edition
-  , doi
-  , isbn
-  , articleNumber
-  , given
-  , family
   ) where
 
 import           Data.Aeson
 import           Data.List.NonEmpty             ( NonEmpty )
 import           Data.Text                      ( Text )
 import           GHC.Generics
-import           Lens.Micro
 
 -- $work-datatypes
+-- TODO: Update this because the whole thing has changed! Please ignore the
+-- following.
+--
 -- @abbotsbury@'s core datatype is a 'Work', which is simply a record type which
 -- contains every relevant field needed for citations (it ignores all the excess
 -- metadata from Crossref). The other important datatype is an 'Author', which
@@ -72,54 +56,18 @@ type DOI = Text
 -- | As above, but for International Standard Book Numbers (ISBNs).
 type ISBN = Text
 
--- | The list of possible work types is taken from Crossref
--- (<https://api.crossref.org/types>). Only 'JournalArticle' is supported right
--- now. Although we do not support all of them, they are enumerated here as they
--- allow a more useful error message to be returned if data for an unsupported
--- work type is fetched from Crossref (see
--- 'Abbotsbury.Crossref.CRUnknownWorkException').
-data WorkType
-  = BookSection
-  | Monograph
-  | Report
-  | PeerReview
-  | BookTrack
-  | JournalArticle
-  | Part
-  | Other
-  | Book
-  | JournalVolume
-  | BookSet
-  | ReferenceEntry
-  | ProceedingsArticle
-  | Journal
-  | Component
-  | BookChapter
-  | ProceedingsSeries
-  | ReportSeries
-  | Proceedings
-  | Standard
-  | ReferenceBook
-  | PostedContent
-  | JournalIssue
-  | Dissertation
-  | Dataset
-  | BookSeries
-  | EditedBook
-  | StandardSeries
-  deriving (Generic, Eq, Show)
-
--- | A @Work@ represents one single work from Crossref, whether it is a journal
--- article, book, or any other type of work. Lenses are provided for each field.
+-- | A @Work@ represents one single work from Crossref.
+-- TODO: Document this again.
 --
 -- TODO: Add more fields here for other information (e.g. editors). See
 -- <https://github.com/Crossref/rest-api-doc/blob/master/api_format.md>.
-data Work = Work
-  { _workType      :: WorkType
-  , _title         :: Text
-  , _publisher     :: Text
-  -- | Publisher location.
-  , _publisherLoc  :: Text
+data Work = IsJournalArticle JournalArticle
+          | IsBook Book
+          deriving (Generic, Show, Eq)
+
+-- | A journal article.
+data JournalArticle = JournalArticle
+  { _title         :: Text
   ,
     -- | There has to be at least one author!
     _authors       :: NonEmpty Author
@@ -140,9 +88,7 @@ data Work = Work
     _volume        :: Text
   , _issue         :: Text
   , _pages         :: Text
-  , _edition       :: Text
   , _doi           :: DOI
-  , _isbn          :: ISBN
   ,
     -- | Some online-only articles do not have page numbers, and are indexed by
     -- article numbers instead.
@@ -150,10 +96,24 @@ data Work = Work
   }
   deriving (Generic, Show, Eq)
 
+-- | A book.
+data Book = Book
+  { _title        :: Text
+  , _publisher    :: Text
+  -- | Publisher location.
+  , _publisherLoc :: Text
+    -- | A book doesn't have to have an author.
+  , _authors      :: [Author]
+  , _year         :: Int
+  , _edition      :: Text
+  , _isbn         :: ISBN
+  }
+  deriving (Generic, Show, Eq)
+
 -- | This is an incomplete representation of an author.
 --
--- TODO: Rename this to @Contributor@ and add the @suffix@ and @role@ records.
--- This will allow us to deal with editors, etc. more properly.
+-- TODO: Add the @suffix@ field, and rename it to @Person@ or @Contributor@ so
+-- that it can be generalised to editors, etc.
 data Author = Author
   { -- | Not everyone has a given name.
     _given  :: Maybe Text
@@ -163,73 +123,22 @@ data Author = Author
   }
   deriving (Generic, Show, Ord, Eq)
 
--- $work-lenses
--- The following lenses are provided for convenience. You don't have to use them
--- if you don't want to: the record fields are simply the same as these but
--- prefixed with an underscore.
-
-workType :: Lens' Work WorkType
-workType = lens _workType (\w x -> w { _workType = x })
-
-title :: Lens' Work Text
-title = lens _title (\w x -> w { _title = x })
-
-publisher :: Lens' Work Text
-publisher = lens _publisher (\w x -> w { _publisher = x })
-
-publisherLoc :: Lens' Work Text
-publisherLoc = lens _publisherLoc (\w x -> w { _publisherLoc = x })
-
-authors :: Lens' Work (NonEmpty Author)
-authors = lens _authors (\w x -> w { _authors = x })
-
-journalLong :: Lens' Work Text
-journalLong = lens _journalLong (\w x -> w { _journalLong = x })
-
-journalShort :: Lens' Work Text
-journalShort = lens _journalShort (\w x -> w { _journalShort = x })
-
-year :: Lens' Work Int
-year = lens _year (\w x -> w { _year = x })
-
-volume :: Lens' Work Text
-volume = lens _volume (\w x -> w { _volume = x })
-
-issue :: Lens' Work Text
-issue = lens _issue (\w x -> w { _issue = x })
-
-pages :: Lens' Work Text
-pages = lens _pages (\w x -> w { _pages = x })
-
-edition :: Lens' Work Text
-edition = lens _edition (\w x -> w { _edition = x })
-
-doi :: Lens' Work DOI
-doi = lens _doi (\w x -> w { _doi = x })
-
-isbn :: Lens' Work ISBN
-isbn = lens _isbn (\w x -> w { _isbn = x })
-
-articleNumber :: Lens' Work Text
-articleNumber = lens _articleNumber (\w x -> w { _articleNumber = x })
-
-given :: Lens' Author (Maybe Text)
-given = lens _given (\a g -> a { _given = g })
-
-family :: Lens' Author Text
-family = lens _family (\a f -> a { _family = f })
-
-instance ToJSON WorkType where
+instance ToJSON Work where
   toEncoding = genericToEncoding defaultOptions
 
-instance ToJSON Work where
+instance ToJSON JournalArticle where
+  toEncoding = genericToEncoding defaultOptions
+
+instance ToJSON Book where
   toEncoding = genericToEncoding defaultOptions
 
 instance ToJSON Author where
   toEncoding = genericToEncoding defaultOptions
 
-instance FromJSON WorkType
-
 instance FromJSON Work
+
+instance FromJSON JournalArticle
+
+instance FromJSON Book
 
 instance FromJSON Author

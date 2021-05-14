@@ -29,8 +29,9 @@ data CrossrefException
   -- provided by Aeson and says what went wrong.
   | CRJsonException DOI Text
   -- | @abbotsbury@ right now only parses journal articles. If you request
-  -- metadata about a book (for example) this error will be returned.
-  | CRUnknownWorkException DOI WorkType 
+  -- metadata about a book chapter (for example), this exception will be
+  -- returned (the @Text@ value will contain the offending work type).
+  | CRUnknownWorkException DOI Text 
   -- | Something else went wrong.
   | CROtherException DOI Text
   deriving (Show)
@@ -103,7 +104,7 @@ getJsonMessage doi' val = do
 -- | Step 3a is to identify the type of work. This basically gives a CRUnknownWorkException if it's
 -- not an article, which is technically a bug, but I don't know when I'll be able to work on adding
 -- new types of works (e.g. books).
-identifyWorkType :: DOI -> Value -> Either CrossrefException WorkType
+identifyWorkType :: DOI -> Value -> Either CrossrefException Text
 identifyWorkType doi' messageVal = do
   let parsedWorkType =
         DAT.parseEither (withObject "Crossref response" (.: "type")) messageVal
@@ -111,41 +112,9 @@ identifyWorkType doi' messageVal = do
     Left failedParseMessage ->
       Left (CRJsonException doi' (T.pack failedParseMessage))
     Right wType -> case wType of
-      "book-section"        -> Right BookSection
-      "monograph"           -> Right Monograph
-      "report"              -> Right Report
-      "peer-review"         -> Right PeerReview
-      "book-track"          -> Right BookTrack
-      "journal-article"     -> Right JournalArticle
-      "book-part"           -> Right Part
-      "other"               -> Right Other
-      "book"                -> Right Book
-      "journal-volume"      -> Right JournalVolume
-      "book-set"            -> Right BookSet
-      "reference-entry"     -> Right ReferenceEntry
-      "proceedings-article" -> Right ProceedingsArticle
-      "journal"             -> Right Journal
-      "component"           -> Right Component
-      "book-chapter"        -> Right BookChapter
-      "proceedings-series"  -> Right ProceedingsSeries
-      "report-series"       -> Right ReportSeries
-      "proceedings"         -> Right Proceedings
-      "standard"            -> Right Standard
-      "reference-book"      -> Right ReferenceBook
-      "posted-content"      -> Right PostedContent
-      "journal-issue"       -> Right JournalIssue
-      "dissertation"        -> Right Dissertation
-      "dataset"             -> Right Dataset
-      "book-series"         -> Right BookSeries
-      "edited-book"         -> Right EditedBook
-      "standard-series"     -> Right StandardSeries
-      _                     -> Left
-        (  CRJsonException doi'
-        $  "work type '"
-        <> T.pack wType
-        <> "' not found in Crossref schema. "
-        <> "This should probably be reported to the Crossref maintainers."
-        )
+      "journal-article"     -> Right wType
+      "book"                -> Right wType
+      _                     -> Left (CRUnknownWorkException doi' wType)
 
 -- | Step 3b is to parse the 'message' component into the Abbotsbury data types, depending on which type
 -- of work it is. Right now only Articles are supported.
@@ -160,27 +129,32 @@ parseCrossrefMessage
      Value
   -> Either CrossrefException Work -- Either an error message or the Work.
 parseCrossrefMessage doi' useInternalAbbrevs messageVal = do
-  -- Figure out which parser to use.
-  wType  <- identifyWorkType doi' messageVal
-  parser <- case wType of
-    JournalArticle -> Right (parseJournalArticle useInternalAbbrevs)
-    Book           -> Right parseBook
-    _              -> Left (CRUnknownWorkException doi' wType)
-  -- Run the appropriate parser on the message Value.
-  let parsedWork =
-        DAT.parseEither (withObject "Crossref response" parser) messageVal
-  first (CRJsonException doi' . T.pack) parsedWork
+  parsedWorkType <- first
+    (CRJsonException doi' . T.pack)
+    (DAT.parseEither (withObject "Crossref response" (.: "type")) messageVal)
+  -- Take an Aeson Parser, run it on a value (the Crossref message), and wrap up
+  -- the Left String in a CrossrefException if it fails.
+  let runParser
+        :: (Object -> DAT.Parser a) -> Value -> Either CrossrefException a
+      runParser parser obj = first
+        (CRJsonException doi' . T.pack)
+        (DAT.parseEither (withObject "Crossref response" parser) obj)
+  -- Then it's as simple as fmapping the Work constructor over a call to
+  -- runParser.
+  case parsedWorkType of
+    "journal-article" ->
+      IsJournalArticle
+        <$> runParser (parseJournalArticle useInternalAbbrevs) messageVal
+    "book" -> IsBook <$> runParser parseBook messageVal
+    _      -> Left (CRUnknownWorkException doi' parsedWorkType)
 
 -- | The parser which parses JournalArticles.
-parseJournalArticle :: Bool -> Object -> DAT.Parser Work
+parseJournalArticle :: Bool -> Object -> DAT.Parser JournalArticle
 parseJournalArticle useInternalAbbrevs messageObj = do
   -- Title
   let _workType = JournalArticle
   _title <- normalize NFC
     <$> safeHead "could not get title" (messageObj .: "title")
-  -- Publisher and their location (can be blank)
-  _publisher   <- messageObj .:? "publisher" .!= ""
-  _publisherLoc <- messageObj .:? "publisher-location" .!= ""
   -- Authors
   _authorArray <- messageObj .: "author"
   _authors     <- do
@@ -210,13 +184,11 @@ parseJournalArticle useInternalAbbrevs messageObj = do
   _volume <- messageObj .:? "volume" .!= ""
   _issue  <- (messageObj .: "journal-issue" >>= (.: "issue")) <|> pure ""
   _pages  <- messageObj .:? "page" .!= ""
-  let _edition = ""
   _doi    <- messageObj .:? "DOI" .!= ""
-  let _isbn = ""
   _articleNumber <- messageObj .:? "article-number" .!= ""
-  pure $ Work { .. }
+  pure $ JournalArticle { .. }
 
-parseBook :: Object -> DAT.Parser Work
+parseBook :: Object -> DAT.Parser Book
 parseBook messageObj = do
   let _workType = Book
   _title       <- safeHead "could not get title" $ messageObj .: "title"
@@ -225,26 +197,15 @@ parseBook messageObj = do
   _publisherLoc <- messageObj .:? "publisher-location" .!= ""
   -- Authors
   _authorArray <- messageObj .: "author"
-  _authors     <- do
-    auths <- mapM parseAuthor _authorArray
-    case NE.nonEmpty auths of
-      Just x  -> pure x
-      Nothing -> fail "expected at least one author, found none"
-  let _journalLong  = ""
-  let _journalShort = ""
+  _authors     <- mapM parseAuthor _authorArray
   -- Year (prefer print publish date over online publish date as the former is the one usually used)
   publishedObj <-
     messageObj .: "published-print" <|> messageObj .: "published-online"
   _year <- safeHead "year not found in date-parts"
     $ safeHead "date-parts was empty" (publishedObj .: "date-parts")
-  let _volume = ""
-  let _issue  = ""
-  let _pages  = ""
   _edition  <- messageObj .:? "edition" .!= ""
-  _doi  <- messageObj .:? "DOI" .!= ""
   _isbn <- safeHead "ISBN was empty" (messageObj .: "ISBN") <|> pure ""
-  let _articleNumber = ""
-  pure $ Work { .. }
+  pure $ Book { .. }
 
 safeHead
   ::

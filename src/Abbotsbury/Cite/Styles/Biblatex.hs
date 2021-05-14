@@ -20,7 +20,7 @@ import qualified Data.Text                     as T
 import           Data.Text.Normalize            ( NormalizationMode(..)
                                                 , normalize
                                                 )
-import           Lens.Micro
+import           GHC.Records
 
 -- | This generates a BibLaTeX entry. The output 'Format' chosen doesn't affect
 -- the BibLaTeX entry in any way, so that can be arbitrarily selected.
@@ -40,12 +40,13 @@ import           Lens.Micro
 --     pages = {2918-2922},
 -- }
 bibStyle :: Style
-bibStyle = Style { articleConstructor = articleConstructorBib }
+bibStyle = Style { articleConstructor = articleConstructorBib
+                 , bookConstructor = const (plain "not yet implemented") }
 
 -- | In practice, we do all of the work as "Data.Text.Text", before converting
 -- it to a 'CitationPart'.
-articleConstructorBib :: Work -> CitationPart
-articleConstructorBib work = plain (latexify t)
+articleConstructorBib :: JournalArticle -> CitationPart
+articleConstructorBib a = plain (latexify t)
  where
   t :: Text
   t =
@@ -59,25 +60,25 @@ articleConstructorBib work = plain (latexify t)
   headerL = "@article{" <> identifier <> ","
    where
     identifier =
-      T.filter isAscii (normalize NFD (work ^. (authors . ix 0 . family)))
-        <> T.filter isUpper (work ^. journalShort)
-        <> (T.pack . show) (work ^. year)
-  doiL    = makeBibField "doi" (work ^. doi)
+      (T.filter isAscii . normalize NFD . _family . NE.head . getField @"_authors" $ a)
+        <> T.filter isUpper (_journalShort a)
+        <> (T.pack . show) (getField @"_year" a)
+  doiL    = makeBibField "doi" (getField @"_doi" a)
   authorL = makeBibField
     "author"
     (T.intercalate
       " and "
-      (fmap (formatAuthor BibLaTeX) (NE.toList $ work ^. authors))
+      (fmap (formatAuthor BibLaTeX) (NE.toList $ getField @"_authors" a))
     )
-  journalL = makeBibField "journal" (work ^. journalShort)
-  titleL   = makeBibField "title" (work ^. title)
-  yearL    = makeBibField "year" (T.pack . show $ work ^. year)
-  volumeM  = makeMaybeBibField "volume" (work ^. volume)
+  journalL = makeBibField "journal" (_journalShort a)
+  titleL   = makeBibField "title" (getField @"_title" a)
+  yearL    = makeBibField "year" (T.pack . show $ getField @"_year" a)
+  volumeM  = makeMaybeBibField "volume" (_volume a)
   issueM =
-    makeMaybeBibFieldWith (T.all isDigit) "number" (work ^. issue)
-      <|> makeMaybeBibField "issue" (work ^. issue)
-  pagesM = makeMaybeBibField "pages" (work ^. pages)
-    <|> makeMaybeBibField "pages" (work ^. articleNumber)
+    makeMaybeBibFieldWith (T.all isDigit) "number" (_issue a)
+      <|> makeMaybeBibField "issue" (_issue a)
+  pagesM = makeMaybeBibField "pages" (_pages a)
+    <|> makeMaybeBibField "pages" (_articleNumber a)
 
 -- | Shortcut to make a BibLaTeX key-value pair. If the value is not guaranteed to be present, then
 -- use makeMaybeBibField.

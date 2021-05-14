@@ -9,7 +9,7 @@ import qualified Data.List                     as L
 import qualified Data.List.NonEmpty            as NE
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
-import           Lens.Micro
+import           GHC.Records
 
 -- | The American Chemical Society style, as specified in the 3rd edition of the
 -- ACS Style Guide. ACS seem to have removed this from their website in favour
@@ -27,39 +27,40 @@ import           Lens.Micro
 -- talyzed Synthesis of Ynamides from 1,2-Dichloroenamides. *Org. Lett.* **2019,** *21* (8), 2918-29
 -- 22. DOI: [10.1021/acs.orglett.9b00971](https://doi.org/10.1021/acs.orglett.9b00971).
 acsStyle :: Style
-acsStyle = Style { articleConstructor = articleConstructorACS }
+acsStyle = Style { articleConstructor = articleConstructorACS
+                 , bookConstructor = const (plain "not yet done") }
 
-articleConstructorACS :: Work -> CitationPart
-articleConstructorACS work = mconcat
+articleConstructorACS :: JournalArticle -> CitationPart
+articleConstructorACS a = mconcat
   $ L.intersperse space [authorP, titleP, journalInfoP, doiP]
  where
   authorP, titleP, journalInfoP, doiP :: CitationPart
   authorP = plain $ T.intercalate
     "; "
-    (fmap (formatAuthor FamilyInitials) (NE.toList $ work ^. authors))
+    (fmap (formatAuthor FamilyInitials) (NE.toList $ getField @"_authors" a))
   titleP =
-    let t   = work ^. title
+    let t   = getField @"_title" a
         end = if (not . T.null $ t) && (T.last t == '.') then "" else "."
-    in  plain $ (work ^. title) <> end
-  journalInfoP = formatJInfoACS work
-  doiP         = plain "DOI: " <> mkDoiUri (work ^. doi) <> plain "."
+    in  plain $ t <> end
+  journalInfoP = formatJInfoACS a
+  doiP         = plain "DOI: " <> mkDoiUri (getField @"_doi" a) <> plain "."
   mkDoiUri :: DOI -> CitationPart
   mkDoiUri doi' = Link ("https://doi.org/" <> doi') (plain doi')
 
-formatJInfoACS :: Work -> CitationPart
-formatJInfoACS work = mconcat
+formatJInfoACS :: JournalArticle -> CitationPart
+formatJInfoACS a = mconcat
   $ L.intersperse space [theJName, theYear, theVolInfo, thePages]
  where
-  theJName = italic (work ^. journalShort)
-  theYear  = bold (T.pack (show (work ^. year) ++ ","))
-  thePages = case (work ^. pages, work ^. articleNumber) of
+  theJName = italic (_journalShort a)
+  theYear  = bold (T.pack (show (getField @"_year" a) ++ ","))
+  thePages = case (_pages a, _articleNumber a) of
     ("", "") -> plain "."
     ("", aN) -> plain ("No. " <> aN <> ".")
     (pg, _ ) -> plain (pg <> ".")
   -- Whether the pagination part is empty will determine the punctuation used at
   -- the end of the volume info.
   endPunct   = if thePages == plain "." then "" else ","
-  theVolInfo = case (work ^. volume, work ^. issue) of
+  theVolInfo = case (_volume a, _issue a) of
     (""    , ""    ) -> mempty
     (""    , theIss) -> plain ("No. " <> theIss <> endPunct)
     (theVol, ""    ) -> italic (theVol <> endPunct)

@@ -33,7 +33,6 @@ common abbot-deps
     , base ^>=4.14.1.0
     , containers
     , text , unicode-transforms
-    , microlens
     , aeson , bytestring
     , http-client , http-client-tls , network-uri
     , raw-strings-qq
@@ -47,6 +46,10 @@ common abbot-deps
     FlexibleInstances
     ScopedTypeVariables
     RecordWildCards
+    DuplicateRecordFields
+    OverloadedLabels
+    TypeApplications
+    DataKinds
 
 
 library
@@ -109,7 +112,6 @@ executable abbot
     , haskeline , ansi-terminal , colour , terminal-size
     , optparse-applicative , ansi-wl-pprint
     , megaparsec
-    , microlens-platform
     , directory , filepath >=1.3.0.0 , process , time , temporary
     , exceptions , transformers , mtl
     , yaml

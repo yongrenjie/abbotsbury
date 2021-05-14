@@ -5,7 +5,6 @@ import           Abbotsbury.LatexEscapes
 import           Abbotsbury.Work
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
-import           Lens.Micro
 
 -- Note that these AuthorStyles are merely helper functions. We can't and shouldn't hard code them
 -- into a Style, because it won't be extensible by other people.
@@ -26,9 +25,9 @@ formatAuthorAsCPart fmt auth = CText (formatAuthor fmt auth)
 -- as a CitationPart.
 formatAuthor :: AuthorStyle -> Author -> Text
 formatAuthor fmt auth =
-  let fam          = auth ^. family
+  let fam          = _family auth
       makeInitials = joinInitialsWith " " "-" "." . getInitials
-  in  case auth ^. given of
+  in  case _given auth of
         Nothing  -> fam
         Just gvn -> case fmt of
           FamilyInitials -> fam <> ", " <> makeInitials gvn

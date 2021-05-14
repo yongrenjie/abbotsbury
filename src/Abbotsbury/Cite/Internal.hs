@@ -8,8 +8,6 @@ import           Data.Sequence                  ( (<|)
                                                 )
 import qualified Data.Sequence                 as Seq
 import           Data.Text                      ( Text )
-import qualified Data.Text                     as T
-import           Lens.Micro
 
 -- | A 'Style' is a citation style, i.e. a set of rules which defines what text
 -- is to be used and how it is to be formatted. This is roughly analogous with
@@ -24,7 +22,8 @@ import           Lens.Micro
 -- 'CitationPart' is not exported from the top-level "Abbotsbury" module: you
 -- will have to import it from "Abbotsbury.Cite.Internal".
 data Style = Style
-  { articleConstructor :: Work -> CitationPart
+  { articleConstructor :: JournalArticle -> CitationPart
+  , bookConstructor    :: Book -> CitationPart
   }
 
 -- | A 'Format' dictates how the abstract formatting is to be realised, which is
@@ -105,12 +104,9 @@ italic = Italic . CText
 -- internal abstract representation of formatted text) which represents the
 -- entire citation.
 makeCitationPart :: Style -> Work -> CitationPart
-makeCitationPart style work = case wt of
-  JournalArticle -> articleConstructor style work
-  _              -> CText ("work type " <> tshow wt <> " not supported yet")
- where
-  wt    = work ^. workType
-  tshow = T.pack . show
+makeCitationPart style work = case work of
+  IsJournalArticle art  -> articleConstructor style art
+  IsBook           book -> bookConstructor style book
 
 -- | Using a specific output 'Format', generate text that has concrete
 -- formatting from a 'CitationPart' (which could be a "Data.Sequence.Seq" of
