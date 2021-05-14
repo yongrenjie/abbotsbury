@@ -41,11 +41,12 @@ import           GHC.Records
 -- }
 bibStyle :: Style
 bibStyle = Style { articleConstructor = articleConstructorBib
-                 , bookConstructor = const (plain "not yet implemented") }
+                 , bookConstructor    = const (plain "not yet implemented")
+                 }
 
 -- | In practice, we do all of the work as "Data.Text.Text", before converting
 -- it to a 'CitationPart'.
-articleConstructorBib :: JournalArticle -> CitationPart
+articleConstructorBib :: Article -> CitationPart
 articleConstructorBib a = plain (latexify t)
  where
   t :: Text
@@ -60,7 +61,13 @@ articleConstructorBib a = plain (latexify t)
   headerL = "@article{" <> identifier <> ","
    where
     identifier =
-      (T.filter isAscii . normalize NFD . _family . NE.head . getField @"_authors" $ a)
+      ( T.filter isAscii
+        . normalize NFD
+        . _family
+        . NE.head
+        . getField @"_authors"
+        $ a
+        )
         <> T.filter isUpper (_journalShort a)
         <> (T.pack . show) (getField @"_year" a)
   doiL    = makeBibField "doi" (getField @"_doi" a)

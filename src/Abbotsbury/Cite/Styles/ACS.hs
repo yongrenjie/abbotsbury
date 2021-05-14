@@ -28,9 +28,10 @@ import           GHC.Records
 -- 22. DOI: [10.1021/acs.orglett.9b00971](https://doi.org/10.1021/acs.orglett.9b00971).
 acsStyle :: Style
 acsStyle = Style { articleConstructor = articleConstructorACS
-                 , bookConstructor = const (plain "not yet done") }
+                 , bookConstructor    = const (plain "not yet done")
+                 }
 
-articleConstructorACS :: JournalArticle -> CitationPart
+articleConstructorACS :: Article -> CitationPart
 articleConstructorACS a = mconcat
   $ L.intersperse space [authorP, titleP, journalInfoP, doiP]
  where
@@ -47,7 +48,7 @@ articleConstructorACS a = mconcat
   mkDoiUri :: DOI -> CitationPart
   mkDoiUri doi' = Link ("https://doi.org/" <> doi') (plain doi')
 
-formatJInfoACS :: JournalArticle -> CitationPart
+formatJInfoACS :: Article -> CitationPart
 formatJInfoACS a = mconcat
   $ L.intersperse space [theJName, theYear, theVolInfo, thePages]
  where

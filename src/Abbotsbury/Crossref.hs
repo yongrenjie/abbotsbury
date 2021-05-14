@@ -61,26 +61,25 @@ import qualified Network.HTTP.Client.TLS       as NHCT
 -- internal @Map@ of abbreviations already contains the corrected form for /Nature/
 -- /Communications/.
 --
--- >>> Right natComm <- fetchWork' Nothing False "your@email.com" "10.1038/s41467-021-21936-4"
+-- >>> Right (Article natComm) <- fetchWork' Nothing False "your@email.com" "10.1038/s41467-021-21936-4"
 -- >>> natComm
--- IsJournalArticle (JournalArticle {_title = "Direct catalytic asymmetric synthesis of \945-chiral 
--- bicyclo[1.1.1]pentanes", _authors = Author {_given = Just "Marie L. J.", _family = "Wong"} :| [Au
--- thor {_given = Just "Alistair J.", _family = "Sterling"},Author {_given = Just "James J.", _famil
--- y = "Mousseau"},Author {_given = Just "Fernanda", _family = "Duarte"},Author {_given = Just "Edwa
--- rd A.", _family = "Anderson"}], _journalLong = "Nature Communications", _journalShort = "Nat Comm
--- un", _year = 2021, _volume = "12", _issue = "1", _pages = "", _doi = "10.1038/s41467-021-21936-4"
--- , _articleNumber = "1644"})
--- >>> let (IsJournalArticle ja) = natComm
--- >>> _journalShort ja  -- the result of this is wrong: there should be periods
+-- MkArticle {_title = "Direct catalytic asymmetric synthesis of \945-chiral bicyclo[1.1.1]pentanes"
+-- , _authors = Author {_given = Just "Marie L. J.", _family = "Wong"} :| [Author {_given = Just "Al
+-- istair J.", _family = "Sterling"},Author {_given = Just "James J.", _family = "Mousseau"},Author 
+-- {_given = Just "Fernanda", _family = "Duarte"},Author {_given = Just "Edward A.", _family = "Ande
+-- rson"}], _journalLong = "Nature Communications", _journalShort = "Nat Commun", _year = 2021, _vol
+-- ume = "12", _issue = "1", _pages = "", _doi = "10.1038/s41467-021-21936-4", _articleNumber = "164
+-- 4"}
+-- >>> _journalShort natComm  -- the result of this is wrong: there should be periods
 -- "Nat Commun"
--- >>> IsJournalArticle (ja { _journalShort = "Nat. Commun." })
--- IsJournalArticle (JournalArticle {_title = "Direct catalytic asymmetric synthesis of \945-chiral 
--- bicyclo[1.1.1]pentanes", _authors = Author {_given = Just "Marie L. J.", _family = "Wong"} :| [Au
--- thor {_given = Just "Alistair J.", _family = "Sterling"},Author {_given = Just "James J.", _famil
--- y = "Mousseau"},Author {_given = Just "Fernanda", _family = "Duarte"},Author {_given = Just "Edwa
--- rd A.", _family = "Anderson"}], _journalLong = "Nature Communications", _journalShort = "Nat. Com
--- mun.", _year = 2021, _volume = "12", _issue = "1", _pages = "", _doi = "10.1038/s41467-021-21936-
--- 4", _articleNumber = "1644"})
+-- >>> natComm { _journalShort = "Nat. Commun." }
+-- MkArticle {_title = "Direct catalytic asymmetric synthesis of \945-chiral bicyclo[1.1.1]pentanes"
+-- , _authors = Author {_given = Just "Marie L. J.", _family = "Wong"} :| [Author {_given = Just "Al
+-- istair J.", _family = "Sterling"},Author {_given = Just "James J.", _family = "Mousseau"},Author 
+-- {_given = Just "Fernanda", _family = "Duarte"},Author {_given = Just "Edward A.", _family = "Ande
+-- rson"}], _journalLong = "Nature Communications", _journalShort = "Nat. Commun.", _year = 2021, _v
+-- olume = "12", _issue = "1", _pages = "", _doi = "10.1038/s41467-021-21936-4", _articleNumber = "1
+-- 644"}
 
 -- | Convert a DOI into a full-fledged Work by fetching metadata from Crossref.
 --

@@ -14,7 +14,7 @@ module Abbotsbury.Work
     DOI
   , ISBN
   , Work(..)
-  , JournalArticle(..)
+  , Article(..)
   , Book(..)
   , Author(..)
   ) where
@@ -36,8 +36,8 @@ import           GHC.Generics
 -- In theory, 'Work's can be constructed manually by entering each field:
 -- however, in practice it is much easier to fetch the data from Crossref using
 -- the 'fetchWork' family of functions. This function, however, only works with
--- 'JournalArticle's and not other types of works (yet). Likewise, citation only
--- works with 'JournalArticle's for now.
+-- 'Article's and not other types of works (yet). Likewise, citation only
+-- works with 'Article's for now.
 --
 -- Defining a work as a simple record type like this unfortunately leads to many
 -- redundant fields: for example, a journal article does not have an ISBN, and a
@@ -61,12 +61,12 @@ type ISBN = Text
 --
 -- TODO: Add more fields here for other information (e.g. editors). See
 -- <https://github.com/Crossref/rest-api-doc/blob/master/api_format.md>.
-data Work = IsJournalArticle JournalArticle
-          | IsBook Book
+data Work = Article Article
+          | Book Book
           deriving (Generic, Show, Eq)
 
 -- | A journal article.
-data JournalArticle = JournalArticle
+data Article = MkArticle
   { _title         :: Text
   ,
     -- | There has to be at least one author!
@@ -97,7 +97,7 @@ data JournalArticle = JournalArticle
   deriving (Generic, Show, Eq)
 
 -- | A book.
-data Book = Book
+data Book = MkBook
   { _title        :: Text
   , _publisher    :: Text
   -- | Publisher location.
@@ -126,7 +126,7 @@ data Author = Author
 instance ToJSON Work where
   toEncoding = genericToEncoding defaultOptions
 
-instance ToJSON JournalArticle where
+instance ToJSON Article where
   toEncoding = genericToEncoding defaultOptions
 
 instance ToJSON Book where
@@ -137,7 +137,7 @@ instance ToJSON Author where
 
 instance FromJSON Work
 
-instance FromJSON JournalArticle
+instance FromJSON Article
 
 instance FromJSON Book
 

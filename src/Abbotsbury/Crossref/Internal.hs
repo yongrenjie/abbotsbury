@@ -143,16 +143,16 @@ parseCrossrefMessage doi' useInternalAbbrevs messageVal = do
   -- runParser.
   case parsedWorkType of
     "journal-article" ->
-      IsJournalArticle
-        <$> runParser (parseJournalArticle useInternalAbbrevs) messageVal
-    "book" -> IsBook <$> runParser parseBook messageVal
+      Article
+        <$> runParser (parseArticle useInternalAbbrevs) messageVal
+    "book" -> Book <$> runParser parseBook messageVal
     _      -> Left (CRUnknownWorkException doi' parsedWorkType)
 
--- | The parser which parses JournalArticles.
-parseJournalArticle :: Bool -> Object -> DAT.Parser JournalArticle
-parseJournalArticle useInternalAbbrevs messageObj = do
+-- | The parser which parses Articles.
+parseArticle :: Bool -> Object -> DAT.Parser Article
+parseArticle useInternalAbbrevs messageObj = do
   -- Title
-  let _workType = JournalArticle
+  let _workType = Article
   _title <- normalize NFC
     <$> safeHead "could not get title" (messageObj .: "title")
   -- Authors
@@ -186,7 +186,7 @@ parseJournalArticle useInternalAbbrevs messageObj = do
   _pages  <- messageObj .:? "page" .!= ""
   _doi    <- messageObj .:? "DOI" .!= ""
   _articleNumber <- messageObj .:? "article-number" .!= ""
-  pure $ JournalArticle { .. }
+  pure $ MkArticle { .. }
 
 parseBook :: Object -> DAT.Parser Book
 parseBook messageObj = do
@@ -205,7 +205,7 @@ parseBook messageObj = do
     $ safeHead "date-parts was empty" (publishedObj .: "date-parts")
   _edition  <- messageObj .:? "edition" .!= ""
   _isbn <- safeHead "ISBN was empty" (messageObj .: "ISBN") <|> pure ""
-  pure $ Book { .. }
+  pure $ MkBook { .. }
 
 safeHead
   ::

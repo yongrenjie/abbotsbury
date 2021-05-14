@@ -22,7 +22,7 @@ import           Data.Text                      ( Text )
 -- 'CitationPart' is not exported from the top-level "Abbotsbury" module: you
 -- will have to import it from "Abbotsbury.Cite.Internal".
 data Style = Style
-  { articleConstructor :: JournalArticle -> CitationPart
+  { articleConstructor :: Article -> CitationPart
   , bookConstructor    :: Book -> CitationPart
   }
 
@@ -85,7 +85,7 @@ instance Semigroup CitationPart where
   other1 <> other2 = CSeq (Seq.fromList [other1, other2])
 
 instance Monoid CitationPart where
-  mempty = CText ""
+  mempty  = CText ""
   mappend = (<>)
 
 -- | A more descriptive substitute for @CText@.
@@ -105,8 +105,8 @@ italic = Italic . CText
 -- entire citation.
 makeCitationPart :: Style -> Work -> CitationPart
 makeCitationPart style work = case work of
-  IsJournalArticle art  -> articleConstructor style art
-  IsBook           book -> bookConstructor style book
+  Article art  -> articleConstructor style art
+  Book    book -> bookConstructor style book
 
 -- | Using a specific output 'Format', generate text that has concrete
 -- formatting from a 'CitationPart' (which could be a "Data.Sequence.Seq" of
@@ -125,4 +125,4 @@ formatCitationPart fmt@(Format plainFormatter boldFormatter italicFormatter link
     (Bold   part'  ) -> boldFormatter (formatCitationPart fmt part')
     (Italic part'  ) -> italicFormatter (formatCitationPart fmt part')
     (Link uri part') -> linkFormatter uri (formatCitationPart fmt part')
-    (CSeq parts')    -> foldMap (formatCitationPart fmt) parts'
+    (CSeq parts'   ) -> foldMap (formatCitationPart fmt) parts'
