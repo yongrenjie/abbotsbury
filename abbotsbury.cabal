@@ -92,6 +92,7 @@ executable abbot
     Commands.Fetch
     Commands.Help
     Commands.List
+    Commands.New
     Commands.Open
     Commands.Shared
     Commands.Sort

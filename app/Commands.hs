@@ -9,6 +9,7 @@ import           Commands.Edit
 import           Commands.Fetch
 import           Commands.Help
 import           Commands.List
+import           Commands.New
 import           Commands.Open
 import           Commands.Shared
 import           Commands.Sort
@@ -26,15 +27,16 @@ runCmdWith cmd input =
         (Cd _)                      -> pure nop
         -- Just one command...
         Single (SingleCmd base args) -> case base of
-          Help   -> runHelp args >> pure nop
-          List   -> runList args input
-          Cite   -> runCite args input
-          Open   -> runOpen args input
-          Sort   -> runSort args input
           Add    -> runAdd args input
+          Cite   -> runCite args input
           Delete -> runDelete args input
           Edit   -> runEdit args input
           Fetch  -> runFetch args input
+          Help   -> runHelp args >> pure nop
+          List   -> runList args input
+          New    -> runNew args input
+          Open   -> runOpen args input
+          Sort   -> runSort args input
         -- Composed commands.
         Composed single1 other2 -> do
           SCmdOutput refs2 var2 <- runCmdWith (Single single1) input

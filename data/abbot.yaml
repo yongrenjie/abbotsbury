@@ -1,4 +1,4 @@
-- _timeOpened: 2021-05-14T23:58:30.915836Z
+- _timeOpened: 2021-05-15T16:02:11.078062Z
   _timeAdded: 2021-05-14T23:36:50.98366Z
   _work:
     contents:
@@ -24,3 +24,45 @@
       _articleIssue: '8'
     tag: ArticleWork
   _tags: []
+- _timeOpened: 2021-05-15T16:02:02.059798Z
+  _timeAdded: 2021-05-15T16:02:02.059798Z
+  _work:
+    contents:
+      _articleDoi: 10.1038/s43586-021-00024-3
+      _articleVolume: '1'
+      _articlePages: ''
+      _articleJournalLong: Nature Reviews Methods Primers
+      _articleJournalShort: Nat. Rev. Methods Primers
+      _articleAuthors:
+      - _given: Ēriks
+        _family: Kupče
+      - _given: Lucio
+        _family: Frydman
+      - _given: Andrew G.
+        _family: Webb
+      - _given: Jonathan R. J.
+        _family: Yong
+      - _given: Tim D. W.
+        _family: Claridge
+      _articleYear: 2021
+      _articleTitle: Parallel nuclear magnetic resonance spectroscopy
+      _articleNumber: '27'
+      _articleIssue: '1'
+    tag: ArticleWork
+  _tags: []
+- _timeOpened: 2021-05-15T16:17:15.172234Z
+  _timeAdded: 2021-05-15T16:17:15.172234Z
+  _work:
+    contents:
+      _bookTitle: High-Resolution NMR Techniques in Organic Chemistry
+      _bookAuthors:
+      - _given: Timothy D. W.
+        _family: Claridge
+      _bookYear: 2016
+      _bookPublisher: Elsevier
+      _bookPublisherLoc: Amsterdam
+      _bookIsbn: 978-0-08-099986-9
+      _bookEdition: 3rd
+    tag: BookWork
+  _tags:
+  - nmr

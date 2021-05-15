@@ -47,7 +47,7 @@ data SingleCmd = SingleCmd
   deriving Show
 
 data BaseCommand = Help | List | Cite | Open | Sort
-                 | Add | Delete | Edit | Fetch
+                 | Add | Delete | Edit | Fetch | New
   deriving (Ord, Eq, Show)
 
 -- | A command takes several sources of input:
@@ -123,6 +123,7 @@ pSingleCmd = do
       | t `elem` ["f", "fetch"]         -> pure Fetch
       | t `elem` ["h", "help"]          -> pure Help
       | t `elem` ["l", "ls", "list"]    -> pure List
+      | t `elem` ["n", "new"]           -> pure New
       | t `elem` ["o", "op", "open"]    -> pure Open
       | t `elem` ["so", "sort"]         -> pure Sort
       | otherwise                       -> fail "command not recognised"
@@ -176,7 +177,6 @@ resolveRefnosWith refs rnos = if IM.null refs
   where
     mostRecent :: (Int, Reference) -> (Int, Reference) -> Ordering
     mostRecent (_, r1) (_, r2) = comparing (^. timeOpened) r1 r2
-
 
 -- | Parse a series of objects of type @a@, which are represented by (one or
 -- more) @Text@ values. If there is a default value, it can be passed as the
