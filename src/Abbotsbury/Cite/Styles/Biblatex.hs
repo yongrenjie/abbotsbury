@@ -87,7 +87,7 @@ articleConstructorBib a = plain (latexify t)
     , (always   , "year"        , T.pack . show $ a ^. year)
     , (ifNotNull, "volume"      , a ^. volume)
     , (ifNotNull, "number"      , a ^. issue)
-    , (always   , "pages"       , displayPages $ a ^. pages)
+    , (always, "pages", T.replace "-" "--" . displayPages $ a ^. pages)
     ]
   fields :: [Text]
   fields = mapMaybe (\(a, b, c) -> makeMaybeBibFieldWith a b c) rules
