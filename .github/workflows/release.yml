@@ -122,18 +122,11 @@ jobs:
     runs-on: macOS-10.15
     needs: [create_release, update_formula_version]
     steps:
-      - uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cabal/store
-          key: macOS-homebrew-${{ hashFiles('~/.cabal/store/**/cabal-hash.txt') }}
-          restore-keys: macOS-homebrew-
-
       - name: Build a bottle using Homebrew
         run: |
           brew tap yongrenjie/abbotsbury
           brew install --build-bottle --verbose abbotsbury
-          brew bottle abbotsbury
+          brew bottle abbotsbury --no-rebuild
       - name: Upload the bottle to the GitHub release
         uses: actions/upload-release-asset@v1
         env:
