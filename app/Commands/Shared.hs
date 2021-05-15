@@ -102,7 +102,7 @@ pAbbotCmd = do
     [ try pComposedCmd
     , try (Single <$> pSingleCmd)
     , Cd <$> (replLexeme (string' "cd") >> pArgs)
-    , Quit <$ choice (map string' ["quit", "q"])
+    , Quit <$ choice (map string' ["quit", "q", ":q", ":wq"])
     , Nop <$ eof
     ]
   eof
