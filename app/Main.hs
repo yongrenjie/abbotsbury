@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Main where
 
 import           Abbotsbury                     ( cite
@@ -82,6 +84,8 @@ data LoopState = LoopState
     --  should save and reread the references.
     _references :: IntMap Reference -- The references.
   }
+
+makeLenses ''LoopState
 
 -- | Entry point.
 main :: IO ()

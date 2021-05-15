@@ -9,7 +9,7 @@ import qualified Data.List                     as L
 import qualified Data.List.NonEmpty            as NE
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
-import           GHC.Records
+import           Lens.Micro
 
 -- | The American Chemical Society style, as specified in the 3rd edition of the
 -- ACS Style Guide. ACS seem to have removed this from their website in favour
@@ -38,13 +38,13 @@ articleConstructorACS a = mconcat
   authorP, titleP, journalInfoP, doiP :: CitationPart
   authorP = plain $ T.intercalate
     "; "
-    (fmap (formatAuthor FamilyInitials) (NE.toList $ getField @"_authors" a))
+    (fmap (formatAuthor FamilyInitials) (NE.toList $ a ^. authors))
   titleP =
-    let t   = getField @"_title" a
+    let t   = a ^. title
         end = if (not . T.null $ t) && (T.last t == '.') then "" else "."
     in  plain $ t <> end
   journalInfoP = formatJInfoACS a
-  doiP         = plain "DOI: " <> mkDoiUri (getField @"_doi" a) <> plain "."
+  doiP         = plain "DOI: " <> mkDoiUri (a ^. doi) <> plain "."
   mkDoiUri :: DOI -> CitationPart
   mkDoiUri doi' = Link ("https://doi.org/" <> doi') (plain doi')
 
@@ -52,16 +52,16 @@ formatJInfoACS :: Article -> CitationPart
 formatJInfoACS a = mconcat
   $ L.intersperse space [theJName, theYear, theVolInfo, thePages]
  where
-  theJName = italic (_journalShort a)
-  theYear  = bold (T.pack (show (getField @"_year" a) ++ ","))
-  thePages = case (_pages a, _articleNumber a) of
+  theJName = italic (a ^. journalShort)
+  theYear  = bold (T.pack (show (a ^. year) ++ ","))
+  thePages = case (a ^. pages, a ^. number) of
     ("", "") -> plain "."
     ("", aN) -> plain ("No. " <> aN <> ".")
     (pg, _ ) -> plain (pg <> ".")
   -- Whether the pagination part is empty will determine the punctuation used at
   -- the end of the volume info.
   endPunct   = if thePages == plain "." then "" else ","
-  theVolInfo = case (_volume a, _issue a) of
+  theVolInfo = case (a ^. volume, a ^. issue) of
     (""    , ""    ) -> mempty
     (""    , theIss) -> plain ("No. " <> theIss <> endPunct)
     (theVol, ""    ) -> italic (theVol <> endPunct)

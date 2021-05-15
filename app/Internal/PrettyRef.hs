@@ -7,23 +7,19 @@ import           Commands.Shared
 import           Data.Char                      ( isAlphaNum
                                                 , isSpace
                                                 )
-import           GHC.Records
 import           Data.IntMap                    ( IntMap )
 import qualified Data.IntMap                   as IM
 import qualified Data.IntSet                   as IS
 import           Data.List                      ( foldl'
-                                                , maximumBy
-                                                , zip5
+                                                , unzip5
+                                                , transpose
                                                 )
 import qualified Data.List.NonEmpty            as NE
-import           Data.Ord                       ( comparing )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           Internal.Monad
-import           Internal.Path                  ( PDFType(..)
-                                                , getPDFPath
-                                                )
+import           Internal.Path
 import           Internal.Style                 ( setBold
                                                 , setColor
                                                 )
@@ -42,139 +38,88 @@ prettify :: FilePath -> [(Int, Reference)] -> IO Text
 prettify cwd refs = if null refs
   then pure ""
   else do
-    fieldSizes <- liftIO $ getFieldSizes refs
-    let headText = prettifyHead fieldSizes
-    refsText <- liftIO $ mapM (prettifyOneRef fieldSizes cwd) refs
-    -- Extra blank line looks nice.
-    pure $ headText <> "\n" <> T.intercalate "\n\n" refsText <> "\n"
+    rawColumns <- mkRawColumns cwd refs
+    fieldSizes <- getFieldSizes rawColumns
+    let header = mkHeader fieldSizes
+        refsText = fmap (convertRawColumnsToText fieldSizes) rawColumns
+    pure $ header <> "\n" <> T.intercalate "\n\n" refsText
 
--- | Get the field sizes for pretty-printing. Note that the title field is also
--- responsible for the DOI, as well as the availability columns. Note that the
--- first four field sizes include the padding.
-data FieldSizes = FieldSizes
-  { numberF  :: Int
-  , authorF  :: Int
-  , yearF    :: Int
-  , journalF :: Int
-  , titleF   :: Int
-  }
-
--- | The amount of columns acting as padding between adjacent fields.
-fieldPadding :: Int
-fieldPadding = 2
-
--- | Count the total of field sizes.
-totalSizes :: FieldSizes -> Int
-totalSizes fss = sum $ map ($ fss) [numberF, authorF, yearF, journalF, titleF]
+-- $step1-generate-heads
+-- First, we generate the header row. This can really be anything we like.
 
 -- | A constant.
 headings :: (Text, Text, Text, Text, Text)
-headings = ("  #", "Authors", "Year", "Journal/Publisher", "Title/DOI")
+headings = ("   #", "Authors", "Year", "Journal/Publisher", "Title/DOI")
 
--- | Calculate the correct field sizes based on the terminal size.
-getFieldSizes :: [(Int, Reference)] -> IO FieldSizes
-getFieldSizes refnosAndRefs = do
-  let (numberH, authorH, yearH, journalH, titleH) = headings
-  -- Useful things.
-  let refnos = map fst refnosAndRefs
-      refs   = map snd refnosAndRefs
-      longestBy :: (Reference -> Text) -> Int
-      longestBy key = maximum $ fmap (T.length . key) refs
-  -- Number field. Extra 2 spaces to show the type of reference being listed (a
-  -- one-letter identifier plus a space).
-  let maxRefno = maximum refnos
-      numberF' = fieldPadding + 2 + length (show maxRefno)
-  -- Author field.
-  let getLongestAuthor :: Reference -> Text
-      getLongestAuthor ref = maximumBy
-        (comparing T.length)
-        (fmap formatAuthorForList . getField @"_authors" . _work $ ref)
-      authorF' = fieldPadding + longestBy getLongestAuthor
-  -- Year field.
-  let yearF' = fieldPadding + 4
-  -- Journal field.
-  let longestJName = longestBy getShortestJournalName
-      longestJInfo = longestBy getVolInfo
-      journalF' =
-        fieldPadding + maximum [longestJName, longestJInfo, T.length journalH]
-  -- Title field. Our first guess is to just use up the remaining space.
-  Just (_, ncols) <- getTerminalSize
-  let titleF1      = ncols - numberF' - authorF' - yearF' - journalF'
-      -- We enforce an upper limit, which is the longest title / DOI /
-      -- availability string.
-      longestTitle = longestBy (getField @"_title" . _work)
-      longestDOI   = longestBy (getField @"_doi" . _work)
-      availLength  = 40  -- hardcoded
-      upperLimit   = maximum [longestTitle, longestDOI, availLength]
-      titleF2      = min titleF1 upperLimit
-  -- We also enforce a lower limit, which is the availability string itself: or else
-  -- the ANSI escape sequences tend to get messed up.
-  let titleF' = max availLength titleF2
-  pure $ FieldSizes numberF' authorF' yearF' journalF' titleF'
+mkHeader :: FieldSizes -> Text
+mkHeader fss = mconcat
+  [ setBold (printf (headings ^.. each))
+  , "\n"
+  , setBold (T.replicate (totalSizes fss) "-")
+  ]
+ where
+  printf :: [Text] -> Text
+  printf row =
+    foldMap (\(t, fs) -> T.justifyLeft fs ' ' t) (zip row (fss ^.. each))
 
--- | Generate a pretty header for the reference list. This function should only
--- ever be called by 'prettify'.
-prettifyHead :: FieldSizes -> Text
-prettifyHead fss = setBold (formatLine fss headings) <> "\n" <> setBold
-  (T.replicate (totalSizes fss) "-")
+-- $step2-generate-columns
+-- We then need to generate *four* of the columns according to what type of Work
+-- the reference contains. The column we *don't* generate is the first one:
+-- that's because it contains the refno, and the Work itself doesn't carry that
+-- information. It can only be obtained from the (Int, Reference) that is passed
+-- into 'prettify'.
+--
+-- Out of the five columns, it's quite clear that the only one we need to
+-- "resize" is actually the *last* column. The other four columns have sizes
+-- which are adapted to their largest member, so it makes a lot more sense to
+-- create them first before calculating the field sizes for them.
 
--- | Generate a pretty header for one single reference. This function should
--- only ever be called by 'prettify'.
-prettifyOneRef
-  :: FieldSizes
-  -> FilePath
-  -> (Int, Reference)  -- ^ Refno and ref, generated using 'Data.IntMap.assocs'
-  -> IO Text
-prettifyOneRef fss fp (i, ref) = do
-  columns <- case _work ref of
-    Article a -> makeArticleColumns fss fp (i, ref)
-    Book b    -> makeBookColumns fss fp (i, ref)
-  pure . T.intercalate "\n" . map (formatLine fss) $ zipLongest5 columns
+-- | A vertical column of text, which may or may not have been formatted nicely
+-- according to some maximal width.
+type Column = [Text]
 
--- | Does the job for an article.
-makeArticleColumns
-  :: FieldSizes
-  -> FilePath
-  -> (Int, Reference)  -- ^ Refno and ref, generated using 'Data.IntMap.assocs'
-  -> IO ([Text], [Text], [Text], [Text], [Text])
-makeArticleColumns fss cwd (index, ref) = do
+-- | This is an indicator as to whether a Text should be \'cooked\' (i.e. split
+-- into chunks of N characters long).
+data CookLater = Cook | DontCook deriving (Show, Eq)
+
+-- | This represents the fifth column that hasn't been \'cooked\' yet, i.e.
+-- hasn't been split into chunks of N characters yet. We need to keep extra
+-- information about whether to \'cook\' each component, because ONLY the title
+-- and the tags should be \'cooked\': if we \'cook\' anything with ANSI escape
+-- sequences they will be destroyed.
+type RawFifthColumn = [(Text, CookLater)]
+
+-- | Generate the *four* last columns (i.e. ignoring the number column).
+mkArticleColumns
+  :: FilePath   -- Current working directory
+  -> [Tag]      -- Any tags belonging to the Reference containing the Article.
+  -> Article
+  -> IO (Column, Column, Column, RawFifthColumn)
+mkArticleColumns cwd refTags a = do
   -- This line is the only thing that requires IO. So annoying. I mean, I could
   -- factorise it out, but at the cost of making the function signature worse.
-  availString <- getAvailString cwd ref
+  availText <- mkAvailText cwd [FullText, SI] a
   -- Build up the columns first.
-  let numberColumn  = ["A " <> T.pack (show index)]
-      authorColumn  = getAuthorColumn 5 ref
-      yearColumn    = [T.pack . show . getField @"_year" . _work $ ref]
-      journalColumn = [getShortestJournalName ref, getVolInfo ref]
+  let authorColumn  = mkAuthorColumn 5 a
+      yearColumn    = [T.pack . show $ a ^. year]
+      journalColumn = [getShortestJournalName a, getVolInfo a]
       titleColumn =
-        T.chunksOf (titleF fss) (getField @"_title" . _work $ ref)
-          ++ [getField @"_doi" . _work $ ref]
-          ++ [availString]
-          ++ T.chunksOf (titleF fss) (getTagString ref)
-  pure (numberColumn, authorColumn, yearColumn, journalColumn, titleColumn)
+        [ (a ^. title         , Cook)
+        , (a ^. doi           , Cook)
+        , (availText          , DontCook)
+        , (mkTagString refTags, Cook)
+        ]
+  pure (authorColumn, yearColumn, journalColumn, titleColumn)
 
--- | Does the job for a Book.
-makeBookColumns
-  :: FieldSizes
-  -> FilePath
-  -> (Int, Reference)  -- ^ Refno and ref, generated using 'Data.IntMap.assocs'
-  -> IO ([Text], [Text], [Text], [Text], [Text])
-makeBookColumns fss cwd (index, ref) = do
-  -- This line is the only thing that requires IO. So annoying. I mean, I could
-  -- factorise it out, but at the cost of making the function signature worse.
-  availString <- getAvailString cwd ref
-  -- Build up the columns first.
-  let numberColumn  = ["B " <> T.pack (show index)]
-      authorColumn  = getAuthorColumn 5 ref
-      yearColumn    = [T.pack . show $ ref ^. (work . year)]
-      editionText   = ref ^. work . edition
-      editionText2  = if T.null editionText
-                         then "" else editionText <> " ed."
-      journalColumn = [ref ^. (work . publisher), editionText2]
-      titleColumn   = T.chunksOf (titleF fss) (ref ^. (work . title))
-          ++ [availString]
-          ++ T.chunksOf (titleF fss) (getTagString ref)
-  pure (numberColumn, authorColumn, yearColumn, journalColumn, titleColumn)
+-- | Generate the author column.
+mkAuthorColumn :: Bibliographic w => Int -> w -> [Text]
+mkAuthorColumn n w = trimIfOverN allContribs
+ where
+  allContribs = formatAuthorForList <$> getContributors w
+  -- It doesn't make sense to trim if n is smaller than 4.
+  trimIfOverN :: [Text] -> [Text]
+  trimIfOverN ts =
+    if n >= 4 && length ts > n then take (n - 2) ts ++ ["...", last ts] else ts
 
 -- | In the 'list' command, we display authors as (e.g.) JRJ Yong.
 formatAuthorForList :: Author -> Text
@@ -185,42 +130,48 @@ formatAuthorForList auth =
         Just gvn ->
           (joinInitialsWith "" "" "" . getInitials $ gvn) <> " " <> fam
 
--- | Generate the author column. We don't need to worry about field sizes
--- because this has been sorted out beforehand.
-getAuthorColumn :: Int -> Reference -> [Text]
-getAuthorColumn n ref = trimIfOverN fullAuthors
- where
-  fullAuthors = formatAuthorForList <$> ref ^. (work . authors) ^.. each
-  -- It doesn't make sense to trim if n is smaller than 4.
-  trimIfOverN :: [Text] -> [Text]
-  trimIfOverN ts =
-    if n >= 4 && length ts > n then take (n - 2) ts ++ ["...", last ts] else ts
+-- | Does the job for a Book.
+mkBookColumns
+  :: FilePath   -- Current working directory
+  -> [Tag]      -- Any tags belonging to the Reference containing the Book.
+  -> Book
+  -> IO (Column, Column, Column, RawFifthColumn)
+mkBookColumns cwd refTags b = do
+  availText <- mkAvailText cwd [FullText] b
+  -- Build up the columns first.
+  let authorColumn  = mkAuthorColumn 5 b
+      yearColumn    = [T.pack . show $ b ^. year]
+      editionText   = b ^. edition
+      editionText2  = if T.null editionText then "" else editionText <> " ed."
+      journalColumn = [b ^. publisher, editionText2]
+      titleColumn =
+        [ (b ^. title         , Cook)
+        , (b ^. isbn          , Cook)
+        , (availText          , DontCook)
+        , (mkTagString refTags, Cook)
+        ]
+  pure (authorColumn, yearColumn, journalColumn, titleColumn)
 
--- | Utility function to generate one line of output according to the field sizes
--- and the text to be placed there.
-formatLine :: FieldSizes -> (Text, Text, Text, Text, Text) -> Text
-formatLine fss texts = mconcat
-  [ T.justifyLeft (numberF fss) ' ' (texts ^. _1)
-  , T.justifyLeft (authorF fss) ' ' (texts ^. _2)
-  , T.justifyLeft (yearF fss) ' ' (texts ^. _3)
-  , T.justifyLeft (journalF fss) ' ' (texts ^. _4)
-  , T.justifyLeft (titleF fss) ' ' (texts ^. _5)
-  ]
-
--- | Generate a one-liner describing the tags.
-getTagString :: Reference -> Text
-getTagString ref = case ref ^. tags of
-  [] -> ""
-  ts -> "[" <> T.intercalate ", " ts <> "]"
+-- | Get availability string for a reference.
+mkAvailText :: Bibliographic x => FilePath -> [PDFType] -> x -> IO Text
+mkAvailText cwd types w = do
+  texts <- forM types $ \t -> do
+    avail <- doesFileExist $ getPDFPath t cwd w
+    let symbol = if avail then setColor "seagreen" "\x2714"
+                          else setColor "crimson" "\x2718"
+    pure $ symbol <> " " <> showPdfType t
+  pure $ T.unwords texts
 
 -- | Produce as short a journal name as possible, by removing special characters
 -- (only alphanumeric characters and spaces are retained), as well as using some
 -- acronyms such as "NMR". This function is only really used for the list command
 -- so we can keep it here.
-getShortestJournalName :: Reference -> Text
+getShortestJournalName :: Article -> Text
 getShortestJournalName =
-  replaceAcronyms . T.strip . T.filter ((||) <$> isAlphaNum <*> isSpace) . view
-    (work . journalShort)
+  replaceAcronyms
+    . T.strip
+    . T.filter (\c -> isAlphaNum c || isSpace c)
+    . (^. journalShort)
  where
   acronyms = [("Nucl Magn Reson", "NMR")]
   replaceAcronyms startText =
@@ -230,40 +181,153 @@ getShortestJournalName =
 -- This output is only meant for list printing, hence is placed here. It's a slight reworking of one
 -- of the functions in Abbotsbury.Cite.Styles.ACS (which isn't exported) (but anyway we want
 -- slightly different output).
-getVolInfo :: Reference -> Text
-getVolInfo ref = T.intercalate ", "
+getVolInfo :: Article -> Text
+getVolInfo a = T.intercalate ", "
   $ filter (not . T.null) [theVolInfo, thePages]
  where
-  thePages = case (ref ^. work . pages, ref ^. work . articleNumber) of
+  thePages = case (a ^. pages, a ^. number) of
     ("", "") -> ""
     ("", aN) -> "No. " <> aN <> ""
     (pg, _ ) -> pg <> ""
-  theVolInfo = case (ref ^. work . volume, ref ^. work . issue) of
+  theVolInfo = case (a ^. volume, a ^. issue) of
     (""    , ""    ) -> ""
     (""    , theIss) -> "No. " <> theIss
     (theVol, ""    ) -> theVol
     (theVol, theIss) -> theVol <> " (" <> theIss <> ")"
 
--- | Get availability string for a reference.
-getAvailString :: FilePath -> Reference -> IO Text
-getAvailString cwd ref = do
-  fullTextAvail <- doesFileExist $ getPDFPath FullText cwd ref
-  siAvail       <- doesFileExist $ getPDFPath SI cwd ref
-  let makeSymbol :: Bool -> Text
-      makeSymbol x = if x
-        then setColor "seagreen" "\x2714"
-        else setColor "crimson" "\x2718"
-  pure $ case _work ref of
-    Article a ->
-      mconcat [makeSymbol fullTextAvail, " pdf ", makeSymbol siAvail, " si"]
-    Book b -> mconcat [makeSymbol fullTextAvail, " pdf"]
+-- | Generate a one-liner describing the tags.
+mkTagString :: [Text] -> Text
+mkTagString ts = case ts of
+  [] -> ""
+  _  -> "[" <> T.intercalate ", " ts <> "]"
 
--- | Clone of Python's itertools.zip_longest(fillvalue=""). It's even uncurried.
--- (That's purely for the sake of convenience, though.)
-zipLongest5
-  :: ([Text], [Text], [Text], [Text], [Text])
-  -> [(Text, Text, Text, Text, Text)]
-zipLongest5 (as, bs, cs, ds, es) =
-  let maxLen = maximum $ map length [as, bs, cs, ds, es]
-      pad xs = xs ++ repeat ""
-  in  take maxLen (zip5 (pad as) (pad bs) (pad cs) (pad ds) (pad es))
+-- $step3-calculate-field-sizes
+-- Calculate the "correct" field sizes, based on the columns we created earlier.
+
+-- | Field sizes for pretty-printing. Note that the \"title\" field contains
+-- more than the title: it also has the DOI/ISBN, as well as the availability
+-- text. Note also that the first four field sizes include the padding.
+type FieldSizes = (Int, Int, Int, Int, Int)
+
+-- | The amount of columns acting as padding between adjacent fields.
+fieldPadding :: Int
+fieldPadding = 2
+
+-- | Count the total of field sizes.
+totalSizes :: FieldSizes -> Int
+totalSizes fss = sum $ fss ^.. each
+
+-- | This function basically takes the four columns generated by mkArticleColumn
+-- or mkBookColumn and adds on the first one.
+mkRawColumns
+  :: FilePath
+  -> [(Int, Reference)]
+  -> IO [(Column, Column, Column, Column, RawFifthColumn)]
+mkRawColumns cwd refnosAndRefs = do
+  let mkRawColumns1
+        :: (Int, Reference)
+        -> IO (Column, Column, Column, Column, RawFifthColumn)
+      -- This function does it for just one reference.
+      mkRawColumns1 (refno, ref) = do
+        let refTags = ref ^. tags
+        (c2, c3, c4, c5) <- case ref ^. work of
+          ArticleWork a -> mkArticleColumns cwd refTags a
+          BookWork    b -> mkBookColumns cwd refTags b
+        -- A hack here: we use a combination of a wide emoji plus a zero-width
+        -- space to mimic a Text that has length 2 (i.e. its length is equal to
+        -- the space it occupies in the terminal).
+        let workTypeSymbol = case ref ^. work of
+              ArticleWork _ -> "\x1f4dd\x200b"
+              BookWork    _ -> "\x1f4d8\x200b"
+        let c1 = [workTypeSymbol <> " " <> (T.pack . show $ refno)]
+        pure (c1, c2, c3, c4, c5)
+  mapM mkRawColumns1 refnosAndRefs
+
+-- | This converts a RawFifthColumn to a Column proper. If width is set to 0
+-- then formats it with an infinite width, i.e. doesn't split up any of the
+-- Texts.
+cookFifthColumn :: Int -> RawFifthColumn -> Column
+cookFifthColumn width | width == 0 = map fst
+                      | otherwise  = concatMap cookIndivTexts
+ where
+  cookIndivTexts :: (Text, CookLater) -> [Text]
+  cookIndivTexts (t, c) = if c == Cook then T.chunksOf width t else [t]
+
+-- | This function uses the (raw) columns previously generated to calculate the
+-- correct field sizes.
+getFieldSizes :: [(Column, Column, Column, Column, RawFifthColumn)] -> IO FieldSizes
+getFieldSizes rawColumns = do
+  -- "Safe" maximum function which defaults to 0.
+  let maximum0 :: Foldable t => t Int -> Int
+      maximum0 xs = if null xs then 0 else maximum xs
+  -- This calculates the width of a column, i.e. the length of the longest
+  -- line in it.
+  -- >>> columnWidth ["A", "B", "Hello"] = 5
+  let columnWidth :: Column -> Int
+      columnWidth = maximum0 . fmap T.length
+  -- We need to (temporarily) convert the RawFifthColumn into a real Column, so
+  -- that we can get its width. This lens expression basically means: for each
+  -- tuple, in the fifth entry, perform @cookFifthColumn 0@ to it.
+  let tempCooked = rawColumns & each . _5 %~ cookFifthColumn 0
+  -- Calculate the maximum size of each of these.
+  -- unzip5 tempCooked :: ([Column], [Column], [Column], [Column], [Column])
+  -- The lens expression says: to each entry of this 5-tuple, do @maximum 0 .
+  -- fmap columnWidth@ (which basically the longest width) to it.
+  let fss1 = unzip5 tempCooked & each %~ maximum0 . fmap columnWidth
+  -- The first four fields need some padding, so we add that here.
+  let fss2 = fss1 & _1 %~ (+ fieldPadding)
+                  & _2 %~ (+ fieldPadding)
+                  & _3 %~ (+ fieldPadding)
+                  & _4 %~ (+ fieldPadding)
+  -- The last field needs to be counted very carefully. Essentially, we:
+  --   - have a lower limit of 40 (which is the length of the availability
+  --     string; if we go below this the ANSI escape sequences go awry)
+  --   - have an upper limit of whatever it is now (because that corresponds to
+  --     the length of the longest title / tag string / whatever, and there's no
+  --     point going beyond that)
+  --   - apart from those limits, we ideally want to use up the remaining space
+  --     in the terminal.
+  termSize <- getTerminalSize
+  let termWidth = case termSize of
+                       Just (_, ncols) -> ncols
+                       Nothing         -> 80
+  let lowerLimit = 40
+      upperLimit = fss2 ^. _5
+      ideal      = termWidth - (fss2 ^. _1 + fss2 ^. _2 + fss2 ^. _3 + fss2 ^. _4)
+      result     | ideal < lowerLimit = lowerLimit
+                 | ideal > upperLimit = upperLimit
+                 | otherwise          = ideal
+  let fss = fss2 & _5 .~ result
+  pure fss
+
+-- $step4-cook
+-- Finally, from the columns we can now generate some real text. We do this by
+-- first cooking the fifth column according to the field sizes we calculated
+-- earlier. After that, we transpose the columns to rows and print each row
+-- according to the field sizes.
+
+-- | This converts the columns into something that we can actually print on
+-- screen. Note that the input to this must already be "cooked"!
+convertRawColumnsToText
+  :: FieldSizes -> (Column, Column, Column, Column, RawFifthColumn) -> Text
+convertRawColumnsToText fss rawCols = t
+  where
+    -- Cook the fifth column according to the field size which was calculated.
+    cols = rawCols & _5 %~ cookFifthColumn (fss ^. _5)
+    -- Turn it into a list. That makes life easier.
+    colsList = cols ^.. each
+    -- Pad all the columns so that they have the same height.
+    maxColumnHeight = maximum . fmap length $ colsList
+    padColumn :: Column -> Column
+    padColumn c = take maxColumnHeight (c ++ repeat "")
+    paddedColumns = fmap padColumn colsList
+    -- Transpose it to get the rows instead of columns!!
+    rows = transpose paddedColumns
+    -- Convert a row of Texts (one from each column) into a single line of Text.
+    printf :: [Text] -> Text
+    printf row = foldMap (\(t, fs) -> T.justifyLeft fs ' ' t) (zip row (fss ^.. each))
+    -- Then just fmap that over the rows.
+    allLines = fmap printf rows
+    -- And stick newlines between them. T.unlines gives one extra newline at the
+    -- end, which I don't want.
+    t = T.intercalate "\n" allLines

@@ -31,7 +31,7 @@ data CrossrefException
   -- | @abbotsbury@ right now only parses journal articles. If you request
   -- metadata about a book chapter (for example), this exception will be
   -- returned (the @Text@ value will contain the offending work type).
-  | CRUnknownWorkException DOI Text 
+  | CRUnknownWorkException DOI Text
   -- | Something else went wrong.
   | CROtherException DOI Text
   deriving (Show)
@@ -112,9 +112,9 @@ identifyWorkType doi' messageVal = do
     Left failedParseMessage ->
       Left (CRJsonException doi' (T.pack failedParseMessage))
     Right wType -> case wType of
-      "journal-article"     -> Right wType
-      "book"                -> Right wType
-      _                     -> Left (CRUnknownWorkException doi' wType)
+      "journal-article" -> Right wType
+      "book"            -> Right wType
+      _                 -> Left (CRUnknownWorkException doi' wType)
 
 -- | Step 3b is to parse the 'message' component into the Abbotsbury data types, depending on which type
 -- of work it is. Right now only Articles are supported.
@@ -143,68 +143,66 @@ parseCrossrefMessage doi' useInternalAbbrevs messageVal = do
   -- runParser.
   case parsedWorkType of
     "journal-article" ->
-      Article
-        <$> runParser (parseArticle useInternalAbbrevs) messageVal
-    "book" -> Book <$> runParser parseBook messageVal
+      ArticleWork <$> runParser (parseArticle useInternalAbbrevs) messageVal
+    "book" -> BookWork <$> runParser parseBook messageVal
     _      -> Left (CRUnknownWorkException doi' parsedWorkType)
 
 -- | The parser which parses Articles.
 parseArticle :: Bool -> Object -> DAT.Parser Article
 parseArticle useInternalAbbrevs messageObj = do
   -- Title
-  let _workType = Article
-  _title <- normalize NFC
+  _articleTitle <- normalize NFC
     <$> safeHead "could not get title" (messageObj .: "title")
   -- Authors
-  _authorArray <- messageObj .: "author"
-  _authors     <- do
+  _authorArray    <- messageObj .: "author"
+  _articleAuthors <- do
     auths <- mapM parseAuthor _authorArray
     case NE.nonEmpty auths of
       Just x  -> pure x
       Nothing -> fail "expected at least one author, found none"
   -- Journal names
-  _journalLong <-
+  _articleJournalLong <-
     safeHead "could not get journal title from container-title key"
     $  messageObj
     .: "container-title"
   -- Take the abbreviation from the Map if possible. Otherwise fall back on
   -- Crossref short-container-title, and if that isn't present, fall back on
   -- Crossref container-title.
-  _journalShort <- case (useInternalAbbrevs, getJournalAbbrev _journalLong) of
-    (True, Just short) -> pure short
-    _ ->
-      safeHead "" (messageObj .: "short-container-title") <|> pure _journalLong
+  _articleJournalShort <-
+    case (useInternalAbbrevs, getJournalAbbrev _articleJournalLong) of
+      (True, Just short) -> pure short
+      _                  -> safeHead "" (messageObj .: "short-container-title")
+        <|> pure _articleJournalLong
   -- Year (prefer print publish date over online publish date as the former is
   -- the one usually used)
   publishedObj <-
     messageObj .: "published-print" <|> messageObj .: "published-online"
-  _year <- safeHead "year not found in date-parts"
+  _articleYear <- safeHead "year not found in date-parts"
     $ safeHead "date-parts was empty" (publishedObj .: "date-parts")
   -- Volume, issue, pages, DOI
-  _volume <- messageObj .:? "volume" .!= ""
-  _issue  <- (messageObj .: "journal-issue" >>= (.: "issue")) <|> pure ""
-  _pages  <- messageObj .:? "page" .!= ""
-  _doi    <- messageObj .:? "DOI" .!= ""
+  _articleVolume <- messageObj .:? "volume" .!= ""
+  _articleIssue  <- (messageObj .: "journal-issue" >>= (.: "issue")) <|> pure ""
+  _articlePages  <- messageObj .:? "page" .!= ""
+  _articleDoi    <- messageObj .:? "DOI" .!= ""
   _articleNumber <- messageObj .:? "article-number" .!= ""
   pure $ MkArticle { .. }
 
 parseBook :: Object -> DAT.Parser Book
 parseBook messageObj = do
-  let _workType = Book
-  _title       <- safeHead "could not get title" $ messageObj .: "title"
+  _bookTitle        <- safeHead "could not get title" $ messageObj .: "title"
   -- Publisher and their location
-  _publisher   <- messageObj .: "publisher"
-  _publisherLoc <- messageObj .:? "publisher-location" .!= ""
+  _bookPublisher    <- messageObj .: "publisher"
+  _bookPublisherLoc <- messageObj .:? "publisher-location" .!= ""
   -- Authors
-  _authorArray <- messageObj .: "author"
-  _authors     <- mapM parseAuthor _authorArray
+  _authorArray      <- messageObj .: "author"
+  _bookAuthors      <- mapM parseAuthor _authorArray
   -- Year (prefer print publish date over online publish date as the former is the one usually used)
-  publishedObj <-
+  publishedObj      <-
     messageObj .: "published-print" <|> messageObj .: "published-online"
-  _year <- safeHead "year not found in date-parts"
+  _bookYear <- safeHead "year not found in date-parts"
     $ safeHead "date-parts was empty" (publishedObj .: "date-parts")
-  _edition  <- messageObj .:? "edition" .!= ""
-  _isbn <- safeHead "ISBN was empty" (messageObj .: "ISBN") <|> pure ""
+  _bookEdition <- messageObj .:? "edition" .!= ""
+  _bookIsbn    <- safeHead "ISBN was empty" (messageObj .: "ISBN") <|> pure ""
   pure $ MkBook { .. }
 
 safeHead

@@ -105,8 +105,8 @@ italic = Italic . CText
 -- entire citation.
 makeCitationPart :: Style -> Work -> CitationPart
 makeCitationPart style work = case work of
-  Article art  -> articleConstructor style art
-  Book    book -> bookConstructor style book
+  ArticleWork a -> articleConstructor style a
+  BookWork    b -> bookConstructor style b
 
 -- | Using a specific output 'Format', generate text that has concrete
 -- formatting from a 'CitationPart' (which could be a "Data.Sequence.Seq" of

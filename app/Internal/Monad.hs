@@ -6,6 +6,7 @@ module Internal.Monad
   , Control.Monad.Except.ExceptT(..)
   , Control.Monad.Except.runExceptT
   , Control.Monad.Except.MonadError(..)
+  , Control.Monad.guard
   , Control.Monad.when
   , Control.Monad.unless
   , Control.Monad.forM
@@ -14,6 +15,10 @@ module Internal.Monad
   , Control.Monad.replicateM
   , Control.Monad.replicateM_
   , Control.Monad.filterM
+  , Data.Either.isLeft
+  , Data.Either.isRight
+  , Data.Maybe.isJust
+  , Data.Maybe.isNothing
   , (<|>)
   ) where
 
@@ -21,5 +26,7 @@ module Internal.Monad
 import           Control.Applicative
 import           Control.Monad
 import           Control.Monad.Except
+import           Data.Either
+import           Data.Maybe
 -- mtl
 import           Control.Monad.IO.Class

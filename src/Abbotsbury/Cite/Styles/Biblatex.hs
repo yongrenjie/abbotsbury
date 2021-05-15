@@ -20,7 +20,7 @@ import qualified Data.Text                     as T
 import           Data.Text.Normalize            ( NormalizationMode(..)
                                                 , normalize
                                                 )
-import           GHC.Records
+import           Lens.Micro
 
 -- | This generates a BibLaTeX entry. The output 'Format' chosen doesn't affect
 -- the BibLaTeX entry in any way, so that can be arbitrarily selected.
@@ -63,29 +63,26 @@ articleConstructorBib a = plain (latexify t)
     identifier =
       ( T.filter isAscii
         . normalize NFD
-        . _family
-        . NE.head
-        . getField @"_authors"
-        $ a
+        $ a ^. (authors . ix 0 . family)
         )
-        <> T.filter isUpper (_journalShort a)
-        <> (T.pack . show) (getField @"_year" a)
-  doiL    = makeBibField "doi" (getField @"_doi" a)
+        <> T.filter isUpper (a ^. journalShort)
+        <> (T.pack . show) (a ^. year)
+  doiL    = makeBibField "doi" (a ^. doi)
   authorL = makeBibField
     "author"
     (T.intercalate
       " and "
-      (fmap (formatAuthor BibLaTeX) (NE.toList $ getField @"_authors" a))
+      (fmap (formatAuthor BibLaTeX) (NE.toList $ a ^. authors))
     )
-  journalL = makeBibField "journal" (_journalShort a)
-  titleL   = makeBibField "title" (getField @"_title" a)
-  yearL    = makeBibField "year" (T.pack . show $ getField @"_year" a)
-  volumeM  = makeMaybeBibField "volume" (_volume a)
+  journalL = makeBibField "journal" (a ^. journalShort)
+  titleL   = makeBibField "title" (a ^. title)
+  yearL    = makeBibField "year" (T.pack . show $ a ^. year)
+  volumeM  = makeMaybeBibField "volume" (a ^. volume)
   issueM =
-    makeMaybeBibFieldWith (T.all isDigit) "number" (_issue a)
-      <|> makeMaybeBibField "issue" (_issue a)
-  pagesM = makeMaybeBibField "pages" (_pages a)
-    <|> makeMaybeBibField "pages" (_articleNumber a)
+    makeMaybeBibFieldWith (T.all isDigit) "number" (a ^. issue)
+      <|> makeMaybeBibField "issue" (a ^. issue)
+  pagesM = makeMaybeBibField "pages" (a ^. pages)
+    <|> makeMaybeBibField "pages" (a ^. number)
 
 -- | Shortcut to make a BibLaTeX key-value pair. If the value is not guaranteed to be present, then
 -- use makeMaybeBibField.

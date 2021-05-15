@@ -53,33 +53,36 @@ import qualified Network.HTTP.Client.TLS       as NHCT
 -- internal @Map@ by default. If you obtain incorrect metadata in the @Work@
 -- (i.e. the journal doesn't appear in @abbotsbury@'s internal @Map@), then
 -- then you can manually replace the @journalShort@ field, as demonstrated below
--- (with lenses, although you can do this with plain old record update syntax).
+-- (with lenses: the alternative is some painful pattern matching and record
+-- updates).
 -- Alternatively, [submit a pull request
 -- :-)](https://github.com/yongrenjie/abbotsbury/)
 -- 
--- Note that this following example uses 'fetchWork'' because @abbotsbury@'s
--- internal @Map@ of abbreviations already contains the corrected form for /Nature/
--- /Communications/.
+-- In the following example, we use 'fetchWork'' @Nothing@ because
+-- @abbotsbury@'s internal @Map@ of abbreviations already contains the corrected
+-- form for /Nature Communications/. Crossref provides the abbreviation
+-- @"Nat Commun"@, but the correct form is @"Nat. Commun."@ (with periods).
 --
--- >>> Right (Article natComm) <- fetchWork' Nothing False "your@email.com" "10.1038/s41467-021-21936-4"
+-- >>> import Lens.Micro
+-- >>> natComm <- fetchWork' Nothing False "your@email.com" "10.1038/s41467-021-21936-4"
 -- >>> natComm
--- MkArticle {_title = "Direct catalytic asymmetric synthesis of \945-chiral bicyclo[1.1.1]pentanes"
--- , _authors = Author {_given = Just "Marie L. J.", _family = "Wong"} :| [Author {_given = Just "Al
--- istair J.", _family = "Sterling"},Author {_given = Just "James J.", _family = "Mousseau"},Author 
--- {_given = Just "Fernanda", _family = "Duarte"},Author {_given = Just "Edward A.", _family = "Ande
--- rson"}], _journalLong = "Nature Communications", _journalShort = "Nat Commun", _year = 2021, _vol
--- ume = "12", _issue = "1", _pages = "", _doi = "10.1038/s41467-021-21936-4", _articleNumber = "164
--- 4"}
--- >>> _journalShort natComm  -- the result of this is wrong: there should be periods
+-- Right (Article (MkArticle {_articleTitle = "Direct catalytic asymmetric synthesis of \945-chiral 
+-- bicyclo[1.1.1]pentanes", _articleAuthors = Author {_given = Just "Marie L. J.", _family = "Wong"}
+-- :| [Author {_given = Just "Alistair J.", _family = "Sterling"},Author {_given = Just "James J.", 
+-- _family = "Mousseau"},Author {_given = Just "Fernanda", _family = "Duarte"},Author {_given = Just
+-- "Edward A.", _family = "Anderson"}], _articleJournalLong = "Nature Communications", _articleJourn
+-- alShort = "Nat Commun", _articleYear = 2021, _articleVolume = "12", _articleIssue = "1", _article
+-- Pages = "", _articleDoi = "10.1038/s41467-021-21936-4", _articleNumber = "1644"})
+-- >>> natComm ^?! _Right . article . journalShort
 -- "Nat Commun"
--- >>> natComm { _journalShort = "Nat. Commun." }
--- MkArticle {_title = "Direct catalytic asymmetric synthesis of \945-chiral bicyclo[1.1.1]pentanes"
--- , _authors = Author {_given = Just "Marie L. J.", _family = "Wong"} :| [Author {_given = Just "Al
--- istair J.", _family = "Sterling"},Author {_given = Just "James J.", _family = "Mousseau"},Author 
--- {_given = Just "Fernanda", _family = "Duarte"},Author {_given = Just "Edward A.", _family = "Ande
--- rson"}], _journalLong = "Nature Communications", _journalShort = "Nat. Commun.", _year = 2021, _v
--- olume = "12", _issue = "1", _pages = "", _doi = "10.1038/s41467-021-21936-4", _articleNumber = "1
--- 644"}
+-- >>> natComm & _Right . article . journalShort .~ "Nat. Commun."
+-- Right (Article (MkArticle {_articleTitle = "Direct catalytic asymmetric synthesis of \945-chiral 
+-- bicyclo[1.1.1]pentanes", _articleAuthors = Author {_given = Just "Marie L. J.", _family = "Wong"}
+-- :| [Author {_given = Just "Alistair J.", _family = "Sterling"},Author {_given = Just "James J.", 
+-- _family = "Mousseau"},Author {_given = Just "Fernanda", _family = "Duarte"},Author {_given = Just
+-- "Edward A.", _family = "Anderson"}], _articleJournalLong = "Nature Communications", _articleJourn
+-- alShort = "Nat. Commun.", _articleYear = 2021, _articleVolume = "12", _articleIssue = "1", _artic
+-- lePages = "", _articleDoi = "10.1038/s41467-021-21936-4", _articleNumber = "1644"})
 
 -- | Convert a DOI into a full-fledged Work by fetching metadata from Crossref.
 --

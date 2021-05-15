@@ -36,6 +36,7 @@ common abbot-deps
     , aeson , bytestring
     , http-client , http-client-tls , network-uri
     , raw-strings-qq
+    , microlens , microlens-th
   default-language:
     Haskell2010
   default-extensions:
@@ -47,9 +48,6 @@ common abbot-deps
     ScopedTypeVariables
     RecordWildCards
     DuplicateRecordFields
-    OverloadedLabels
-    TypeApplications
-    DataKinds
 
 
 library

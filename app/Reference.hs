@@ -30,3 +30,11 @@ instance ToJSON Reference where
   toEncoding = genericToEncoding defaultOptions
 
 instance FromJSON Reference
+
+instance Bibliographic Reference where
+  getContributors = getContributors . (^. work)
+  getAuthors      = getAuthors . (^. work)
+  getEditors      = getEditors . (^. work)
+  mkIdentifier    = mkIdentifier . (^. work)
+  getYear         = getYear . (^. work)
+  getTitle        = getTitle . (^. work)

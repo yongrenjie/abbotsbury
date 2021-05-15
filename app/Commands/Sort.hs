@@ -83,8 +83,8 @@ pSort = do
   pure $ SortCriterion sortKey sortOrder
  where
   abbrevs = M.fromList
-    [ ("year"  , SKYearJournalAuthor)
-    , ("y"     , SKYearJournalAuthor)
+    [ ("year"  , SKYear)
+    , ("y"     , SKYear)
     , ("opened", SKTimeOpened)
     , ("o"     , SKTimeOpened)
     , ("added" , SKTimeAdded)
@@ -99,7 +99,7 @@ data SortCriterion = SortCriterion SortKey SortOrder
 data SortKey
   = -- | Sorting by year, using the journal name and then first author's family
     -- name to break ties.
-    SKYearJournalAuthor
+    SKYear
   | -- | Sorting by the time a reference was last opened.
     SKTimeOpened
   | -- | Sorting by the time a reference was last added.
@@ -114,7 +114,7 @@ showT :: SortCriterion -> T.Text
 showT (SortCriterion key order) = showKey key <> showOrder order
  where
   showKey :: SortKey -> T.Text
-  showKey SKYearJournalAuthor = "year, journal, author"
+  showKey SKYear = "year, journal, author"
   showKey SKTimeOpened        = "time opened"
   showKey SKTimeAdded         = "time added"
   showOrder :: SortOrder -> T.Text
@@ -135,11 +135,6 @@ getComparisonFn (SortCriterion key order) (_, ref1) (_, ref2) =
         Ascending  -> id
         Descending -> flipOrder
   in  reverseFn $ case key of
-        SKTimeOpened        -> comparing (view timeOpened) ref1 ref2
-        SKTimeAdded         -> comparing (view timeAdded) ref1 ref2
-        SKYearJournalAuthor -> comparing
-          ((,,) <$> view (work . year) <*> view (work . journalLong) <*> view
-            (work . authors . ix 0 . family)
-          )
-          ref1
-          ref2
+        SKTimeOpened -> comparing (^. timeOpened) ref1 ref2
+        SKTimeAdded  -> comparing (^. timeAdded) ref1 ref2
+        SKYear       -> comparing getYear ref1 ref2

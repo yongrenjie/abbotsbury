@@ -11,7 +11,6 @@ import           Data.List                      ( isInfixOf )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import           Data.Yaml
-import           GHC.Records
 import           Internal.Monad
 import           Lens.Micro.Platform
 import           Reference
@@ -111,27 +110,27 @@ data PDFType
   | SI
   deriving (Ord, Eq, Show)
 
+showPdfType :: PDFType -> Text
+showPdfType FullText = "pdf"
+showPdfType SI       = "si"
+
 -- | Find the path to a PDF file belonging to a reference.
 getPDFPath
-  ::
+  :: Bibliographic x =>
   -- | Full text or SI.
      PDFType
   ->
   -- | Current working directory.
      FilePath
   ->
-  -- | The reference.
-     Reference
+  -- | The work to look for.
+     x
   ->
   -- | Path to the file.
      FilePath
-getPDFPath pdfType cwd ref = cwd </> dirName </> fileName
+getPDFPath pdfType cwd x = cwd </> dirName </> fileName
  where
   dirName = case pdfType of
     FullText -> "pdf-abbot"
     SI       -> "si-abbot"
-  identifier = case _work ref of
-                    Article a -> getField @"_doi" a
-                    Book b -> T.filter isDigit (getField @"_isbn" b)
-  fileName =
-    T.unpack . flip T.append ".pdf" . T.replace "/" "#" $ identifier
+  fileName = T.unpack . flip T.append ".pdf" $ mkIdentifier x

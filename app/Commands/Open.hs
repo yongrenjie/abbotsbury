@@ -46,9 +46,12 @@ runOpen args input = do
   let jobs =
         [ (rno, fmt) | fmt <- S.toList formats, rno <- IS.toList refnosToOpen ]
   let openCommands = do
+        -- list monad
         (rno, fmt) <- jobs
-        let openLink = T.unpack $ getOpenLink fmt (refs IM.! rno) cwd
-        pure $ proc "open" [openLink]
+        let openLink = T.unpack <$> getOpenLink fmt (refs IM.! rno) cwd
+        case openLink of
+             Just x -> pure $ proc "open" [x]
+             Nothing -> []
   -- Run the commands.
   processReturns <- liftIO
     $ mapM (`readCreateProcessWithExitCode` "") openCommands
@@ -109,14 +112,13 @@ showT OpenSI       = "SI"
 showT OpenWebURL   = "web URL"
 
 getOpenLink
-  :: OpenFormat
-  -> -- The format to open in (full text, SI, web)
-     Reference
-  -> -- The reference to open
-     FilePath
-  -> -- The current working directory
-     Text -- The link
+  :: OpenFormat -- ^ The format to open in (full text, SI, web)
+  -> Reference  -- ^ The reference to open
+  -> FilePath   -- ^ Current working directory
+  -> Maybe Text
 getOpenLink fmt ref cwd = case fmt of
-  OpenFullText -> T.pack $ getPDFPath FullText cwd ref
-  OpenSI       -> T.pack $ getPDFPath SI cwd ref
-  OpenWebURL   -> "https://doi.org/" <> ref ^. (work . doi)
+  OpenFullText -> Just (T.pack $ getPDFPath FullText cwd ref)
+  OpenSI       -> Just (T.pack $ getPDFPath SI cwd ref)
+  OpenWebURL   -> case ref ^. work of
+    ArticleWork a -> Just $ "https://doi.org/" <> (a ^. doi)
+    BookWork    b -> Nothing
