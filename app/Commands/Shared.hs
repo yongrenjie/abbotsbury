@@ -3,6 +3,7 @@ module Commands.Shared
   ) where
 
 import           Data.Char
+import           Data.Foldable                  ( maximumBy )
 import           Data.IntMap                    ( IntMap )
 import qualified Data.IntMap                   as IM
 import           Data.IntSet                    ( IntSet )
@@ -10,7 +11,9 @@ import qualified Data.IntSet                   as IS
 import           Data.List                      ( sortOn )
 import           Data.Map                       ( Map )
 import qualified Data.Map                      as M
-import           Data.Ord                       ( Down(..) )
+import           Data.Ord                       ( Down(..)
+                                                , comparing
+                                                )
 import           Data.Set                       ( Set )
 import qualified Data.Set                      as S
 import           Data.Text                      ( Text )
@@ -19,6 +22,7 @@ import qualified Data.Text.IO                  as TIO
 import           Data.Void                      ( Void )
 import           Internal.Monad
 import           Internal.Style                 ( makeError )
+import           Lens.Micro.Platform
 import           Reference
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
@@ -136,24 +140,43 @@ pComposedCmd = do
   cmd2 <- replLexeme pAbbotCmd
   pure $ Composed cmd1 cmd2
 
+-- | In the REPL, refnos can be specified either using the word 'last' (which
+-- is resolved to the most recently opened ref), or as a set of integers.
+data Refnos = Last
+            | SetOf IntSet
+
 -- | Parse a series of reference numbers. The format is:
 -- <NumRange> = <NumLit>-<NumLit>
 -- <Num> = <NumLit> | <NumRange>
 -- <Refnos> = 0 or more <Num>, separated by commas and/or spaces
-pRefnos :: Parser IntSet
-pRefnos = IS.unions <$> many (pNum <* pSeparator)
+pRefnos :: Parser Refnos
+pRefnos = pLast <|> pSetOf
  where
+  pLast :: Parser Refnos
+  pLast  = Last <$ string' "last"
+  pSetOf :: Parser Refnos
+  pSetOf = SetOf . IS.unions <$> many (pNum <* pSeparator)
   pNum, pNumLit, pNumRange :: Parser IntSet
   pNum      = try pNumRange <|> pNumLit
   pNumLit   = IS.singleton <$> L.decimal -- Parse a number literal
-  pNumRange = do
-    -- Parse a range of numbers `m-n`
+  pNumRange = do                 -- Parse a range of numbers `m-n`
     m <- L.decimal
     void $ char '-'
     n <- L.decimal
     pure $ IS.fromDistinctAscList [m .. n]
   pSeparator :: Parser ()
   pSeparator = void $ takeWhileP Nothing (\c -> isSpace c || c == ',')
+
+resolveRefnosWith :: IntMap Reference -> Refnos -> IntSet
+resolveRefnosWith refs rnos = if IM.null refs
+  then IS.empty
+  else case rnos of
+    Last    -> IS.singleton . fst $ maximumBy mostRecent (IM.assocs refs)
+    SetOf s -> s
+  where
+    mostRecent :: (Int, Reference) -> (Int, Reference) -> Ordering
+    mostRecent (_, r1) (_, r2) = comparing (^. timeOpened) r1 r2
+
 
 -- | Parse a series of objects of type @a@, which are represented by (one or
 -- more) @Text@ values. If there is a default value, it can be passed as the

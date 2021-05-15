@@ -37,9 +37,12 @@ runOpen args input = do
   let cwd  = cwdin input
       refs = refsin input
   -- If no refs present, error immediately
-  (argsRefnos, formats) <- parseInCommand pOpen args prefix
+  errorOnNoRefs prefix input
+  -- Parse arguments
+  (refnos, formats) <- parseInCommand pOpen args prefix
+  let argsRefnos = resolveRefnosWith refs refnos
   -- Figure out which refnos to open
-  refnosToOpen          <- getActiveRefnos prefix argsRefnos input
+  refnosToOpen <- getActiveRefnos prefix argsRefnos input
   -- Check for any refnos that don't exist
   errorOnInvalidRefnos prefix refnosToOpen input
   -- Construct the links to be opened.
@@ -50,8 +53,8 @@ runOpen args input = do
         (rno, fmt) <- jobs
         let openLink = T.unpack <$> getOpenLink fmt (refs IM.! rno) cwd
         case openLink of
-             Just x -> pure $ proc "open" [x]
-             Nothing -> []
+          Just x  -> pure $ proc "open" [x]
+          Nothing -> []
   -- Run the commands.
   processReturns <- liftIO
     $ mapM (`readCreateProcessWithExitCode` "") openCommands
@@ -88,7 +91,7 @@ runOpen args input = do
   -- Return the updated refs.
   pure $ SCmdOutput updatedRefs Nothing
 
-pOpen :: Parser (IntSet, Set OpenFormat)
+pOpen :: Parser (Refnos, Set OpenFormat)
 pOpen = (,) <$> pRefnos <*> pFormats abbrevs (Just OpenFullText)
  where
   abbrevs = M.fromList

@@ -23,7 +23,8 @@ runList args input = do
       refs    = refsin input
       numRefs = fst $ IM.findMax refs
   -- Parse arguments
-  refnos <- parseInCommand pRefnos args prefix
+  refnos' <- parseInCommand pRefnos args prefix
+  let refnos = resolveRefnosWith refs refnos'
   -- TODO: this only works with non-piped input. Need to get it to work properly
   -- with piped input. The problem is we can't reuse getActiveRefnos because
   -- that errors on empty input -- and for this function in particular, empty

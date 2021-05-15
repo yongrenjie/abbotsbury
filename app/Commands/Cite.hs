@@ -35,12 +35,14 @@ data ReplCiteRules
 
 runCite :: Args -> CmdInput -> CmdOutput
 runCite args input = do
+  let refs = refsin input
   -- If no refs present, error immediately
   errorOnNoRefs prefix input
   -- Parse arguments
-  (argsRefnos, rules) <- parseInCommand pCite args prefix
+  (refnos, rules) <- parseInCommand pCite args prefix
+  let argsRefnos = resolveRefnosWith refs refnos
   -- Figure out which refnos to print
-  refnosToCite        <- getActiveRefnos prefix argsRefnos input
+  refnosToCite <- getActiveRefnos prefix argsRefnos input
   -- Check for any refnos that don't exist
   errorOnInvalidRefnos prefix refnosToCite input
   -- Generate the citation(s)
@@ -59,7 +61,7 @@ runCite args input = do
   -- Return basically nothing
   pure $ SCmdOutput (refsin input) Nothing
 
-pCite :: Parser (IntSet, ReplCiteRules)
+pCite :: Parser (Refnos, ReplCiteRules)
 pCite = (,) <$> pRefnos <*> pOneFormatCaseSens abbrevs (Just Biblatex)
  where
   abbrevs = M.fromList

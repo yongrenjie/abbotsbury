@@ -47,7 +47,8 @@ runEdit args input = do
   -- If no refs present, error immediately
   errorOnNoRefs prefix input
   -- Parse arguments
-  argsRefnos   <- parseInCommand pRefnos args prefix
+  refnos   <- parseInCommand pRefnos args prefix
+  let argsRefnos = resolveRefnosWith refs refnos
   -- Figure out which refnos to edit
   refnosToEdit <- getActiveRefnos prefix argsRefnos input
   -- Check for any refnos that don't exist
