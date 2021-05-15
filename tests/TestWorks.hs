@@ -17,7 +17,6 @@ orgLett = ArticleWork $ Article { _articleTitle        = t
                                 , _articleIssue        = i
                                 , _articlePages        = p
                                 , _articleDoi          = doi
-                                , _articleNumber       = aN
                                 }
  where
   t =
@@ -28,7 +27,7 @@ orgLett = ArticleWork $ Article { _articleTitle        = t
   y   = 2019
   v   = "21"
   i   = "8"
-  p   = "2918-2922"
+  p   = PageRange "2918-2922"
   doi = "10.1021/acs.orglett.9b00971"
   aN  = ""
   mansfield, smith, yong, garry, anderson :: Author
@@ -48,7 +47,6 @@ nrmpCorrected = ArticleWork $ Article { _articleTitle        = t
                                       , _articleIssue        = i
                                       , _articlePages        = p
                                       , _articleDoi          = doi
-                                      , _articleNumber       = aN
                                       }
  where
   t   = "Parallel nuclear magnetic resonance spectroscopy"
@@ -58,9 +56,8 @@ nrmpCorrected = ArticleWork $ Article { _articleTitle        = t
   y   = 2021
   v   = "1"
   i   = "1"
-  p   = ""
+  p   = ArticleNumber "27"
   doi = "10.1038/s43586-021-00024-3"
-  aN  = "27"
   kupce, frydman, webb, yong, claridge :: Author
   kupce    = auth ("Ēriks", "Kupče")
   frydman  = auth ("Lucio", "Frydman")
@@ -78,7 +75,6 @@ noFirstNameN2020 = ArticleWork $ Article { _articleTitle        = t
                                          , _articleIssue        = i
                                          , _articlePages        = p
                                          , _articleDoi          = doi
-                                         , _articleNumber       = aN
                                          }
  where
   t   = "Attention science: some people have only one name"
@@ -88,9 +84,8 @@ noFirstNameN2020 = ArticleWork $ Article { _articleTitle        = t
   y   = 2020
   v   = ""
   i   = ""
-  p   = ""
+  p   = PageRange ""
   doi = "10.1038/d41586-020-02761-z"
-  aN  = ""
   sheherazade, ardiantiono :: Author
   sheherazade = Author Nothing "Sheherazade"
   ardiantiono = Author Nothing "Ardiantiono"
@@ -105,7 +100,6 @@ glaserS1998 = ArticleWork $ Article { _articleTitle        = t
                                     , _articleIssue        = i
                                     , _articlePages        = p
                                     , _articleDoi          = doi
-                                    , _articleNumber       = aN
                                     }
  where
   t
@@ -117,6 +111,5 @@ glaserS1998 = ArticleWork $ Article { _articleTitle        = t
   y   = 1998
   v   = "280"
   i   = "5362"
-  p   = "421-424"
+  p   = PageRange "421-424"
   doi = "10.1126/science.280.5362.421"
-  aN  = ""

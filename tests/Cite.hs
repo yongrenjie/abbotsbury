@@ -50,7 +50,7 @@ testOLCite = testGroup "cite - 2019 OL - all styles"
                          , "    year = {2019},"
                          , "    volume = {21},"
                          , "    number = {8},"
-                         , "    pages = {2918-2922},"
+                         , "    pages = {2918--2922},"
                          , "}" ]
 
 tests :: TestTree
