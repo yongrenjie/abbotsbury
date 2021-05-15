@@ -23,5 +23,4 @@
       _articleNumber: ''
       _articleIssue: '8'
     tag: ArticleWork
-  _tags:
-  - not_nmr
+  _tags: []

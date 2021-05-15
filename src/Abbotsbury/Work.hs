@@ -19,6 +19,10 @@ module Abbotsbury.Work
   , Article(..)
   , Book(..)
   , Author(..)
+    -- * Empty versions of Works
+    -- $work-empty
+  , emptyArticle
+  , emptyBook
     -- * Work -> datatype 'Traversal's
   , _article
   , _book
@@ -130,32 +134,32 @@ data Work = ArticleWork Article
 -- TODO: Convert pages and number into a single field. They should be mutually
 -- exclusive.
 data Article = MkArticle
-  { _articleTitle         :: Text
+  { _articleTitle        :: Text
   ,
     -- | There has to be at least one author!
-    _articleAuthors       :: NonEmpty Author
+    _articleAuthors      :: NonEmpty Author
   ,
     -- | The full name of the journal, e.g. @"Journal of the American Chemical
     -- Society"@.
-    _articleJournalLong   :: Text
+    _articleJournalLong  :: Text
   ,
     -- | The short name of the journal, e.g. @"J. Am. Chem. Soc."@. This short
     -- form should be taken from [CASSI](https://cassi.cas.org/); Crossref often
     -- has incorrect information for this field. See "Abbotsbury.Cite" for more
     -- information.
-    _articleJournalShort  :: Text
-  , _articleYear          :: Int
+    _articleJournalShort :: Text
+  , _articleYear         :: Int
   ,
     -- | The volume and issue cannot be simple @Int@s, because sometimes they
     -- are a range.
-    _articleVolume        :: Text
-  , _articleIssue         :: Text
-  , _articlePages         :: Text
-  , _articleDoi           :: DOI
+    _articleVolume       :: Text
+  , _articleIssue        :: Text
+  , _articlePages        :: Text
+  , _articleDoi          :: DOI
   ,
     -- | Some online-only articles do not have page numbers, and are indexed by
     -- article numbers instead.
-    _articleNumber :: Text
+    _articleNumber       :: Text
   }
   deriving (Generic, Show, Eq)
 
@@ -198,12 +202,12 @@ data Author = Author
 -- article if it is one and @Nothing@ if it isn't one.
 _article :: Traversal' Work Article
 _article f (ArticleWork a) = ArticleWork <$> f a
-_article _ x = pure x
+_article _ x               = pure x
 
 -- | Same as '_article', except that it extracts a 'Book'.
 _book :: Traversal' Work Book
 _book f (BookWork b) = BookWork <$> f b
-_book _ x = pure x
+_book _ x            = pure x
 
 -- | I generate the rest with TH, because honestly, I can't be bothered to
 -- define all the HasField stuff myself.
@@ -211,25 +215,43 @@ makeFields ''Article
 makeFields ''Book
 makeLenses ''Author
 
-instance ToJSON Work where
-  toEncoding = genericToEncoding defaultOptions
+-- $work-empty
+-- The following are \'empty\' versions of 'Article's / 'Book's, with fields
+-- initialised to (sort of) empty values. They are provided in order to allow
+-- you to \'initialise\' new records using lenses, as opposed to directly using
+-- record syntax. (Lenses can be used to /modify/ fields, but cannot create a
+-- new record out of nothing.)
 
-instance ToJSON Article where
-  toEncoding = genericToEncoding defaultOptions
+-- | An empty 'Article'.
+emptyArticle :: Article
+emptyArticle = MkArticle { _articleTitle        = ""
+                         , _articleAuthors      = NE.fromList [mkAuthor "" ""]
+                         , _articleJournalLong  = ""
+                         , _articleJournalShort = ""
+                         , _articleYear         = 2021
+                         , _articleVolume       = ""
+                         , _articleIssue        = ""
+                         , _articlePages        = ""
+                         , _articleDoi          = ""
+                         , _articleNumber       = ""
+                         }
 
-instance ToJSON Book where
-  toEncoding = genericToEncoding defaultOptions
+-- | An empty 'Book'.
+emptyBook :: Book
+emptyBook = MkBook { _bookTitle        = ""
+                   , _bookPublisher    = ""
+                   , _bookPublisherLoc = ""
+                   , _bookAuthors      = []
+                   , _bookYear         = 2021
+                   , _bookEdition      = ""
+                   , _bookIsbn         = ""
+                   }
 
-instance ToJSON Author where
-  toEncoding = genericToEncoding defaultOptions
-
-instance FromJSON Work
-
-instance FromJSON Article
-
-instance FromJSON Book
-
-instance FromJSON Author
+-- | Quickly make an author.
+--
+-- TODO: generalise 'Author' and then export this.
+mkAuthor :: Text -> Text -> Author
+mkAuthor = Author . Just
 
 -- $work-typeclasses
 -- We also export a 'Bibliographic' typeclass, which contains functions which
@@ -284,5 +306,28 @@ instance Bibliographic Work where
 -- | Something like 'either', but for a Work. Not exported.
 _work :: (Article -> r) -> (Book -> r) -> Work -> r
 _work f1 f2 w = case w of
-                     ArticleWork a -> f1 a
-                     BookWork    b -> f2 b
+  ArticleWork a -> f1 a
+  BookWork    b -> f2 b
+
+-- | Boring typeclass instances.
+
+instance ToJSON Work where
+  toEncoding = genericToEncoding defaultOptions
+
+instance ToJSON Article where
+  toEncoding = genericToEncoding defaultOptions
+
+instance ToJSON Book where
+  toEncoding = genericToEncoding defaultOptions
+
+instance ToJSON Author where
+  toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON Work
+
+instance FromJSON Article
+
+instance FromJSON Book
+
+instance FromJSON Author
+
