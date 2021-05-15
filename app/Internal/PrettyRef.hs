@@ -187,10 +187,7 @@ getVolInfo :: Article -> Text
 getVolInfo a = T.intercalate ", "
   $ filter (not . T.null) [theVolInfo, thePages]
  where
-  thePages = case (a ^. pages, a ^. number) of
-    ("", "") -> ""
-    ("", aN) -> "No. " <> aN <> ""
-    (pg, _ ) -> pg <> ""
+  thePages = displayPages (a ^. pages)
   theVolInfo = case (a ^. volume, a ^. issue) of
     (""    , ""    ) -> ""
     (""    , theIss) -> "No. " <> theIss

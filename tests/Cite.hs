@@ -45,14 +45,13 @@ testOLCite = testGroup "cite - 2019 OL - all styles"
     = T.intercalate "\n" [ "@article{MansfieldOL2019,"
                          , "    doi = {10.1021/acs.orglett.9b00971},"
                          , "    author = {Mansfield, Steven J.\\ and Smith, Russell C.\\ and Yong, Jonathan R.\\ J.\\ and Garry, Olivia L.\\ and Anderson, Edward A.},"
-                         , "    journal = {Org.\\ Lett.},"
+                         , "    journaltitle = {Org.\\ Lett.},"
                          , "    title = {A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides},"
                          , "    year = {2019},"
                          , "    volume = {21},"
                          , "    number = {8},"
                          , "    pages = {2918-2922},"
                          , "}" ]
-
 
 tests :: TestTree
 tests = testGroup "Cite" [testOLCite]

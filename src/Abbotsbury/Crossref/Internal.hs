@@ -179,12 +179,17 @@ parseArticle useInternalAbbrevs messageObj = do
     messageObj .: "published-print" <|> messageObj .: "published-online"
   _articleYear <- safeHead "year not found in date-parts"
     $ safeHead "date-parts was empty" (publishedObj .: "date-parts")
-  -- Volume, issue, pages, DOI
+  -- Volume, issue, DOI
   _articleVolume <- messageObj .:? "volume" .!= ""
   _articleIssue  <- (messageObj .: "journal-issue" >>= (.: "issue")) <|> pure ""
-  _articlePages  <- messageObj .:? "page" .!= ""
   _articleDoi    <- messageObj .:? "DOI" .!= ""
-  _articleNumber <- messageObj .:? "article-number" .!= ""
+  -- The pages are the most annoying one, I think. Try to get pages first, then
+  -- fall back on article number, and if none of them exist, just use an empty
+  -- page range.
+  _articlePages  <-
+    (PageRange <$> messageObj .: "page")
+    <|> (ArticleNumber <$> messageObj .: "article-number")
+    <|> pure (PageRange "")
   pure $ Article { .. }
 
 parseBook :: Object -> DAT.Parser Book

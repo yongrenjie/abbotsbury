@@ -87,14 +87,12 @@ articleConstructorBib a = plain (latexify t)
     , (always   , "year"        , T.pack . show $ a ^. year)
     , (ifNotNull, "volume"      , a ^. volume)
     , (ifNotNull, "number"      , a ^. issue)
-    , (always   , "pages"       , a ^. pages)
+    , (always   , "pages"       , displayPages $ a ^. pages)
     ]
   fields :: [Text]
   fields = mapMaybe (\(a, b, c) -> makeMaybeBibFieldWith a b c) rules
   -- Note that the bibtex 'number' field should be used for the issue, even if
-  -- it is non-numeric. See section 2.3.11 of the BibLaTeX package
-  -- documentation.
-  -- TODO: unify pages and articleNumber.
+-- it is non-numeric. See section 2.3.11 of the BibLaTeX package documentation.
 
 -- BibLaTeX package documentation about the book.
 -- A single-volume book with one or more authors where the authors share credit

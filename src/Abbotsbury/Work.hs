@@ -18,6 +18,8 @@ module Abbotsbury.Work
   , Work(..)
   , Article(..)
   , Book(..)
+  , ArticlePage(..)
+  , displayPages
   , Author(..)
     -- * Empty versions of Works
     -- $work-empty
@@ -32,7 +34,6 @@ module Abbotsbury.Work
   , issue
   , journalLong
   , journalShort
-  , number
   , pages
   , title
   , volume
@@ -75,15 +76,6 @@ import           Lens.Micro.TH
 --
 -- I plan to write a tutorial on using @abbotsbury@'s lenses/traversals in due
 -- course.
-
--- | A type synonym for Digital Object Identifiers (DOIs). Given that abbotsbury
--- doesn't provide a "smart constructor" for DOIs, it seems that the sensible
--- option for these is to use a plain type synonym instead of a @newtype@. See
--- also [Alexis King's blogpost on this](https://git.io/JsfwJ).
-type DOI = Text
-
--- | As above, but for International Standard Book Numbers (ISBNs).
-type ISBN = Text
 
 -- | A @Work@ represents one single work from Crossref, which can either be an
 -- 'Article' or a 'Book'. Technically, there are many more work types available
@@ -154,12 +146,8 @@ data Article = Article
     -- are a range.
     _articleVolume       :: Text
   , _articleIssue        :: Text
-  , _articlePages        :: Text
+  , _articlePages        :: ArticlePage
   , _articleDoi          :: DOI
-  ,
-    -- | Some online-only articles do not have page numbers, and are indexed by
-    -- article numbers instead.
-    _articleNumber       :: Text
   }
   deriving (Generic, Show, Eq)
 
@@ -196,6 +184,38 @@ data Author = Author
   }
   deriving (Generic, Show, Ord, Eq)
 
+-- | Articles either have a classical page range, or are indexed by a number
+-- only (online-only articles tend to be like that). They correspond to
+-- different fields in Crossref data and must be treated separately.
+data ArticlePage = PageRange Text
+                 | ArticleNumber Text
+                 deriving (Generic, Show, Eq)
+
+-- | When displayed, article numbers should be prefixed with "No. ". However,
+-- this is really awkward with non-numeric "article numbers", such as those used
+-- by Science. This function helpfully converts the pagination data into
+-- something that is appropriate for display.
+-- 
+-- >>> displayPages (PageRange "103-104")
+-- "103-104"
+-- >>> displayPages (ArticleNumber "203")
+-- "No. 203"
+-- >>> displayPages (ArticleNumber "eabc1234")
+-- "eabc1234"
+displayPages :: ArticlePage -> Text
+displayPages (PageRange t) = t
+displayPages (ArticleNumber n) | T.all isDigit n = "No. " <> n
+                               | otherwise       = n
+
+-- | A type synonym for Digital Object Identifiers (DOIs). Given that abbotsbury
+-- doesn't provide a "smart constructor" for DOIs, it seems that the sensible
+-- option for these is to use a plain type synonym instead of a @newtype@. See
+-- also [Alexis King's blogpost on this](https://git.io/JsfwJ).
+type DOI = Text
+
+-- | As above, but for International Standard Book Numbers (ISBNs).
+type ISBN = Text
+
 -- | If @w@ is a 'Work', then @w ^?! _article@ extracts an 'Article' from inside
 -- a 'Work' and throws an exception if it doesn't actually contain an 'Article'.
 -- The 'safe' version @w ^? _article@ returns @Maybe Article@, i.e. @Just@ the
@@ -231,9 +251,8 @@ emptyArticle = Article { _articleTitle        = ""
                        , _articleYear         = 2021
                        , _articleVolume       = ""
                        , _articleIssue        = ""
-                       , _articlePages        = ""
+                       , _articlePages        = PageRange ""
                        , _articleDoi          = ""
-                       , _articleNumber       = ""
                        }
 
 -- | An empty 'Book'.
@@ -314,6 +333,9 @@ _work f1 f2 w = case w of
 instance ToJSON Work where
   toEncoding = genericToEncoding defaultOptions
 
+instance ToJSON ArticlePage where
+  toEncoding = genericToEncoding defaultOptions
+
 instance ToJSON Article where
   toEncoding = genericToEncoding defaultOptions
 
@@ -324,6 +346,8 @@ instance ToJSON Author where
   toEncoding = genericToEncoding defaultOptions
 
 instance FromJSON Work
+
+instance FromJSON ArticlePage
 
 instance FromJSON Article
 
