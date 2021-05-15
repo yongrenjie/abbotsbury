@@ -8,17 +8,17 @@ auth :: (Text, Text) -> Author
 auth (gvn, fmy) = Author (Just gvn) fmy
 
 orgLett :: Work
-orgLett = ArticleWork $ MkArticle { _articleTitle        = t
-                                  , _articleAuthors      = a
-                                  , _articleJournalLong  = jL
-                                  , _articleJournalShort = jS
-                                  , _articleYear         = y
-                                  , _articleVolume       = v
-                                  , _articleIssue        = i
-                                  , _articlePages        = p
-                                  , _articleDoi          = doi
-                                  , _articleNumber       = aN
-                                  }
+orgLett = ArticleWork $ Article { _articleTitle        = t
+                                , _articleAuthors      = a
+                                , _articleJournalLong  = jL
+                                , _articleJournalShort = jS
+                                , _articleYear         = y
+                                , _articleVolume       = v
+                                , _articleIssue        = i
+                                , _articlePages        = p
+                                , _articleDoi          = doi
+                                , _articleNumber       = aN
+                                }
  where
   t =
     "A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides"
@@ -39,17 +39,17 @@ orgLett = ArticleWork $ MkArticle { _articleTitle        = t
   anderson  = auth ("Edward A.", "Anderson")
 
 nrmpCorrected :: Work
-nrmpCorrected = ArticleWork $ MkArticle { _articleTitle        = t
-                                        , _articleAuthors      = a
-                                        , _articleJournalLong  = jL
-                                        , _articleJournalShort = jS
-                                        , _articleYear         = y
-                                        , _articleVolume       = v
-                                        , _articleIssue        = i
-                                        , _articlePages        = p
-                                        , _articleDoi          = doi
-                                        , _articleNumber       = aN
-                                        }
+nrmpCorrected = ArticleWork $ Article { _articleTitle        = t
+                                      , _articleAuthors      = a
+                                      , _articleJournalLong  = jL
+                                      , _articleJournalShort = jS
+                                      , _articleYear         = y
+                                      , _articleVolume       = v
+                                      , _articleIssue        = i
+                                      , _articlePages        = p
+                                      , _articleDoi          = doi
+                                      , _articleNumber       = aN
+                                      }
  where
   t   = "Parallel nuclear magnetic resonance spectroscopy"
   a   = NE.fromList [kupce, frydman, webb, yong, claridge]
@@ -69,17 +69,17 @@ nrmpCorrected = ArticleWork $ MkArticle { _articleTitle        = t
   claridge = auth ("Tim D. W.", "Claridge")
 
 noFirstNameN2020 :: Work
-noFirstNameN2020 = ArticleWork $ MkArticle { _articleTitle        = t
-                                           , _articleAuthors      = a
-                                           , _articleJournalLong  = jL
-                                           , _articleJournalShort = jS
-                                           , _articleYear         = y
-                                           , _articleVolume       = v
-                                           , _articleIssue        = i
-                                           , _articlePages        = p
-                                           , _articleDoi          = doi
-                                           , _articleNumber       = aN
-                                           }
+noFirstNameN2020 = ArticleWork $ Article { _articleTitle        = t
+                                         , _articleAuthors      = a
+                                         , _articleJournalLong  = jL
+                                         , _articleJournalShort = jS
+                                         , _articleYear         = y
+                                         , _articleVolume       = v
+                                         , _articleIssue        = i
+                                         , _articlePages        = p
+                                         , _articleDoi          = doi
+                                         , _articleNumber       = aN
+                                         }
  where
   t   = "Attention science: some people have only one name"
   a   = NE.fromList [sheherazade, ardiantiono]
@@ -96,17 +96,17 @@ noFirstNameN2020 = ArticleWork $ MkArticle { _articleTitle        = t
   ardiantiono = Author Nothing "Ardiantiono"
 
 glaserS1998 :: Work
-glaserS1998 = ArticleWork $ MkArticle { _articleTitle        = t
-                                      , _articleAuthors      = a
-                                      , _articleJournalLong  = jL
-                                      , _articleJournalShort = jS
-                                      , _articleYear         = y
-                                      , _articleVolume       = v
-                                      , _articleIssue        = i
-                                      , _articlePages        = p
-                                      , _articleDoi          = doi
-                                      , _articleNumber       = aN
-                                      }
+glaserS1998 = ArticleWork $ Article { _articleTitle        = t
+                                    , _articleAuthors      = a
+                                    , _articleJournalLong  = jL
+                                    , _articleJournalShort = jS
+                                    , _articleYear         = y
+                                    , _articleVolume       = v
+                                    , _articleIssue        = i
+                                    , _articlePages        = p
+                                    , _articleDoi          = doi
+                                    , _articleNumber       = aN
+                                    }
  where
   t
     = "Unitary Control in Quantum Ensembles: Maximizing Signal Intensity in Coherent Spectroscopy"

@@ -185,7 +185,7 @@ parseArticle useInternalAbbrevs messageObj = do
   _articlePages  <- messageObj .:? "page" .!= ""
   _articleDoi    <- messageObj .:? "DOI" .!= ""
   _articleNumber <- messageObj .:? "article-number" .!= ""
-  pure $ MkArticle { .. }
+  pure $ Article { .. }
 
 parseBook :: Object -> DAT.Parser Book
 parseBook messageObj = do
@@ -203,7 +203,7 @@ parseBook messageObj = do
     $ safeHead "date-parts was empty" (publishedObj .: "date-parts")
   _bookEdition <- messageObj .:? "edition" .!= ""
   _bookIsbn    <- safeHead "ISBN was empty" (messageObj .: "ISBN") <|> pure ""
-  pure $ MkBook { .. }
+  pure $ Book { .. }
 
 safeHead
   ::

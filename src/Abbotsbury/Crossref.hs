@@ -66,23 +66,23 @@ import qualified Network.HTTP.Client.TLS       as NHCT
 -- >>> import Lens.Micro
 -- >>> natComm <- fetchWork' Nothing False "your@email.com" "10.1038/s41467-021-21936-4"
 -- >>> natComm
--- Right (Article (MkArticle {_articleTitle = "Direct catalytic asymmetric synthesis of \945-chiral 
--- bicyclo[1.1.1]pentanes", _articleAuthors = Author {_given = Just "Marie L. J.", _family = "Wong"}
--- :| [Author {_given = Just "Alistair J.", _family = "Sterling"},Author {_given = Just "James J.", 
--- _family = "Mousseau"},Author {_given = Just "Fernanda", _family = "Duarte"},Author {_given = Just
--- "Edward A.", _family = "Anderson"}], _articleJournalLong = "Nature Communications", _articleJourn
--- alShort = "Nat Commun", _articleYear = 2021, _articleVolume = "12", _articleIssue = "1", _article
--- Pages = "", _articleDoi = "10.1038/s41467-021-21936-4", _articleNumber = "1644"})
+-- Right (Article (Article {_articleTitle = "Direct catalytic asymmetric synthesis of \945-chiral bi
+-- cyclo[1.1.1]pentanes", _articleAuthors = Author {_given = Just "Marie L. J.", _family = "Wong"}:|
+--  [Author {_given = Just "Alistair J.", _family = "Sterling"},Author {_given = Just "James J.", _f
+-- amily = "Mousseau"},Author {_given = Just "Fernanda", _family = "Duarte"},Author {_given = Just "
+-- Edward A.", _family = "Anderson"}], _articleJournalLong = "Nature Communications", _articleJourna
+-- lShort = "Nat Commun", _articleYear = 2021, _articleVolume = "12", _articleIssue = "1", _articleP
+-- ages = "", _articleDoi = "10.1038/s41467-021-21936-4", _articleNumber = "1644"})
 -- >>> natComm ^?! _Right . article . journalShort
 -- "Nat Commun"
 -- >>> natComm & _Right . article . journalShort .~ "Nat. Commun."
--- Right (Article (MkArticle {_articleTitle = "Direct catalytic asymmetric synthesis of \945-chiral 
--- bicyclo[1.1.1]pentanes", _articleAuthors = Author {_given = Just "Marie L. J.", _family = "Wong"}
--- :| [Author {_given = Just "Alistair J.", _family = "Sterling"},Author {_given = Just "James J.", 
--- _family = "Mousseau"},Author {_given = Just "Fernanda", _family = "Duarte"},Author {_given = Just
--- "Edward A.", _family = "Anderson"}], _articleJournalLong = "Nature Communications", _articleJourn
--- alShort = "Nat. Commun.", _articleYear = 2021, _articleVolume = "12", _articleIssue = "1", _artic
--- lePages = "", _articleDoi = "10.1038/s41467-021-21936-4", _articleNumber = "1644"})
+-- Right (Article (Article {_articleTitle = "Direct catalytic asymmetric synthesis of \945-chiral bi
+-- cyclo[1.1.1]pentanes", _articleAuthors = Author {_given = Just "Marie L. J.", _family = "Wong"}:|
+--  [Author {_given = Just "Alistair J.", _family = "Sterling"},Author {_given = Just "James J.", _f
+-- amily = "Mousseau"},Author {_given = Just "Fernanda", _family = "Duarte"},Author {_given = Just "
+-- Edward A.", _family = "Anderson"}], _articleJournalLong = "Nature Communications", _articleJourna
+-- lShort = "Nat. Commun.", _articleYear = 2021, _articleVolume = "12", _articleIssue = "1", _articl
+-- ePages = "", _articleDoi = "10.1038/s41467-021-21936-4", _articleNumber = "1644"})
 
 -- | Convert a DOI into a full-fledged Work by fetching metadata from Crossref.
 --

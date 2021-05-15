@@ -133,7 +133,7 @@ data Work = ArticleWork Article
 --
 -- TODO: Convert pages and number into a single field. They should be mutually
 -- exclusive.
-data Article = MkArticle
+data Article = Article
   { _articleTitle        :: Text
   ,
     -- | There has to be at least one author!
@@ -170,7 +170,7 @@ data Article = MkArticle
 --
 -- TODO: Add more fields here for other information (e.g. editors). See
 -- <https://github.com/Crossref/rest-api-doc/blob/master/api_format.md>.
-data Book = MkBook
+data Book = Book
   { _bookTitle        :: Text
   , _bookPublisher    :: Text
   -- | Publisher location.
@@ -224,28 +224,28 @@ makeLenses ''Author
 
 -- | An empty 'Article'.
 emptyArticle :: Article
-emptyArticle = MkArticle { _articleTitle        = ""
-                         , _articleAuthors      = NE.fromList [mkAuthor "" ""]
-                         , _articleJournalLong  = ""
-                         , _articleJournalShort = ""
-                         , _articleYear         = 2021
-                         , _articleVolume       = ""
-                         , _articleIssue        = ""
-                         , _articlePages        = ""
-                         , _articleDoi          = ""
-                         , _articleNumber       = ""
-                         }
+emptyArticle = Article { _articleTitle        = ""
+                       , _articleAuthors      = NE.fromList [mkAuthor "" ""]
+                       , _articleJournalLong  = ""
+                       , _articleJournalShort = ""
+                       , _articleYear         = 2021
+                       , _articleVolume       = ""
+                       , _articleIssue        = ""
+                       , _articlePages        = ""
+                       , _articleDoi          = ""
+                       , _articleNumber       = ""
+                       }
 
 -- | An empty 'Book'.
 emptyBook :: Book
-emptyBook = MkBook { _bookTitle        = ""
-                   , _bookPublisher    = ""
-                   , _bookPublisherLoc = ""
-                   , _bookAuthors      = []
-                   , _bookYear         = 2021
-                   , _bookEdition      = ""
-                   , _bookIsbn         = ""
-                   }
+emptyBook = Book { _bookTitle        = ""
+                 , _bookPublisher    = ""
+                 , _bookPublisherLoc = ""
+                 , _bookAuthors      = []
+                 , _bookYear         = 2021
+                 , _bookEdition      = ""
+                 , _bookIsbn         = ""
+                 }
 
 -- | Quickly make an author.
 --
