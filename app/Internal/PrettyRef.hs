@@ -27,7 +27,7 @@ import           Internal.Style                 ( setBold
                                                 )
 import           Lens.Micro.Platform
 import           Reference
-import           System.Console.ANSI            ( getTerminalSize )
+import qualified System.Console.Terminal.Size   as TermSize
 import           System.Directory               ( doesFileExist )
 import           Text.Megaparsec                ( eof
                                                 , parse
@@ -290,10 +290,7 @@ getFieldSizes rawColumns = do
   --     point going beyond that)
   --   - apart from those limits, we ideally want to use up the remaining space
   --     in the terminal.
-  termSize <- getTerminalSize
-  let termWidth = case termSize of
-                       Just (_, ncols) -> ncols
-                       Nothing         -> 80
+  termWidth <- maybe 80 TermSize.width <$> TermSize.size
   let lowerLimit = 40
       upperLimit = fss2 ^. _5
       ideal      = termWidth - (fss2 ^. _1 + fss2 ^. _2 + fss2 ^. _3 + fss2 ^. _4)
