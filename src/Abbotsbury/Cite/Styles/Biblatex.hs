@@ -8,13 +8,11 @@ import           Abbotsbury.Cite.Helpers.Author
 import           Abbotsbury.Cite.Internal
 import           Abbotsbury.LatexEscapes        ( latexify )
 import           Abbotsbury.Work
-import           Control.Applicative            ( (<|>) )
 import           Data.Char                      ( isAscii
-                                                , isDigit
                                                 , isUpper
                                                 )
-import qualified Data.List.NonEmpty            as NE
-import           Data.Maybe                     ( catMaybes )
+import           Data.Foldable                  ( toList )
+import           Data.Maybe                     ( mapMaybe )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import           Data.Text.Normalize            ( NormalizationMode(..)
@@ -25,6 +23,10 @@ import           Lens.Micro
 -- | This generates a BibLaTeX entry. The output 'Format' chosen doesn't affect
 -- the BibLaTeX entry in any way, so that can be arbitrarily selected.
 --
+-- __Note__ that the output of this is only designed for use with @BibLaTeX@.
+-- There is no guarantee that it will be compatible with the classical @BibTeX@
+-- format.
+--
 -- >>> import qualified Data.Text.IO as TIO
 -- >>> Right orgLett <- fetchWork "your@email.com" "10.1021/acs.orglett.9b00971"
 -- >>> TIO.putStrLn $ cite bibStyle textFormat orgLett
@@ -32,7 +34,7 @@ import           Lens.Micro
 --     doi = {10.1021/acs.orglett.9b00971},
 --     author = {Mansfield, Steven J.\ and Smith, Russell C.\ and Yong, Jonathan R.\ J.\ and Garry,
 -- Olivia L.\ and Anderson, Edward A.},
---     journal = {Org.\ Lett.},
+--     journaltitle = {Org.\ Lett.},
 --     title = {A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides},
 --     year = {2019},
 --     volume = {21},
@@ -41,8 +43,25 @@ import           Lens.Micro
 -- }
 bibStyle :: Style
 bibStyle = Style { articleConstructor = articleConstructorBib
-                 , bookConstructor    = const (plain "not yet implemented")
+                 , bookConstructor    = bookConstructorBib
                  }
+
+-- BibLaTeX package documentation about the article.
+-- An article in a journal, magazine, newspaper, or other periodical which forms
+-- a self-contained unit with its own title. The title of the periodical is
+-- given in the journaltitle field. If the issue has its own title in addition
+-- to the main title of the periodical, it goes in the issuetitle field. Note
+-- that editor and related fields refer to the journal while translator and
+-- related fields refer to the article.
+--
+-- Required fields: author, title, journaltitle, year/date
+--
+-- Optional fields: translator, annotator,
+-- commentator, subtitle, titleaddon, editor, editora, editorb, editorc,
+-- journalsubtitle, journaltitleaddon, issuetitle, issuesubtitle,
+-- issuetitleaddon, language, origlanguage, series, volume, number, eid, issue,
+-- month, pages, version, note, issn, addendum, pubstate, doi, eprint,
+-- eprintclass, eprinttype, url, urldate
 
 -- | In practice, we do all of the work as "Data.Text.Text", before converting
 -- it to a 'CitationPart'.
@@ -50,81 +69,117 @@ articleConstructorBib :: Article -> CitationPart
 articleConstructorBib a = plain (latexify t)
  where
   t :: Text
-  t =
-    T.intercalate "\n"
-      $ -- T.unlines adds one extra \n at the very end which I don't want.
-         [headerL, doiL, authorL, journalL, titleL, yearL]
-      ++ catMaybes [volumeM, issueM, pagesM]
-      ++ ["}"]
-  headerL, doiL, authorL, journalL, titleL, yearL :: Text
-  volumeM, issueM, pagesM :: Maybe Text -- These fields may be empty.
-  headerL = "@article{" <> identifier <> ","
-   where
-    identifier =
-      ( T.filter isAscii
-        . normalize NFD
-        $ a ^. (authors . ix 0 . family)
-        )
-        <> T.filter isUpper (a ^. journalShort)
-        <> (T.pack . show) (a ^. year)
-  doiL    = makeBibField "doi" (a ^. doi)
-  authorL = makeBibField
-    "author"
-    (T.intercalate
-      " and "
-      (fmap (formatAuthor BibLaTeX) (NE.toList $ a ^. authors))
-    )
-  journalL = makeBibField "journal" (a ^. journalShort)
-  titleL   = makeBibField "title" (a ^. title)
-  yearL    = makeBibField "year" (T.pack . show $ a ^. year)
-  volumeM  = makeMaybeBibField "volume" (a ^. volume)
-  issueM =
-    makeMaybeBibFieldWith (T.all isDigit) "number" (a ^. issue)
-      <|> makeMaybeBibField "issue" (a ^. issue)
-  pagesM = makeMaybeBibField "pages" (a ^. pages)
-    <|> makeMaybeBibField "pages" (a ^. number)
+  t = T.intercalate "\n" ([headerL] ++ fields ++ ["}"])
+  bibIdentifier :: Text
+  bibIdentifier =
+    toAscii (a ^. authors . ix 0 . family)
+      <> T.filter isUpper (a ^. journalShort)
+      <> (T.pack . show) (a ^. year)
+  headerL :: Text
+  headerL = "@article{" <> bibIdentifier <> ","
+  -- The components of these tuples are the arguments to makeMaybeBibFieldWith.
+  rules :: [(Text -> Bool, Text, Text)]
+  rules =
+    [ (always   , "doi"         , a ^. doi)
+    , (always   , "author"      , makeAuthorValue $ a ^. authors)
+    , (always   , "journaltitle", a ^. journalShort)
+    , (always   , "title"       , a ^. title)
+    , (always   , "year"        , T.pack . show $ a ^. year)
+    , (ifNotNull, "volume"      , a ^. volume)
+    , (ifNotNull, "number"      , a ^. issue)
+    , (always   , "pages"       , a ^. pages)
+    ]
+  fields :: [Text]
+  fields = mapMaybe (\(a, b, c) -> makeMaybeBibFieldWith a b c) rules
+  -- Note that the bibtex 'number' field should be used for the issue, even if
+  -- it is non-numeric. See section 2.3.11 of the BibLaTeX package
+  -- documentation.
+  -- TODO: unify pages and articleNumber.
 
--- | Shortcut to make a BibLaTeX key-value pair. If the value is not guaranteed to be present, then
--- use makeMaybeBibField.
+-- BibLaTeX package documentation about the book.
+-- A single-volume book with one or more authors where the authors share credit
+-- for the work as a whole. This entry type also covers the function of the
+-- @inbook type of traditional BibTeX, see § 2.3.1 for details.
+--
+-- Required fields: author, title, year/date
+--
+-- Optional fields: editor, editora, editorb, editorc, translator, annotator,
+-- commentator, introduction, foreword, afterword, subtitle, titleaddon,
+-- maintitle, mainsubtitle, maintitleaddon, language, origlanguage, volume,
+-- part, edition, volumes, series, number, note, publisher, location, isbn, eid,
+-- chapter, pages, pagetotal, addendum, pubstate, doi, eprint, eprintclass,
+-- eprinttype, url, urldate
+
+-- | For books.
+bookConstructorBib :: Book -> CitationPart
+bookConstructorBib b = plain (latexify t)
+ where
+  t :: Text
+  t = T.intercalate "\n" ([headerL] ++ fields ++ ["}"])
+  bibIdentifier :: Text
+  bibIdentifier =
+    toAscii (getContributors b ^. _head . family) <> T.pack (show (b ^. year))
+  headerL :: Text
+  headerL = "@book{" <> bibIdentifier <> ","
+  -- We need to precalculate whether to include an 'edition' key.
+  doEdition :: Bool
+  doEdition = not . T.null $ b ^. edition
+  rules :: [(Text -> Bool, Text, Text)]
+  rules =
+    [ (always         , "author"   , makeAuthorValue $ b ^. authors)
+    , (always         , "title"    , b ^. title)
+    , (always         , "year"     , T.pack . show $ b ^. year)
+    , (always         , "publisher", b ^. publisher)
+    , (always         , "location" , b ^. publisherLoc)
+    , (always         , "isbn"     , b ^. isbn)
+    , (const doEdition, "edition"  , b ^. edition <> " ed.")
+    ]
+  fields :: [Text]
+  fields = mapMaybe (\(a, b, c) -> makeMaybeBibFieldWith a b c) rules
+
+-- | Shortcut to make a BibLaTeX key-value pair. If the value is not guaranteed
+-- to be present, then use 'makeMaybeBibField'.
 makeBibField
-  ::
-  -- | The key.
-     Text
-  ->
-  -- | The value.
-     Text
-  ->
-  -- | The line to be printed to the bib file.
-     Text
+  :: Text -- ^ The key.
+  -> Text -- ^ The value.
+  -> Text -- ^ The line to be printed to the bib file.
 makeBibField key val = "    " <> key <> " = {" <> val <> "},"
 
 -- | Makes a BibLaTeX field if a certain predicate is satisfied. Generalised form of
--- makeMaybeBibField.
+-- 'makeMaybeBibField'.
 makeMaybeBibFieldWith
-  ::
-  -- | The predicate. The field is created if this predicate returns True when applied to the value.
-     (Text -> Bool)
-  ->
-  -- | The key.
-     Text
-  ->
-  -- | The value (which the predicate is tested against).
-     Text
-  ->
-  -- | Just the line to be printed, or Nothing if predicate fails.
-     Maybe Text
+  :: (Text -> Bool) -- ^ The predicate
+  -> Text -- ^ The key.
+  -> Text -- ^ The value (which the predicate is tested against).
+  -> Maybe Text -- ^ Just the line, or Nothing if predicate fails.
 makeMaybeBibFieldWith pred key val =
   if pred val then Just (makeBibField key val) else Nothing
 
--- | Shortcut to make Just a BibLaTex key-value pair, but only if the value is nonempty.
+-- | Shortcut to make Just a BibLaTex key-value pair, but only if the value is
+-- nonempty.
 makeMaybeBibField
-  ::
-  -- | The key.
-     Text
-  ->
-  -- | The (possibly empty) value.
-     Text
-  ->
-  -- | Just the line to be printed, or Nothing if the value was empty.
-     Maybe Text
+  :: Text -- ^ The key.
+  -> Text -- ^ The (possibly empty) value.
+  -> Maybe Text -- ^ Just the line to be printed, or Nothing for empty values.
 makeMaybeBibField = makeMaybeBibFieldWith (not . T.null)
+
+-- | Convert a name to plain ASCII. As best as we can. That is, separate all the
+-- diacritics from the original letters (that's what NFD does), and then remove
+-- all the diacritics, leaving the original letters behind.
+toAscii :: Text -> Text
+toAscii = T.filter isAscii . normalize NFD
+
+-- | Generate the BibLaTeX-formatted value for the @author@ key, i.e. joined by
+-- @and@s.
+makeAuthorValue :: Foldable t => t Author -> Text
+makeAuthorValue = T.intercalate " and "
+                . fmap (formatAuthor BibLaTeX)
+                . toList
+
+-- | A helpful predicate.
+always :: Text -> Bool
+always = const True
+
+-- | Another helpful predicate.
+ifNotNull :: Text -> Bool
+ifNotNull = not . T.null
