@@ -7,6 +7,7 @@ import           Commands.Shared
 import           Control.Exception
 import           Data.Either                    ( partitionEithers )
 import qualified Data.IntMap                   as IM
+import qualified Data.Set                      as S
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import           Data.Time.Clock                ( getCurrentTime )
@@ -43,7 +44,7 @@ runAdd args input = do
       )
     )
   now <- liftIO getCurrentTime
-  let newRefs = map (\w -> Reference w [] now now) newWorks
+  let newRefs = map (\w -> Reference w S.empty now now) newWorks
       refsout = IM.fromList $ zip [1 ..] (IM.elems refs ++ newRefs)
   pure $ SCmdOutput refsout Nothing
 

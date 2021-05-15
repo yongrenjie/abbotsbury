@@ -8,6 +8,7 @@ module Reference
 
 import           Abbotsbury.Work
 import           Data.Aeson
+import           Data.Set                       ( Set )
 import           Data.Text                      ( Text )
 import           Data.Time.Clock
 import           GHC.Generics
@@ -17,7 +18,7 @@ type Tag = Text
 
 data Reference = Reference
   { _work       :: Work
-  , _tags       :: [Tag]
+  , _tags       :: Set Tag
   , _timeAdded  :: UTCTime
   , _timeOpened :: UTCTime
   }

@@ -7,14 +7,16 @@ import           Commands.Shared
 import           Data.Char                      ( isAlphaNum
                                                 , isSpace
                                                 )
+import           Data.Foldable                  ( toList )
 import           Data.IntMap                    ( IntMap )
 import qualified Data.IntMap                   as IM
 import qualified Data.IntSet                   as IS
 import           Data.List                      ( foldl'
-                                                , unzip5
                                                 , transpose
+                                                , unzip5
                                                 )
 import qualified Data.List.NonEmpty            as NE
+import           Data.Set                       ( Set )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
@@ -92,7 +94,7 @@ type RawFifthColumn = [(Text, CookLater)]
 -- | Generate the *four* last columns (i.e. ignoring the number column).
 mkArticleColumns
   :: FilePath   -- Current working directory
-  -> [Tag]      -- Any tags belonging to the Reference containing the Article.
+  -> Set Tag    -- Any tags belonging to the Reference containing the Article.
   -> Article
   -> IO (Column, Column, Column, RawFifthColumn)
 mkArticleColumns cwd refTags a = do
@@ -133,7 +135,7 @@ formatAuthorForList auth =
 -- | Does the job for a Book.
 mkBookColumns
   :: FilePath   -- Current working directory
-  -> [Tag]      -- Any tags belonging to the Reference containing the Book.
+  -> Set Tag    -- Any tags belonging to the Reference containing the Book.
   -> Book
   -> IO (Column, Column, Column, RawFifthColumn)
 mkBookColumns cwd refTags b = do
@@ -196,10 +198,11 @@ getVolInfo a = T.intercalate ", "
     (theVol, theIss) -> theVol <> " (" <> theIss <> ")"
 
 -- | Generate a one-liner describing the tags.
-mkTagString :: [Text] -> Text
-mkTagString ts = case ts of
+mkTagString :: Set Text -> Text
+mkTagString tagSet = case ts of
   [] -> ""
   _  -> "[" <> T.intercalate ", " ts <> "]"
+  where ts = toList tagSet
 
 -- $step3-calculate-field-sizes
 -- Calculate the "correct" field sizes, based on the columns we created earlier.
