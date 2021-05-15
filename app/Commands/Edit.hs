@@ -54,10 +54,9 @@ runEdit args input = do
   errorOnInvalidRefnos prefix refnosToEdit input
   -- Get the Works.
   let refsToEdit  = IM.elems $ refs `IM.restrictKeys` refnosToEdit
-      worksToEdit = map (^. work) refsToEdit
   -- Create a temporary file and dump the YAML into it.
   tmpfile <- liftIO $ makeSystemTempFile "abbot_edit.yaml"
-  liftIO $ encodeFile tmpfile worksToEdit
+  liftIO $ encodeFile tmpfile refsToEdit
   -- Then open the tempfile in vim, and edit it. The /dev/tty handles are
   -- required to stop vim from complaining (its stdin and stdout must be from
   -- and to a terminal).
@@ -71,24 +70,24 @@ runEdit args input = do
   when (exitCode /= ExitSuccess)
        (throwError (prefix <> "vim exited with failure"))
   -- Decode the YAML.
-  eitherExcWorks     <- liftIO $ decodeFileEither tmpfile
+  eitherExcRefs      <- liftIO $ decodeFileEither tmpfile
   -- Check for parse errors. The type annotation specifies which instance of
   -- FromJSON to use.
-  newWorks :: [Work] <- mEither
-    eitherExcWorks
+  newRefs :: [Reference] <- mEither
+    eitherExcRefs
     (throwError . (prefix <>) . T.pack . prettyPrintParseException)
     pure
   -- Make sure it's still the same number of references...
   when
-    (length newWorks /= length worksToEdit)
+    (length newRefs /= length refsToEdit)
     (throwError
       (prefix <> "number of references not the same; discarding changes")
     )
   -- Edit the reference list.
-  let newRefnosWorks = zip (IS.toList refnosToEdit) newWorks
+  let newRefnosRefs  = zip (IS.toList refnosToEdit) newRefs
       refsout        = foldl
-        (\rs (index, newWork) -> rs & (ix index . work) .~ newWork)
+        (\rs (index, newRef) -> rs & ix index .~ newRef)
         refs
-        newRefnosWorks
+        newRefnosRefs
   -- Return the edited reference list
   pure $ SCmdOutput refsout Nothing
