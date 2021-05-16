@@ -89,6 +89,17 @@ getCrossrefJson manager email doi' = do
       Left  err -> Left (CRJsonException doi' (T.pack err))
       Right val -> Right val
 
+-- | The same as 'getCrossrefJson', but does it from a file. You still need to
+-- specify some kind of DOI for the error reporting: if you don't care about
+-- that, then just pass an empty DOI (after all it is just a type alias for
+-- Text).
+getCrossrefJsonFile :: DOI -> FilePath -> IO (Either CrossrefException Value)
+getCrossrefJsonFile doi' fname = do
+  decoded <- eitherDecodeFileStrict fname
+  case decoded of
+       Left err -> pure $ Left (CRJsonException doi' (T.pack err))
+       Right val -> pure $ Right val
+
 -- | Step 2 is to get the 'message' component.
 getJsonMessage
   :: DOI

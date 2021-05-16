@@ -21,18 +21,12 @@ tests = testGroup
   "Crossref"
   [testOL, testNRMP, testNoFirstName, testNoJournalShort]
 
-parseCrossrefJsonFromFile :: FilePath -> IO (Either CrossrefException Work)
-parseCrossrefJsonFromFile fp = do
-  let blankDOI = ""
-  jsonValue <- fromJust . Aeson.decode <$> BL.readFile fp
-  pure $ getJsonMessage blankDOI jsonValue >>= parseCrossrefMessage blankDOI True
-
 testOL :: TestTree
 testOL = testCase "parseCrossrefMessage - 2019 OL" checkOLJSON
  where
   checkOLJSON :: Assertion --- equivalent to IO ()
   checkOLJSON = do
-    work <- parseCrossrefJsonFromFile "tests/test-data/orglett.json"
+    work <- fetchWorkFile "tests/test-data/orglett.json"
     work @?= Right TW.orgLett
 
 testNRMP :: TestTree
@@ -40,7 +34,7 @@ testNRMP = testCase "parseCrossrefMessage - 2021 NRMP" checkNRMPJSON
  where
   checkNRMPJSON :: Assertion --- equivalent to IO ()
   checkNRMPJSON = do
-    work <- parseCrossrefJsonFromFile "tests/test-data/nrmp.json"
+    work <- fetchWorkFile "tests/test-data/nrmp.json" 
     work
       @?= Right TW.nrmpCorrected
 
@@ -50,7 +44,7 @@ testNoFirstName = testCase "parseCrossrefMessage - author without first name"
  where
   checkNFNJSON :: Assertion
   checkNFNJSON = do
-    work <- parseCrossrefJsonFromFile "tests/test-data/nofirstname.json"
+    work <- fetchWorkFile "tests/test-data/nofirstname.json"
     work @?= Right TW.noFirstNameN2020
 
 testNoJournalShort :: TestTree
@@ -59,5 +53,5 @@ testNoJournalShort = testCase "parseCrossrefMessage - no short journal name"
  where
   checkNoJournalShortJSON :: Assertion
   checkNoJournalShortJSON = do
-    work <- parseCrossrefJsonFromFile "tests/test-data/science_oct.json"
+    work <- fetchWorkFile "tests/test-data/science_oct.json"
     work @?= Right TW.glaserS1998

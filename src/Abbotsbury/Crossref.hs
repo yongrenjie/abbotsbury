@@ -14,6 +14,8 @@ module Abbotsbury.Crossref
   , fetchWork'
   , fetchWorks
   , fetchWorks'
+  , fetchWorkFile
+  , fetchWorkFile'
     -- * What could go wrong
     -- $crossref-exceptions
   , Abbotsbury.Crossref.Internal.CrossrefException
@@ -25,6 +27,7 @@ import           Abbotsbury.Work
 import           Control.Concurrent
 import           Control.Monad
 import           Data.Text                      ( Text )
+import qualified Data.Text                     as T
 import qualified Network.HTTP.Client           as NHC
 import qualified Network.HTTP.Client.TLS       as NHCT
 
@@ -226,6 +229,39 @@ fetchWorks' maybeManager useInternalAbbrevs email dois = if null dois
         putMVar mvar eitherErrorWork
       )
     mapM takeMVar mvars
+
+-- | Get a Work by reading in JSON data from a file. This automatically uses
+-- @abbotsbury@'s internal abbreviation list, and also uses the filename passed
+-- as an error string in case JSON parsing fails. If you want to customise
+-- these, look at 'fetchWorkFile''.
+fetchWorkFile
+  ::
+  -- | The file to read from.
+     FilePath -> IO (Either CrossrefException Work)
+fetchWorkFile fp = fetchWorkFile' True (T.pack fp) fp
+
+-- | Generalised version of fetchWorkFile.
+fetchWorkFile'
+  ::
+  -- | Whether to use @abbotsbury@'s internal abbreviation list.
+     Bool
+  ->
+  -- | This argument is used only for error reporting. You can leave it blank if
+  -- you like, or provide any kind of sentinel value.
+     DOI
+  ->
+  -- | The file to read from.
+     FilePath
+  -> IO (Either CrossrefException Work)
+fetchWorkFile' useInternalAbbrevs doi' fpath = do
+  -- Get the JSON data.
+  eitherErrorJson <- getCrossrefJsonFile doi' fpath
+  -- Parse the JSON data. (Note that the argument to 'pure' runs in the Either
+  -- monad, not IO.)
+  pure
+    $   eitherErrorJson
+    >>= getJsonMessage doi'
+    >>= parseCrossrefMessage doi' useInternalAbbrevs
 
 -- $crossref-exceptions
 -- If 'fetchWork' and co. fail, then they will return a @Left
