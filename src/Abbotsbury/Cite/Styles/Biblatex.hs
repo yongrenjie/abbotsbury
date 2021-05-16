@@ -73,8 +73,8 @@ articleConstructorBib a = plain (latexReplaceEscapes t)
   bibIdentifier :: Text
   bibIdentifier =
     toAscii (a ^. authors . ix 0 . family)
-      <> T.filter isUpper (a ^. journalShort)
       <> (T.pack . show) (a ^. year)
+      <> T.filter isUpper (a ^. journalShort)
   headerL :: Text
   headerL = "@article{" <> bibIdentifier <> ","
   -- The components of these tuples are the arguments to makeMaybeBibFieldWith.
@@ -82,8 +82,8 @@ articleConstructorBib a = plain (latexReplaceEscapes t)
   rules =
     [ (always   , "doi"         , a ^. doi)
     , (always   , "author"      , makePersonValue $ a ^. authors)
-    , (always   , "journaltitle", latexReplaceSpaces $ a ^. journalShort)
     , (always   , "title"       , a ^. title)
+    , (always   , "journaltitle", latexReplaceSpaces $ a ^. journalShort)
     , (always   , "year"        , T.pack . show $ a ^. year)
     , (ifNotNull, "volume"      , a ^. volume)
     , (ifNotNull, "number"      , a ^. issue)
@@ -126,11 +126,11 @@ bookConstructorBib b = plain (latexReplaceEscapes t)
   rules =
     [ (always         , "author"   , makePersonValue $ b ^. authors)
     , (always         , "title"    , b ^. title)
+    , (const doEdition, "edition"  , b ^. edition <> " ed.")
     , (always         , "year"     , T.pack . show $ b ^. year)
     , (always         , "publisher", b ^. publisher)
     , (always         , "location" , b ^. publisherLoc)
     , (always         , "isbn"     , b ^. isbn)
-    , (const doEdition, "edition"  , b ^. edition <> " ed.")
     ]
   fields :: [Text]
   fields = mapMaybe (\(a, b, c) -> makeMaybeBibFieldWith a b c) rules

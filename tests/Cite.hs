@@ -42,11 +42,11 @@ testOLCite = testGroup "cite - 2019 OL - all styles"
   bib = testCase "BibLaTeX" $ bibActual @?= bibExpected
   bibActual = cite bibStyle textFormat TW.orgLett
   bibExpected
-    = T.intercalate "\n" [ "@article{MansfieldOL2019,"
+    = T.intercalate "\n" [ "@article{Mansfield2019OL,"
                          , "    doi = {10.1021/acs.orglett.9b00971},"
                          , "    author = {Mansfield, Steven J. and Smith, Russell C. and Yong, Jonathan R.\\ J. and Garry, Olivia L. and Anderson, Edward A.},"
-                         , "    journaltitle = {Org.\\ Lett.},"
                          , "    title = {A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides},"
+                         , "    journaltitle = {Org.\\ Lett.},"
                          , "    year = {2019},"
                          , "    volume = {21},"
                          , "    number = {8},"
