@@ -84,8 +84,8 @@ noFirstNameN2020 = ArticleWork $ Article { _articleTitle        = t
   p   = PageRange ""
   doi = "10.1038/d41586-020-02761-z"
   sheherazade, ardiantiono :: Person
-  sheherazade = Person Nothing "Sheherazade"
-  ardiantiono = Person Nothing "Ardiantiono"
+  sheherazade = Person Nothing "Sheherazade" Nothing
+  ardiantiono = Person Nothing "Ardiantiono" Nothing
 
 glaserS1998 :: Work
 glaserS1998 = ArticleWork $ Article { _articleTitle        = t

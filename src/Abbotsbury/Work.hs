@@ -46,6 +46,7 @@ module Abbotsbury.Work
     -- * Person -> field 'Lens'es
   , given
   , family
+  , suffix
     -- * Typeclasses
     -- $work-typeclasses
   , Bibliographic(..)
@@ -182,6 +183,8 @@ data Person = Person
   ,
     -- | But everyone has at least one name.
     _family :: Text
+    -- | Jr, Sr, etc.
+  , _suffix :: Maybe Text
   }
   deriving (Generic, Show, Ord, Eq)
 
@@ -267,9 +270,10 @@ emptyBook = Book { _bookTitle        = ""
                  , _bookIsbn         = ""
                  }
 
--- | Quick constructor for a 'Person'.
+-- | Quick constructor for a 'Person' who doesn't have a suffix, which is the
+-- most common case. For more complicated cases, use record syntax.
 mkPerson :: Text -> Text -> Person
-mkPerson = Person . Just
+mkPerson gvn fmy = Person (Just gvn) fmy Nothing
 
 -- $work-typeclasses
 -- We also export a 'Bibliographic' typeclass, which contains functions which

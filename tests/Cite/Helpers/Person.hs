@@ -22,11 +22,11 @@ import           Text.RawString.QQ
 
 -- Define all possible inputs
 jon, tim, ali, jb, eriks :: Person
-jon = Person (Just "Jonathan Ren Jie") "Yong"
-tim = Person (Just "Tim D. W.") "Claridge"
-ali = Person (Just "Mohammadali") "Foroozandeh"
-jb = Person (Just "Jean-Baptiste") "Verstraete" -- useful for hyphens. Thanks JB
-eriks = Person (Just "Ēriks") "Kupče" -- test Unicode
+jon = mkPerson "Jonathan Ren Jie" "Yong"
+tim = mkPerson "Tim D. W." "Claridge"
+ali = mkPerson "Mohammadali" "Foroozandeh"
+jb = mkPerson "Jean-Baptiste" "Verstraete" -- useful for hyphens. Thanks JB
+eriks = mkPerson "Ēriks" "Kupče" -- test Unicode
 
 allPersons :: [Person]
 allPersons = [jon, tim, ali, jb, eriks]

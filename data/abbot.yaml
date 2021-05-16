@@ -4,7 +4,8 @@
     contents:
       _bookTitle: High-Resolution NMR Techniques in Organic Chemistry
       _bookAuthors:
-      - _given: Timothy D. W.
+      - _suffix: null
+        _given: Timothy D. W.
         _family: Claridge
       _bookYear: 2016
       _bookPublisher: Elsevier
@@ -26,15 +27,20 @@
       _articleJournalLong: Organic Letters
       _articleJournalShort: Org. Lett.
       _articleAuthors:
-      - _given: Steven J.
+      - _suffix: null
+        _given: Steven J.
         _family: Mansfield
-      - _given: Russell C.
+      - _suffix: null
+        _given: Russell C.
         _family: Smith
-      - _given: Jonathan R. J.
+      - _suffix: null
+        _given: Jonathan R. J.
         _family: Yong
-      - _given: Olivia L.
+      - _suffix: null
+        _given: Olivia L.
         _family: Garry
-      - _given: Edward A.
+      - _suffix: null
+        _given: Edward A.
         _family: Anderson
       _articleYear: 2019
       _articleTitle: A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides
@@ -53,15 +59,20 @@
       _articleJournalLong: Nature Reviews Methods Primers
       _articleJournalShort: Nat. Rev. Methods Primers
       _articleAuthors:
-      - _given: Ēriks
+      - _suffix: null
+        _given: Ēriks
         _family: Kupče
-      - _given: Lucio
+      - _suffix: null
+        _given: Lucio
         _family: Frydman
-      - _given: Andrew G.
+      - _suffix: null
+        _given: Andrew G.
         _family: Webb
-      - _given: Jonathan R. J.
+      - _suffix: null
+        _given: Jonathan R. J.
         _family: Yong
-      - _given: Tim D. W.
+      - _suffix: null
+        _given: Tim D. W.
         _family: Claridge
       _articleYear: 2021
       _articleTitle: Parallel nuclear magnetic resonance spectroscopy

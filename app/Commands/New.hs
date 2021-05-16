@@ -91,4 +91,4 @@ pWorkType = choice
   ]
  where
   emptyPerson :: Person
-  emptyPerson = Person (Just "") ""
+  emptyPerson = Person (Just "") "" Nothing

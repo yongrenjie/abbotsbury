@@ -232,12 +232,12 @@ safeHead errorMsg listParser = do
 -- but also ensures that names are parsed correctly for citation generation). For example, the given
 -- name "A.B." is modified to "A. B.".
 parsePerson
-  ::
-  -- | The Crossref JSON for an author.
-     Object -> DAT.Parser Person
-parsePerson authJSON = do
-  _given  <- fmap (normalize NFC . separateInitials) <$> (authJSON .:? "given")
-  _family <- normalize NFC <$> authJSON .: "family"
+  :: Object  -- ^ The Crossref JSON for an author.
+  -> DAT.Parser Person
+parsePerson personObj = do
+  _given  <- fmap (normalize NFC . separateInitials) <$> (personObj .:? "given")
+  _family <- normalize NFC <$> personObj .: "family"
+  _suffix <- fmap (normalize NFC) <$> personObj .:? "suffix"
   pure Person { .. }
 
 -- | This function enforces the separation of initials by a space, as described in parsePerson.
