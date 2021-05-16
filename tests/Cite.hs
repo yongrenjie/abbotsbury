@@ -44,7 +44,7 @@ testOLCite = testGroup "cite - 2019 OL - all styles"
   bibExpected
     = T.intercalate "\n" [ "@article{MansfieldOL2019,"
                          , "    doi = {10.1021/acs.orglett.9b00971},"
-                         , "    author = {Mansfield, Steven J.\\ and Smith, Russell C.\\ and Yong, Jonathan R.\\ J.\\ and Garry, Olivia L.\\ and Anderson, Edward A.},"
+                         , "    author = {Mansfield, Steven J. and Smith, Russell C. and Yong, Jonathan R.\\ J. and Garry, Olivia L. and Anderson, Edward A.},"
                          , "    journaltitle = {Org.\\ Lett.},"
                          , "    title = {A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides},"
                          , "    year = {2019},"

@@ -6,7 +6,7 @@ module Abbotsbury.Cite.Styles.Biblatex where
 
 import           Abbotsbury.Cite.Helpers.Person
 import           Abbotsbury.Cite.Internal
-import           Abbotsbury.LatexEscapes        ( latexify )
+import           Abbotsbury.LatexEscapes
 import           Abbotsbury.Work
 import           Data.Char                      ( isAscii
                                                 , isUpper
@@ -66,7 +66,7 @@ bibStyle = Style { articleConstructor = articleConstructorBib
 -- | In practice, we do all of the work as "Data.Text.Text", before converting
 -- it to a 'CitationPart'.
 articleConstructorBib :: Article -> CitationPart
-articleConstructorBib a = plain (latexify t)
+articleConstructorBib a = plain (latexReplaceEscapes t)
  where
   t :: Text
   t = T.intercalate "\n" ([headerL] ++ fields ++ ["}"])
@@ -82,7 +82,7 @@ articleConstructorBib a = plain (latexify t)
   rules =
     [ (always   , "doi"         , a ^. doi)
     , (always   , "author"      , makePersonValue $ a ^. authors)
-    , (always   , "journaltitle", a ^. journalShort)
+    , (always   , "journaltitle", latexReplaceSpaces $ a ^. journalShort)
     , (always   , "title"       , a ^. title)
     , (always   , "year"        , T.pack . show $ a ^. year)
     , (ifNotNull, "volume"      , a ^. volume)
@@ -110,7 +110,7 @@ articleConstructorBib a = plain (latexify t)
 
 -- | For books.
 bookConstructorBib :: Book -> CitationPart
-bookConstructorBib b = plain (latexify t)
+bookConstructorBib b = plain (latexReplaceEscapes t)
  where
   t :: Text
   t = T.intercalate "\n" ([headerL] ++ fields ++ ["}"])
@@ -170,9 +170,7 @@ toAscii = T.filter isAscii . normalize NFD
 -- | Generate the BibLaTeX-formatted value for the @author@ key, i.e. joined by
 -- @and@s.
 makePersonValue :: Foldable t => t Person -> Text
-makePersonValue = T.intercalate " and "
-                . fmap (formatPerson BibLaTeX)
-                . toList
+makePersonValue = T.intercalate " and " . fmap (formatPerson BibLaTeX) . toList
 
 -- | A helpful predicate.
 always :: Text -> Bool

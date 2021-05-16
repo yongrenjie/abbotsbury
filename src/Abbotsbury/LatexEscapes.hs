@@ -144,18 +144,18 @@ latexEscapes = M.fromList
   , ('\x2014', "---")
   ]
 
--- | Replace all Unicode special characters with their LaTeX counterparts. Gracefully fail
--- if the replacement cannot be found in the latexEscapes dictionary above.
-latexify :: Text -> Text
-latexify = replaceEscapes . replaceSpaces
- where
-  replaceSpaces :: Text -> Text
-  replaceSpaces = T.replace ". " ".\\ "
-  replaceEscapes :: Text -> Text
-  replaceEscapes = T.concatMap
-    (\c -> if isAscii c
-      then T.singleton c
-      else case M.lookup c latexEscapes of
-        Just escapeSeq -> escapeSeq
-        Nothing        -> T.singleton c
-    )
+-- | Replace all Unicode special characters with their LaTeX counterparts.
+-- Gracefully fail if the replacement cannot be found in the latexEscapes
+-- dictionary above.
+latexReplaceEscapes :: Text -> Text
+latexReplaceEscapes = T.concatMap
+  (\c -> if isAscii c
+    then T.singleton c
+    else case M.lookup c latexEscapes of
+      Just escapeSeq -> escapeSeq
+      Nothing        -> T.singleton c
+  )
+
+-- | Make spaces before periods smaller.
+latexReplaceSpaces :: Text -> Text
+latexReplaceSpaces = T.replace ". " ".\\ "

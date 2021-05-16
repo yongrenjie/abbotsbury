@@ -32,7 +32,7 @@ formatPerson fmt auth =
         Just gvn -> case fmt of
           FamilyInitials -> fam <> ", " <> makeInitials gvn
           InitialsFamily -> makeInitials gvn <> " " <> fam
-          BibLaTeX       -> latexify (fam <> ", " <> gvn)
+          BibLaTeX       -> latexReplaceEscapes . latexReplaceSpaces $ (fam <> ", " <> gvn)
 
 -- | Extracts the initials from a given name. The elements of the outermost list are separated by
 -- spaces; the elements of each inner list are separated by hyphens.
