@@ -85,6 +85,7 @@ styleReader = eitherReader $ \s ->
     case s' of
       _
         | s' `elem` ["a", "acs"] -> Right acsStyle
+        | s' == "acs-short" -> Right acsShortStyle
         | s' `elem` ["b", "bib"] -> Right bibStyle
         | otherwise -> Left $ mconcat
           [ "style '"

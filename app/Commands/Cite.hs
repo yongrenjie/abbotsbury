@@ -30,6 +30,11 @@ data ReplCiteRules
   | AcsRestructured
   | AcsHtml
   | AcsWord
+  | AcsShortText
+  | AcsShortMarkdown
+  | AcsShortRestructured
+  | AcsShortHtml
+  | AcsShortWord
   | Biblatex
   deriving (Ord, Eq, Show, Enum, Bounded)
 
@@ -53,11 +58,11 @@ runCite args input = do
   -- Print them
   liftIO $ TIO.putStrLn citations
   -- Copy them to the clipboard
-  liftIO $ case rules of
-    AcsWord -> do
+  liftIO $ if rules `elem` [AcsWord, AcsShortWord]
+    then do
       let htmlLines = map (cite style htmlFormat . _work) refsToCite
       copyHtmlLinesAsRtf htmlLines
-    _ -> copy citations
+    else copy citations
   -- Return basically nothing
   pure $ SCmdOutput (refsin input) Nothing
 
@@ -70,14 +75,24 @@ pCite = (,) <$> pRefnos <*> pOneFormatCaseSens abbrevs (Just Biblatex)
     , ("R", AcsRestructured)
     , ("H", AcsHtml)
     , ("W", AcsWord)
+    , ("t", AcsShortText)
+    , ("m", AcsShortMarkdown)
+    , ("r", AcsShortRestructured)
+    , ("h", AcsShortHtml)
+    , ("w", AcsShortWord)
     , ("b", Biblatex)
     , ("B", Biblatex)
     ]
 
 getStyleFormat :: ReplCiteRules -> (Style, Format)
-getStyleFormat AcsText         = (acsStyle, textFormat)
-getStyleFormat AcsMarkdown     = (acsStyle, markdownFormat)
-getStyleFormat AcsRestructured = (acsStyle, restructuredFormat)
-getStyleFormat AcsHtml         = (acsStyle, htmlFormat)
-getStyleFormat AcsWord         = (acsStyle, textFormat)
-getStyleFormat Biblatex        = (bibStyle, textFormat)
+getStyleFormat AcsText              = (acsStyle, textFormat)
+getStyleFormat AcsMarkdown          = (acsStyle, markdownFormat)
+getStyleFormat AcsRestructured      = (acsStyle, restructuredFormat)
+getStyleFormat AcsHtml              = (acsStyle, htmlFormat)
+getStyleFormat AcsWord              = (acsStyle, textFormat)
+getStyleFormat AcsShortText         = (acsShortStyle, textFormat)
+getStyleFormat AcsShortMarkdown     = (acsShortStyle, markdownFormat)
+getStyleFormat AcsShortRestructured = (acsShortStyle, restructuredFormat)
+getStyleFormat AcsShortHtml         = (acsShortStyle, htmlFormat)
+getStyleFormat AcsShortWord         = (acsShortStyle, textFormat)
+getStyleFormat Biblatex             = (bibStyle, textFormat)
