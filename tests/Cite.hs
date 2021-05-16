@@ -3,18 +3,18 @@ module Cite
   ) where
 
 import           Abbotsbury
-import qualified Data.Text                     as T
 import           Data.IntMap                    ( IntMap )
 import qualified Data.IntMap                   as IM
+import qualified Data.Text                     as T
 import           Test.Tasty
 import           Test.Tasty.HUnit
 import qualified TestWorks                     as TW
 
 -- | This is the only test for which we will exhaustively check all formats. For
 -- other tests we can just check Markdown alone.
-testOLCite :: TestTree
-testOLCite = testGroup "cite - 2019 OL - all styles"
-                       [acsText, acsMarkdown, acsRestructured, acsHtml, bib]
+testCite1 :: TestTree
+testCite1 = testGroup "cite - work 1 - all styles"
+                      [acsText, acsMarkdown, acsRestructured, acsHtml, bib]
  where
   orgLett :: Work
   orgLett = TW.testWorks IM.! 1
@@ -24,8 +24,7 @@ testOLCite = testGroup "cite - 2019 OL - all styles"
   textExpected
     = "Mansfield, S. J.; Smith, R. C.; Yong, J. R. J.; Garry, O. L.; Anderson, E. A. A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides. Org. Lett. 2019, 21 (8), 2918-2922. DOI: 10.1021/acs.orglett.9b00971."
   acsMarkdown :: TestTree
-  acsMarkdown =
-    testCase "ACS/Markdown" $ markdownActual @?= markdownExpected
+  acsMarkdown    = testCase "ACS/Markdown" $ markdownActual @?= markdownExpected
   markdownActual = cite acsStyle markdownFormat orgLett
   markdownExpected
     = "Mansfield, S. J.; Smith, R. C.; Yong, J. R. J.; Garry, O. L.; Anderson, E. A. A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides. *Org. Lett.* **2019,** *21* (8), 2918-2922. DOI: [10.1021/acs.orglett.9b00971](https://doi.org/10.1021/acs.orglett.9b00971)."
@@ -43,19 +42,28 @@ testOLCite = testGroup "cite - 2019 OL - all styles"
   htmlExpected
     = "Mansfield, S. J.; Smith, R. C.; Yong, J. R. J.; Garry, O. L.; Anderson, E. A. A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides. <i>Org. Lett.</i> <b>2019,</b> <i>21</i> (8), 2918-2922. DOI: <a href=\"https://doi.org/10.1021/acs.orglett.9b00971\">10.1021/acs.orglett.9b00971</a>."
   bib :: TestTree
-  bib = testCase "BibLaTeX" $ bibActual @?= bibExpected
-  bibActual = cite bibStyle textFormat orgLett
-  bibExpected
-    = T.intercalate "\n" [ "@article{Mansfield2019OL,"
-                         , "    doi = {10.1021/acs.orglett.9b00971},"
-                         , "    author = {Mansfield, Steven J. and Smith, Russell C. and Yong, Jonathan R.\\ J. and Garry, Olivia L. and Anderson, Edward A.},"
-                         , "    title = {A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides},"
-                         , "    journaltitle = {Org.\\ Lett.},"
-                         , "    year = {2019},"
-                         , "    volume = {21},"
-                         , "    number = {8},"
-                         , "    pages = {2918--2922},"
-                         , "}" ]
+  bib         = testCase "BibLaTeX" $ bibActual @?= bibExpected
+  bibActual   = cite bibStyle textFormat orgLett
+  bibExpected = T.intercalate
+    "\n"
+    [ "@article{Mansfield2019OL,"
+    , "    doi = {10.1021/acs.orglett.9b00971},"
+    , "    author = {Mansfield, Steven J. and Smith, Russell C. and Yong, Jonathan R.\\ J. and Garry, Olivia L. and Anderson, Edward A.},"
+    , "    title = {A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides},"
+    , "    journaltitle = {Org.\\ Lett.},"
+    , "    year = {2019},"
+    , "    volume = {21},"
+    , "    number = {8},"
+    , "    pages = {2918--2922},"
+    , "}"
+    ]
+
+testCite2 :: TestTree
+testCite2 = testCase "cite - work2" $ actual @?= expected
+ where
+  actual = cite acsStyle markdownFormat (TW.testWorks IM.! 2)
+  expected
+    = "Kupče, Ē.; Frydman, L.; Webb, A. G.; Yong, J. R. J.; Claridge, T. D. W. Parallel nuclear magnetic resonance spectroscopy. *Nat. Rev. Methods Primers* **2021,** *1* (1), No. 27. DOI: [10.1038/s43586-021-00024-3](https://doi.org/10.1038/s43586-021-00024-3)."
 
 tests :: TestTree
-tests = testGroup "Cite" [testOLCite]
+tests = testGroup "Cite" [testCite1, testCite2]
