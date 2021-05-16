@@ -53,7 +53,7 @@ formatJInfoACS a = mconcat
  where
   theJName = italic (a ^. journalShort)
   theYear  = bold (T.pack (show (a ^. year) ++ ","))
-  thePages = plain $ displayPages (a ^. pages) <> "."
+  thePages = plain . T.replace "-" "–" $ displayPages (a ^. pages) <> "."
   -- Whether the pagination part is empty will determine the punctuation used at
   -- the end of the volume info.
   endPunct   = if thePages == plain "." then "" else ","

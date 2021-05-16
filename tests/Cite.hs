@@ -22,12 +22,12 @@ testCite1 = testGroup "cite - work 1 - all styles"
   acsText    = testCase "ACS/Text" $ textActual @?= textExpected
   textActual = cite acsStyle textFormat (TW.testWorks IM.! 1)
   textExpected
-    = "Mansfield, S. J.; Smith, R. C.; Yong, J. R. J.; Garry, O. L.; Anderson, E. A. A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides. Org. Lett. 2019, 21 (8), 2918-2922. DOI: 10.1021/acs.orglett.9b00971."
+    = "Mansfield, S. J.; Smith, R. C.; Yong, J. R. J.; Garry, O. L.; Anderson, E. A. A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides. Org. Lett. 2019, 21 (8), 2918–2922. DOI: 10.1021/acs.orglett.9b00971."
   acsMarkdown :: TestTree
   acsMarkdown    = testCase "ACS/Markdown" $ markdownActual @?= markdownExpected
   markdownActual = cite acsStyle markdownFormat orgLett
   markdownExpected
-    = "Mansfield, S. J.; Smith, R. C.; Yong, J. R. J.; Garry, O. L.; Anderson, E. A. A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides. *Org. Lett.* **2019,** *21* (8), 2918-2922. DOI: [10.1021/acs.orglett.9b00971](https://doi.org/10.1021/acs.orglett.9b00971)."
+    = "Mansfield, S. J.; Smith, R. C.; Yong, J. R. J.; Garry, O. L.; Anderson, E. A. A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides. *Org. Lett.* **2019,** *21* (8), 2918–2922. DOI: [10.1021/acs.orglett.9b00971](https://doi.org/10.1021/acs.orglett.9b00971)."
   acsRestructured :: TestTree
   acsRestructured =
     testCase "ACS/reStructuredText"
@@ -35,12 +35,12 @@ testCite1 = testGroup "cite - work 1 - all styles"
       @?= restructuredExpected
   restructuredActual = cite acsStyle restructuredFormat orgLett
   restructuredExpected
-    = "Mansfield, S. J.; Smith, R. C.; Yong, J. R. J.; Garry, O. L.; Anderson, E. A. A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides. *Org. Lett.* **2019,** *21* (8), 2918-2922. DOI: `10.1021/acs.orglett.9b00971 <https://doi.org/10.1021/acs.orglett.9b00971>`_."
+    = "Mansfield, S. J.; Smith, R. C.; Yong, J. R. J.; Garry, O. L.; Anderson, E. A. A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides. *Org. Lett.* **2019,** *21* (8), 2918–2922. DOI: `10.1021/acs.orglett.9b00971 <https://doi.org/10.1021/acs.orglett.9b00971>`_."
   acsHtml :: TestTree
   acsHtml    = testCase "ACS/HTML" $ htmlActual @?= htmlExpected
   htmlActual = cite acsStyle htmlFormat orgLett
   htmlExpected
-    = "Mansfield, S. J.; Smith, R. C.; Yong, J. R. J.; Garry, O. L.; Anderson, E. A. A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides. <i>Org. Lett.</i> <b>2019,</b> <i>21</i> (8), 2918-2922. DOI: <a href=\"https://doi.org/10.1021/acs.orglett.9b00971\">10.1021/acs.orglett.9b00971</a>."
+    = "Mansfield, S. J.; Smith, R. C.; Yong, J. R. J.; Garry, O. L.; Anderson, E. A. A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides. <i>Org. Lett.</i> <b>2019,</b> <i>21</i> (8), 2918–2922. DOI: <a href=\"https://doi.org/10.1021/acs.orglett.9b00971\">10.1021/acs.orglett.9b00971</a>."
   bib :: TestTree
   bib         = testCase "BibLaTeX" $ bibActual @?= bibExpected
   bibActual   = cite bibStyle textFormat orgLett
@@ -70,7 +70,7 @@ testCite5 = testCase "cite - work5" $ actual @?= expected
  where
   actual = cite acsStyle markdownFormat (TW.testWorks IM.! 5)
   expected
-    = "Smith, A. B., III. Twenty Years of Organic Letters, A Look Back...and Forward. *Org. Lett.* **2018,** *20* (1), 1-3. DOI: [10.1021/acs.orglett.7b03845](https://doi.org/10.1021/acs.orglett.7b03845)."
+    = "Smith, A. B., III. Twenty Years of Organic Letters, A Look Back...and Forward. *Org. Lett.* **2018,** *20* (1), 1–3. DOI: [10.1021/acs.orglett.7b03845](https://doi.org/10.1021/acs.orglett.7b03845)."
 
 tests :: TestTree
 tests = testGroup "Cite" [testCite1, testCite2, testCite5]
