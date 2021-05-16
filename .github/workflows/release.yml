@@ -151,7 +151,7 @@ jobs:
           /usr/bin/sed -i "" -E 's/    sha256 cellar.+/    sha256 cellar: :any, catalina: "${{ steps.build_bottle.outputs.executable_sha256 }}"/g' Formula/abbotsbury.rb
 
       - name: Update the Homebrew tap (second time)
-        run: 
+        run: |
           git add -A
           git commit -m "Bump bottle to v${{ needs.create_release.outputs.version }}"
           git push
