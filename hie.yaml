@@ -21,7 +21,16 @@ cradle:
     - path: "app/Commands/Edit.hs"
       component: "abbotsbury:exe:abbot"
 
+    - path: "app/Commands/Fetch.hs"
+      component: "abbotsbury:exe:abbot"
+
+    - path: "app/Commands/Help.hs"
+      component: "abbotsbury:exe:abbot"
+
     - path: "app/Commands/List.hs"
+      component: "abbotsbury:exe:abbot"
+
+    - path: "app/Commands/New.hs"
       component: "abbotsbury:exe:abbot"
 
     - path: "app/Commands/Open.hs"

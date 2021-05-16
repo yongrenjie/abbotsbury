@@ -20,11 +20,12 @@ module Abbotsbury.Work
   , Book(..)
   , ArticlePage(..)
   , displayPages
-  , Author(..)
-    -- * Empty versions of Works
+  , Person(..)
+    -- * Empty versions of datatypes
     -- $work-empty
   , emptyArticle
   , emptyBook
+  , mkPerson
     -- * Work -> datatype 'Traversal's
   , _article
   , _book
@@ -42,7 +43,7 @@ module Abbotsbury.Work
   , isbn
   , publisher
   , publisherLoc
-    -- * Author -> field 'Lens'es
+    -- * Person -> field 'Lens'es
   , given
   , family
     -- * Typeclasses
@@ -129,7 +130,7 @@ data Article = Article
   { _articleTitle        :: Text
   ,
     -- | There has to be at least one author!
-    _articleAuthors      :: NonEmpty Author
+    _articleAuthors      :: NonEmpty Person
   ,
     -- | The full name of the journal, e.g. @"Journal of the American Chemical
     -- Society"@.
@@ -164,7 +165,7 @@ data Book = Book
   -- | Publisher location.
   , _bookPublisherLoc :: Text
     -- | A book doesn't have to have an author.
-  , _bookAuthors      :: [Author]
+  , _bookAuthors      :: [Person]
   , _bookYear         :: Int
   , _bookEdition      :: Text
   , _bookIsbn         :: ISBN
@@ -175,7 +176,7 @@ data Book = Book
 -- on the field in which this is found).
 --
 -- TODO: Add the @suffix@ field, and rename it to @Person@ or @Contributor@.
-data Author = Author
+data Person = Person
   { -- | Not everyone has a given name.
     _given  :: Maybe Text
   ,
@@ -233,7 +234,7 @@ _book _ x            = pure x
 -- define all the HasField stuff myself.
 makeFields ''Article
 makeFields ''Book
-makeLenses ''Author
+makeLenses ''Person
 
 -- $work-empty
 -- The following are \'empty\' versions of 'Article's / 'Book's, with fields
@@ -245,7 +246,7 @@ makeLenses ''Author
 -- | An empty 'Article'.
 emptyArticle :: Article
 emptyArticle = Article { _articleTitle        = ""
-                       , _articleAuthors      = NE.fromList [mkAuthor "" ""]
+                       , _articleAuthors      = NE.fromList [mkPerson "" ""]
                        , _articleJournalLong  = ""
                        , _articleJournalShort = ""
                        , _articleYear         = 2021
@@ -266,11 +267,9 @@ emptyBook = Book { _bookTitle        = ""
                  , _bookIsbn         = ""
                  }
 
--- | Quickly make an author.
---
--- TODO: generalise 'Author' and then export this.
-mkAuthor :: Text -> Text -> Author
-mkAuthor = Author . Just
+-- | Quick constructor for a 'Person'.
+mkPerson :: Text -> Text -> Person
+mkPerson = Person . Just
 
 -- $work-typeclasses
 -- We also export a 'Bibliographic' typeclass, which contains functions which
@@ -286,11 +285,11 @@ class Bibliographic x where
   -- 
   -- TODO: How to express their role? (Person, Role) or make Role a field of
   -- Person?
-  getContributors :: x -> [Author]
+  getContributors :: x -> [Person]
   -- | Return all the authors of a work.
-  getAuthors      :: x -> [Author]
+  getAuthors      :: x -> [Person]
   -- | Return all the editors of a work.
-  getEditors      :: x -> [Author]
+  getEditors      :: x -> [Person]
   -- | Return the year of the work.
   getYear         :: x -> Int
   -- | Return the title of the work.
@@ -342,7 +341,7 @@ instance ToJSON Article where
 instance ToJSON Book where
   toEncoding = genericToEncoding defaultOptions
 
-instance ToJSON Author where
+instance ToJSON Person where
   toEncoding = genericToEncoding defaultOptions
 
 instance FromJSON Work
@@ -353,5 +352,5 @@ instance FromJSON Article
 
 instance FromJSON Book
 
-instance FromJSON Author
+instance FromJSON Person
 

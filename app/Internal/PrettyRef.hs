@@ -2,7 +2,7 @@ module Internal.PrettyRef
   ( prettify
   ) where
 
-import           Abbotsbury.Cite.Helpers.Author
+import           Abbotsbury.Cite.Helpers.Person
 import           Commands.Shared
 import           Data.Char                      ( isAlphaNum
                                                 , isSpace
@@ -102,7 +102,7 @@ mkArticleColumns cwd refTags a = do
   -- factorise it out, but at the cost of making the function signature worse.
   availText <- mkAvailText cwd [FullText, SI] a
   -- Build up the columns first.
-  let authorColumn  = mkAuthorColumn 5 a
+  let authorColumn  = mkPersonColumn 5 a
       yearColumn    = [T.pack . show $ a ^. year]
       journalColumn = [getShortestJournalName a, getVolInfo a]
       titleColumn =
@@ -114,18 +114,18 @@ mkArticleColumns cwd refTags a = do
   pure (authorColumn, yearColumn, journalColumn, titleColumn)
 
 -- | Generate the author column.
-mkAuthorColumn :: Bibliographic w => Int -> w -> [Text]
-mkAuthorColumn n w = trimIfOverN allContribs
+mkPersonColumn :: Bibliographic w => Int -> w -> [Text]
+mkPersonColumn n w = trimIfOverN allContribs
  where
-  allContribs = formatAuthorForList <$> getContributors w
+  allContribs = formatPersonForList <$> getContributors w
   -- It doesn't make sense to trim if n is smaller than 4.
   trimIfOverN :: [Text] -> [Text]
   trimIfOverN ts =
     if n >= 4 && length ts > n then take (n - 2) ts ++ ["...", last ts] else ts
 
 -- | In the 'list' command, we display authors as (e.g.) JRJ Yong.
-formatAuthorForList :: Author -> Text
-formatAuthorForList auth =
+formatPersonForList :: Person -> Text
+formatPersonForList auth =
   let fam = auth ^. family
   in  case auth ^. given of
         Nothing -> fam
@@ -141,7 +141,7 @@ mkBookColumns
 mkBookColumns cwd refTags b = do
   availText <- mkAvailText cwd [FullText] b
   -- Build up the columns first.
-  let authorColumn  = mkAuthorColumn 5 b
+  let authorColumn  = mkPersonColumn 5 b
       yearColumn    = [T.pack . show $ b ^. year]
       editionText   = b ^. edition
       editionText2  = if T.null editionText then "" else editionText <> " ed."

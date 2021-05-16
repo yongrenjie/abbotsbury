@@ -156,7 +156,7 @@ parseArticle useInternalAbbrevs messageObj = do
   -- Authors
   _authorArray    <- messageObj .: "author"
   _articleAuthors <- do
-    auths <- mapM parseAuthor _authorArray
+    auths <- mapM parsePerson _authorArray
     case NE.nonEmpty auths of
       Just x  -> pure x
       Nothing -> fail "expected at least one author, found none"
@@ -200,7 +200,7 @@ parseBook messageObj = do
   _bookPublisherLoc <- messageObj .:? "publisher-location" .!= ""
   -- Authors
   _authorArray      <- messageObj .: "author"
-  _bookAuthors      <- mapM parseAuthor _authorArray
+  _bookAuthors      <- mapM parsePerson _authorArray
   -- Year (prefer print publish date over online publish date as the former is the one usually used)
   publishedObj      <-
     messageObj .: "published-print" <|> messageObj .: "published-online"
@@ -231,16 +231,16 @@ safeHead errorMsg listParser = do
 -- (2) We force initials in the given name to be separated by spaces (this is partly for consistency
 -- but also ensures that names are parsed correctly for citation generation). For example, the given
 -- name "A.B." is modified to "A. B.".
-parseAuthor
+parsePerson
   ::
   -- | The Crossref JSON for an author.
-     Object -> DAT.Parser Author
-parseAuthor authJSON = do
+     Object -> DAT.Parser Person
+parsePerson authJSON = do
   _given  <- fmap (normalize NFC . separateInitials) <$> (authJSON .:? "given")
   _family <- normalize NFC <$> authJSON .: "family"
-  pure Author { .. }
+  pure Person { .. }
 
--- | This function enforces the separation of initials by a space, as described in parseAuthor.
+-- | This function enforces the separation of initials by a space, as described in parsePerson.
 separateInitials :: Text -> Text
 separateInitials t = T.concat . zipWith f [1 ..] . T.unpack $ t
  where

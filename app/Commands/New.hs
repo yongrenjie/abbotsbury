@@ -87,8 +87,8 @@ pWorkType :: Parser Work
 pWorkType = choice
   -- To make the YAML easier to edit, we create a phantom author.
   [ ArticleWork emptyArticle <$ string' "article"
-  , BookWork (emptyBook & authors .~ [emptyAuthor]) <$ string' "book"
+  , BookWork (emptyBook & authors .~ [emptyPerson]) <$ string' "book"
   ]
  where
-  emptyAuthor :: Author
-  emptyAuthor = Author (Just "") ""
+  emptyPerson :: Person
+  emptyPerson = Person (Just "") ""

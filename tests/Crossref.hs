@@ -21,9 +21,6 @@ tests = testGroup
   "Crossref"
   [testOL, testNRMP, testNoFirstName, testNoJournalShort]
 
-auth :: (Text, Text) -> Author
-auth (gvn, fmy) = Author (Just gvn) fmy
-
 parseCrossrefJsonFromFile :: FilePath -> IO (Either CrossrefException Work)
 parseCrossrefJsonFromFile fp = do
   let blankDOI = ""

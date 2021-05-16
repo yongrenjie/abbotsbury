@@ -2,7 +2,7 @@
 -- author list, title, year, journal volume/issue, pages, DOI.
 module Abbotsbury.Cite.Styles.ACS where
 
-import           Abbotsbury.Cite.Helpers.Author
+import           Abbotsbury.Cite.Helpers.Person
 import           Abbotsbury.Cite.Internal
 import           Abbotsbury.Work
 import qualified Data.List                     as L
@@ -38,7 +38,7 @@ articleConstructorACS a = mconcat
   authorP, titleP, journalInfoP, doiP :: CitationPart
   authorP = plain $ T.intercalate
     "; "
-    (fmap (formatAuthor FamilyInitials) (NE.toList $ a ^. authors))
+    (fmap (formatPerson FamilyInitials) (NE.toList $ a ^. authors))
   titleP =
     let t   = a ^. title
         end = if (not . T.null $ t) && (T.last t == '.') then "" else "."

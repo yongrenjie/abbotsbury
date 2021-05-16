@@ -59,7 +59,7 @@ library
     Abbotsbury
     Abbotsbury.Cite
     Abbotsbury.Cite.Internal
-    Abbotsbury.Cite.Helpers.Author
+    Abbotsbury.Cite.Helpers.Person
     Abbotsbury.Crossref
     Abbotsbury.Crossref.Internal
     Abbotsbury.LatexEscapes
@@ -130,7 +130,7 @@ test-suite tests
     Main.hs
   other-modules:
     Cite
-    Cite.Helpers.Author
+    Cite.Helpers.Person
     Crossref
     TestWorks
   build-depends:

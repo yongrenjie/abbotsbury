@@ -4,7 +4,7 @@ module Main where
 
 import           Abbotsbury.Crossref            ( fetchWork )
 import qualified Cite
-import qualified Cite.Helpers.Author
+import qualified Cite.Helpers.Person
 import qualified Crossref
 import           Data.Text                      ( Text )
 import           System.Directory
@@ -29,7 +29,7 @@ allTests = testGroup
   aft       = after AllSucceed "check working directory"
   -- The rest are tests organised by their imports.
   citeTests = testGroup "Cite" [Cite.tests, helperTests]
-    where helperTests = testGroup "Helpers" [Cite.Helpers.Author.tests]
+    where helperTests = testGroup "Helpers" [Cite.Helpers.Person.tests]
 
 main :: IO ()
 main = defaultMain allTests

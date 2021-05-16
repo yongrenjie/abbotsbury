@@ -1,4 +1,4 @@
-module Abbotsbury.Cite.Helpers.Author where
+module Abbotsbury.Cite.Helpers.Person where
 
 import           Abbotsbury.Cite.Internal
 import           Abbotsbury.LatexEscapes
@@ -6,25 +6,25 @@ import           Abbotsbury.Work
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 
--- Note that these AuthorStyles are merely helper functions. We can't and shouldn't hard code them
+-- Note that these PersonStyles are merely helper functions. We can't and shouldn't hard code them
 -- into a Style, because it won't be extensible by other people.
 
 -- | Methods of formatting author names.
-data AuthorStyle
+data PersonStyle
   = FamilyInitials -- ACS style.
   | InitialsFamily -- ACIE style.
   | BibLaTeX -- For .bib files.
   deriving (Ord, Eq, Show, Enum, Bounded)
 
--- | Formats an Author according to the specified AuthorFormat mode, but wraps it inside a
+-- | Formats an Person according to the specified PersonFormat mode, but wraps it inside a
 -- CText to make it a proper CitationPart.
-formatAuthorAsCPart :: AuthorStyle -> Author -> CitationPart
-formatAuthorAsCPart fmt auth = CText (formatAuthor fmt auth)
+formatPersonAsCPart :: PersonStyle -> Person -> CitationPart
+formatPersonAsCPart fmt auth = CText (formatPerson fmt auth)
 
--- | Formats an Author according to the specified AuthorFormat mode, but output in Text instead of
+-- | Formats an Person according to the specified PersonFormat mode, but output in Text instead of
 -- as a CitationPart.
-formatAuthor :: AuthorStyle -> Author -> Text
-formatAuthor fmt auth =
+formatPerson :: PersonStyle -> Person -> Text
+formatPerson fmt auth =
   let fam          = _family auth
       makeInitials = joinInitialsWith " " "-" "." . getInitials
   in  case _given auth of

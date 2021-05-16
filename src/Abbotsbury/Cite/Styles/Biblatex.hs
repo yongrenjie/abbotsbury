@@ -4,7 +4,7 @@
 -- file (it isn't a true citation style per se).
 module Abbotsbury.Cite.Styles.Biblatex where
 
-import           Abbotsbury.Cite.Helpers.Author
+import           Abbotsbury.Cite.Helpers.Person
 import           Abbotsbury.Cite.Internal
 import           Abbotsbury.LatexEscapes        ( latexify )
 import           Abbotsbury.Work
@@ -81,7 +81,7 @@ articleConstructorBib a = plain (latexify t)
   rules :: [(Text -> Bool, Text, Text)]
   rules =
     [ (always   , "doi"         , a ^. doi)
-    , (always   , "author"      , makeAuthorValue $ a ^. authors)
+    , (always   , "author"      , makePersonValue $ a ^. authors)
     , (always   , "journaltitle", a ^. journalShort)
     , (always   , "title"       , a ^. title)
     , (always   , "year"        , T.pack . show $ a ^. year)
@@ -124,7 +124,7 @@ bookConstructorBib b = plain (latexify t)
   doEdition = not . T.null $ b ^. edition
   rules :: [(Text -> Bool, Text, Text)]
   rules =
-    [ (always         , "author"   , makeAuthorValue $ b ^. authors)
+    [ (always         , "author"   , makePersonValue $ b ^. authors)
     , (always         , "title"    , b ^. title)
     , (always         , "year"     , T.pack . show $ b ^. year)
     , (always         , "publisher", b ^. publisher)
@@ -169,9 +169,9 @@ toAscii = T.filter isAscii . normalize NFD
 
 -- | Generate the BibLaTeX-formatted value for the @author@ key, i.e. joined by
 -- @and@s.
-makeAuthorValue :: Foldable t => t Author -> Text
-makeAuthorValue = T.intercalate " and "
-                . fmap (formatAuthor BibLaTeX)
+makePersonValue :: Foldable t => t Person -> Text
+makePersonValue = T.intercalate " and "
+                . fmap (formatPerson BibLaTeX)
                 . toList
 
 -- | A helpful predicate.
