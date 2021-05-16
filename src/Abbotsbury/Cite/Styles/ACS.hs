@@ -35,14 +35,13 @@ articleConstructorACS :: Article -> CitationPart
 articleConstructorACS a = mconcat
   $ L.intersperse space [authorP, titleP, journalInfoP, doiP]
  where
+  addEndingDot :: Text -> Text
+  addEndingDot t = if not (T.null t) && T.last t /= '.' then t <> "." else t
   authorP, titleP, journalInfoP, doiP :: CitationPart
-  authorP = plain $ T.intercalate
-    "; "
-    (fmap (formatPerson FamilyInitials) (NE.toList $ a ^. authors))
-  titleP =
-    let t   = a ^. title
-        end = if (not . T.null $ t) && (T.last t == '.') then "" else "."
-    in  plain $ t <> end
+  authorP = plain . addEndingDot . T.intercalate "; " $ fmap
+    (formatPerson FamilyInitials)
+    (NE.toList $ a ^. authors)
+  titleP       = let t = a ^. title in plain (addEndingDot t)
   journalInfoP = formatJInfoACS a
   doiP         = plain "DOI: " <> mkDoiUri (a ^. doi) <> plain "."
   mkDoiUri :: DOI -> CitationPart

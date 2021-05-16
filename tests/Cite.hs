@@ -65,5 +65,12 @@ testCite2 = testCase "cite - work2" $ actual @?= expected
   expected
     = "Kupče, Ē.; Frydman, L.; Webb, A. G.; Yong, J. R. J.; Claridge, T. D. W. Parallel nuclear magnetic resonance spectroscopy. *Nat. Rev. Methods Primers* **2021,** *1* (1), No. 27. DOI: [10.1038/s43586-021-00024-3](https://doi.org/10.1038/s43586-021-00024-3)."
 
+testCite5 :: TestTree
+testCite5 = testCase "cite - work5" $ actual @?= expected
+ where
+  actual = cite acsStyle markdownFormat (TW.testWorks IM.! 5)
+  expected
+    = "Smith, A. B., III. Twenty Years of Organic Letters, A Look Back...and Forward. *Org. Lett.* **2018,** *20* (1), 1-3. DOI: [10.1021/acs.orglett.7b03845](https://doi.org/10.1021/acs.orglett.7b03845)."
+
 tests :: TestTree
-tests = testGroup "Cite" [testCite1, testCite2]
+tests = testGroup "Cite" [testCite1, testCite2, testCite5]

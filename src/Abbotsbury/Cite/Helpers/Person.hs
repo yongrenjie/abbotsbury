@@ -3,8 +3,10 @@ module Abbotsbury.Cite.Helpers.Person where
 import           Abbotsbury.Cite.Internal
 import           Abbotsbury.LatexEscapes
 import           Abbotsbury.Work
+import           Data.Maybe                     ( catMaybes )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
+import           Lens.Micro
 
 -- Note that these PersonStyles are merely helper functions. We can't and shouldn't hard code them
 -- into a Style, because it won't be extensible by other people.
@@ -16,23 +18,37 @@ data PersonStyle
   | BibLaTeX -- For .bib files.
   deriving (Ord, Eq, Show, Enum, Bounded)
 
--- | Formats an Person according to the specified PersonFormat mode, but wraps it inside a
--- CText to make it a proper CitationPart.
+-- | Creates Text for a person's name according to the specified 'PersonStyle',
+-- and then wraps it inside a plain CitationPart.
 formatPersonAsCPart :: PersonStyle -> Person -> CitationPart
 formatPersonAsCPart fmt auth = CText (formatPerson fmt auth)
 
--- | Formats an Person according to the specified PersonFormat mode, but output in Text instead of
--- as a CitationPart.
+-- | Creates Text for a person's name according to the specified 'PersonStyle'.
 formatPerson :: PersonStyle -> Person -> Text
-formatPerson fmt auth =
-  let fam          = _family auth
-      makeInitials = joinInitialsWith " " "-" "." . getInitials
-  in  case _given auth of
-        Nothing  -> fam
-        Just gvn -> case fmt of
-          FamilyInitials -> fam <> ", " <> makeInitials gvn
-          InitialsFamily -> makeInitials gvn <> " " <> fam
-          BibLaTeX       -> latexReplaceEscapes . latexReplaceSpaces $ (fam <> ", " <> gvn)
+formatPerson fmt person = t
+ where
+  makeInitials = joinInitialsWith " " "-" "." . getInitials
+  t            = case fmt of
+    FamilyInitials ->
+      T.intercalate ", "
+        . catMaybes
+        $ [ Just (person ^. family)
+          , makeInitials <$> person ^. given
+          , person ^. suffix
+          ]
+    InitialsFamily ->
+      T.unwords
+        . catMaybes
+        $ [ makeInitials <$> person ^. given
+          , Just (person ^. family)
+          , person ^. suffix
+          ]
+    BibLaTeX ->
+      latexReplaceEscapes
+        . latexReplaceSpaces
+        . T.intercalate ", "
+        . catMaybes
+        $ [Just (person ^. family), person ^. suffix, person ^. given]
 
 -- | Extracts the initials from a given name. The elements of the outermost list are separated by
 -- spaces; the elements of each inner list are separated by hyphens.
