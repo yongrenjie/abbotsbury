@@ -2,19 +2,29 @@ module TestWorks where
 
 import           Abbotsbury
 import qualified Data.List.NonEmpty            as NE
+import           Data.IntMap                    ( IntMap )
+import qualified Data.IntMap                   as IM
 import           Data.Text                      ( Text )
 
-orgLett :: Work
-orgLett = ArticleWork $ Article { _articleTitle        = t
-                                , _articleAuthors      = a
-                                , _articleJournalLong  = jL
-                                , _articleJournalShort = jS
-                                , _articleYear         = y
-                                , _articleVolume       = v
-                                , _articleIssue        = i
-                                , _articlePages        = p
-                                , _articleDoi          = doi
-                                }
+testWorks :: IntMap Work
+testWorks = IM.fromList $ zip [1..] [ testWork1
+                                    , testWork2
+                                    , testWork3
+                                    , testWork4
+                                    , testWork5
+                                    ]
+
+testWork1 :: Work
+testWork1 = ArticleWork $ Article { _articleTitle        = t
+                                  , _articleAuthors      = a
+                                  , _articleJournalLong  = jL
+                                  , _articleJournalShort = jS
+                                  , _articleYear         = y
+                                  , _articleVolume       = v
+                                  , _articleIssue        = i
+                                  , _articlePages        = p
+                                  , _articleDoi          = doi
+                                  }
  where
   t =
     "A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides"
@@ -26,7 +36,6 @@ orgLett = ArticleWork $ Article { _articleTitle        = t
   i   = "8"
   p   = PageRange "2918-2922"
   doi = "10.1021/acs.orglett.9b00971"
-  aN  = ""
   mansfield, smith, yong, garry, anderson :: Person
   mansfield = mkPerson "Steven J." "Mansfield"
   smith     = mkPerson "Russell C." "Smith"
@@ -34,17 +43,17 @@ orgLett = ArticleWork $ Article { _articleTitle        = t
   garry     = mkPerson "Olivia L." "Garry"
   anderson  = mkPerson "Edward A." "Anderson"
 
-nrmpCorrected :: Work
-nrmpCorrected = ArticleWork $ Article { _articleTitle        = t
-                                      , _articleAuthors      = a
-                                      , _articleJournalLong  = jL
-                                      , _articleJournalShort = jS
-                                      , _articleYear         = y
-                                      , _articleVolume       = v
-                                      , _articleIssue        = i
-                                      , _articlePages        = p
-                                      , _articleDoi          = doi
-                                      }
+testWork2 :: Work
+testWork2 = ArticleWork $ Article { _articleTitle        = t
+                                  , _articleAuthors      = a
+                                  , _articleJournalLong  = jL
+                                  , _articleJournalShort = jS
+                                  , _articleYear         = y
+                                  , _articleVolume       = v
+                                  , _articleIssue        = i
+                                  , _articlePages        = p
+                                  , _articleDoi          = doi
+                                  }
  where
   t   = "Parallel nuclear magnetic resonance spectroscopy"
   a   = NE.fromList [kupce, frydman, webb, yong, claridge]
@@ -62,17 +71,17 @@ nrmpCorrected = ArticleWork $ Article { _articleTitle        = t
   yong     = mkPerson "Jonathan R. J." "Yong"
   claridge = mkPerson "Tim D. W." "Claridge"
 
-noFirstNameN2020 :: Work
-noFirstNameN2020 = ArticleWork $ Article { _articleTitle        = t
-                                         , _articleAuthors      = a
-                                         , _articleJournalLong  = jL
-                                         , _articleJournalShort = jS
-                                         , _articleYear         = y
-                                         , _articleVolume       = v
-                                         , _articleIssue        = i
-                                         , _articlePages        = p
-                                         , _articleDoi          = doi
-                                         }
+testWork3 :: Work
+testWork3 = ArticleWork $ Article { _articleTitle        = t
+                                  , _articleAuthors      = a
+                                  , _articleJournalLong  = jL
+                                  , _articleJournalShort = jS
+                                  , _articleYear         = y
+                                  , _articleVolume       = v
+                                  , _articleIssue        = i
+                                  , _articlePages        = p
+                                  , _articleDoi          = doi
+                                  }
  where
   t   = "Attention science: some people have only one name"
   a   = NE.fromList [sheherazade, ardiantiono]
@@ -87,17 +96,17 @@ noFirstNameN2020 = ArticleWork $ Article { _articleTitle        = t
   sheherazade = Person Nothing "Sheherazade" Nothing
   ardiantiono = Person Nothing "Ardiantiono" Nothing
 
-glaserS1998 :: Work
-glaserS1998 = ArticleWork $ Article { _articleTitle        = t
-                                    , _articleAuthors      = a
-                                    , _articleJournalLong  = jL
-                                    , _articleJournalShort = jS
-                                    , _articleYear         = y
-                                    , _articleVolume       = v
-                                    , _articleIssue        = i
-                                    , _articlePages        = p
-                                    , _articleDoi          = doi
-                                    }
+testWork4 :: Work
+testWork4 = ArticleWork $ Article { _articleTitle        = t
+                                  , _articleAuthors      = a
+                                  , _articleJournalLong  = jL
+                                  , _articleJournalShort = jS
+                                  , _articleYear         = y
+                                  , _articleVolume       = v
+                                  , _articleIssue        = i
+                                  , _articlePages        = p
+                                  , _articleDoi          = doi
+                                  }
  where
   t
     = "Unitary Control in Quantum Ensembles: Maximizing Signal Intensity in Coherent Spectroscopy"
@@ -110,3 +119,26 @@ glaserS1998 = ArticleWork $ Article { _articleTitle        = t
   i   = "5362"
   p   = PageRange "421-424"
   doi = "10.1126/science.280.5362.421"
+
+testWork5 :: Work
+testWork5 = ArticleWork $ Article { _articleTitle        = t
+                                  , _articleAuthors      = a
+                                  , _articleJournalLong  = jL
+                                  , _articleJournalShort = jS
+                                  , _articleYear         = y
+                                  , _articleVolume       = v
+                                  , _articleIssue        = i
+                                  , _articlePages        = p
+                                  , _articleDoi          = doi
+                                  }
+ where
+  t =
+    "Twenty Years of Organic Letters, A Look Back...and Forward"
+  a   = NE.fromList [Person (Just "Amos B.") "Smith" (Just "III")]
+  jL  = "Organic Letters"
+  jS  = "Org. Lett."
+  y   = 2018
+  v   = "20"
+  i   = "1"
+  p   = PageRange "1-3"
+  doi = "10.1021/acs.orglett.7b03845"

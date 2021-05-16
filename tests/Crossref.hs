@@ -8,6 +8,7 @@ import qualified Data.ByteString.Lazy          as BL
 import qualified Data.List.NonEmpty            as NE
 import           Data.Maybe                     ( fromJust )
 import           Data.Text                      ( Text )
+import qualified Data.IntMap                   as IM
 import           Lens.Micro
 import           Test.Tasty
 import           Test.Tasty.HUnit
@@ -19,39 +20,9 @@ import qualified TestWorks                     as TW
 tests :: TestTree
 tests = testGroup
   "Crossref"
-  [testOL, testNRMP, testNoFirstName, testNoJournalShort]
+  (map mkParseTest (IM.keys TW.testWorks))
 
-testOL :: TestTree
-testOL = testCase "parseCrossrefMessage - 2019 OL" checkOLJSON
- where
-  checkOLJSON :: Assertion --- equivalent to IO ()
-  checkOLJSON = do
-    work <- fetchWorkFile "tests/test-data/orglett.json"
-    work @?= Right TW.orgLett
-
-testNRMP :: TestTree
-testNRMP = testCase "parseCrossrefMessage - 2021 NRMP" checkNRMPJSON
- where
-  checkNRMPJSON :: Assertion --- equivalent to IO ()
-  checkNRMPJSON = do
-    work <- fetchWorkFile "tests/test-data/nrmp.json" 
-    work
-      @?= Right TW.nrmpCorrected
-
-testNoFirstName :: TestTree
-testNoFirstName = testCase "parseCrossrefMessage - author without first name"
-                           checkNFNJSON
- where
-  checkNFNJSON :: Assertion
-  checkNFNJSON = do
-    work <- fetchWorkFile "tests/test-data/nofirstname.json"
-    work @?= Right TW.noFirstNameN2020
-
-testNoJournalShort :: TestTree
-testNoJournalShort = testCase "parseCrossrefMessage - no short journal name"
-                              checkNoJournalShortJSON
- where
-  checkNoJournalShortJSON :: Assertion
-  checkNoJournalShortJSON = do
-    work <- fetchWorkFile "tests/test-data/science_oct.json"
-    work @?= Right TW.glaserS1998
+mkParseTest :: Int -> TestTree
+mkParseTest n = testCase ("JSON parsing - work "<> show n) $ do
+  work <- fetchWorkFile ("tests/test-data/test" <> show n <> ".json")
+  work @?= Right (TW.testWorks IM.! n)
