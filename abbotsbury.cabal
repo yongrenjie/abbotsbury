@@ -65,7 +65,8 @@ library
     Abbotsbury.LatexEscapes
     Abbotsbury.Work
   other-modules:
-    Abbotsbury.Cite.Styles.ACS
+    Abbotsbury.Cite.Styles.Acs
+    Abbotsbury.Cite.Styles.AcsShort
     Abbotsbury.Cite.Styles.Biblatex
     Abbotsbury.Cite.Formats.Internal
     Abbotsbury.Cite.Formats.Text

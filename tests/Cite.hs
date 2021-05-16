@@ -14,7 +14,7 @@ import qualified TestWorks                     as TW
 -- other tests we can just check Markdown alone.
 testCite1 :: TestTree
 testCite1 = testGroup "cite - work 1 - all styles"
-                      [acsText, acsMarkdown, acsRestructured, acsHtml, bib]
+                      [acsText, acsMarkdown, acsRestructured, acsHtml, bib, acsShortMarkdown]
  where
   orgLett :: Work
   orgLett = TW.testWorks IM.! 1
@@ -57,6 +57,11 @@ testCite1 = testGroup "cite - work 1 - all styles"
     , "    pages = {2918--2922},"
     , "}"
     ]
+  acsShortMarkdown :: TestTree
+  acsShortMarkdown = testCase "ACS-Short/Markdown" $ asMdActual @?= asMdExpected
+  asMdActual = cite acsShortStyle markdownFormat orgLett
+  asMdExpected
+    = "Mansfield, S. J.; Smith, R. C.; Yong, J. R. J.; Garry, O. L.; Anderson, E. A. *Org. Lett.* **2019,** *21* (8), 2918–2922."
 
 testCite2 :: TestTree
 testCite2 = testCase "cite - work2" $ actual @?= expected

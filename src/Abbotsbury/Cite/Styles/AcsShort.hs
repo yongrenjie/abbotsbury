@@ -1,6 +1,6 @@
--- | Defines the ACS citation style. This refers to the "long" citation style, i.e. includes full
--- author list, title, year, journal volume/issue, pages, DOI.
-module Abbotsbury.Cite.Styles.ACS where
+-- | Defines the ACS citation style. This refers to a "short" citation style,
+-- which omits the title and the DOI.
+module Abbotsbury.Cite.Styles.AcsShort where
 
 import           Abbotsbury.Cite.Helpers.Person
 import           Abbotsbury.Cite.Internal
@@ -22,30 +22,26 @@ import           Lens.Micro
 --
 -- >>> import qualified Data.Text.IO as TIO
 -- >>> Right orgLett <- fetchWork "your@email.com" "10.1021/acs.orglett.9b00971"
--- >>> TIO.putStrLn $ cite acsStyle markdownFormat orgLett
--- Mansfield, S. J.; Smith, R. C.; Yong, J. R. J.; Garry, O. L.; Anderson, E. A. A General Copper-Ca
--- talyzed Synthesis of Ynamides from 1,2-Dichloroenamides. *Org. Lett.* **2019,** *21* (8), 2918-29
--- 22. DOI: [10.1021/acs.orglett.9b00971](https://doi.org/10.1021/acs.orglett.9b00971).
-acsStyle :: Style
-acsStyle = Style { articleConstructor = articleConstructorACS
-                 , bookConstructor    = const (plain "not yet done")
-                 }
+-- >>> TIO.putStrLn $ cite acsShortStyle markdownFormat orgLett
+-- Mansfield, S. J.; Smith, R. C.; Yong, J. R. J.; Garry, O. L.; Anderson, E. A. *Org. 
+-- Lett.* **2019,** *21* (8), 2918–2922. DOI: [10.1021/acs.orglett.9b00971](https://d
+-- oi.org/10.1021/acs.orglett.9b00971).
+acsShortStyle :: Style
+acsShortStyle = Style { articleConstructor = articleConstructorACSShort
+                      , bookConstructor    = const (plain "not yet done")
+                      }
 
-articleConstructorACS :: Article -> CitationPart
-articleConstructorACS a = mconcat
-  $ L.intersperse space [authorP, titleP, journalInfoP, doiP]
+articleConstructorACSShort :: Article -> CitationPart
+articleConstructorACSShort a = mconcat
+  $ L.intersperse space [authorP, journalInfoP]
  where
   addEndingDot :: Text -> Text
   addEndingDot t = if not (T.null t) && T.last t /= '.' then t <> "." else t
-  authorP, titleP, journalInfoP, doiP :: CitationPart
+  authorP, journalInfoP :: CitationPart
   authorP = plain . addEndingDot . T.intercalate "; " $ fmap
     (formatPerson FamilyInitials)
     (NE.toList $ a ^. authors)
-  titleP       = let t = a ^. title in plain (addEndingDot t)
   journalInfoP = formatJInfoACS a
-  doiP         = plain "DOI: " <> mkDoiUri (a ^. doi) <> plain "."
-  mkDoiUri :: DOI -> CitationPart
-  mkDoiUri doi' = Link ("https://doi.org/" <> doi') (plain doi')
 
 formatJInfoACS :: Article -> CitationPart
 formatJInfoACS a = mconcat

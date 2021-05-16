@@ -12,7 +12,8 @@ module Abbotsbury.Cite
     cite
     -- * Citation styles
   , Abbotsbury.Cite.Internal.Style(..)
-  , Abbotsbury.Cite.Styles.ACS.acsStyle
+  , Abbotsbury.Cite.Styles.Acs.acsStyle
+  , Abbotsbury.Cite.Styles.AcsShort.acsShortStyle
   , Abbotsbury.Cite.Styles.Biblatex.bibStyle
     -- * Output formats
   , Abbotsbury.Cite.Internal.Format(..)
@@ -27,7 +28,8 @@ import           Abbotsbury.Cite.Formats.Markdown
 import           Abbotsbury.Cite.Formats.Restructured
 import           Abbotsbury.Cite.Formats.Text
 import           Abbotsbury.Cite.Internal
-import           Abbotsbury.Cite.Styles.ACS
+import           Abbotsbury.Cite.Styles.Acs
+import           Abbotsbury.Cite.Styles.AcsShort
 import           Abbotsbury.Cite.Styles.Biblatex
 import           Abbotsbury.Work
 import           Data.Text                      ( Text )
