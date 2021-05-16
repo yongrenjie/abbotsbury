@@ -43,10 +43,16 @@ jobs:
         os: [ubuntu-latest, macOS-latest]
         ghc: ["8.10.4"]
         cabal: ["3.4.0.0"]
+    outputs:
+      commit_sha: ${{ steps.get_sha.outputs.sha }}
 
     steps:
     - uses: actions/checkout@v2
       name: Checkout repository
+
+    - name: Get SHA of latest commit
+      id: get_sha
+      run: echo "::set-output name=sha::$(git rev-parse HEAD)"
 
     - uses: haskell/actions/setup@v1
       id: setup-haskell
@@ -55,12 +61,9 @@ jobs:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: ${{ matrix.cabal }}
 
-    - name: cabal update
+    - name: Update cabal and get dependency list
       run: |
         cabal update
-
-    - name: cabal freeze
-      run: |
         cabal freeze
 
     - uses: actions/cache@v2
@@ -72,15 +75,12 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-${{ matrix.ghc }}-
 
-    - name: Build
+    - name: Build and test
       run: |
         cabal build all
-
-    - name: Test
-      run: |
         cabal test abbotsbury:test:tests
 
-    - name: Install
+    - name: Install (Linux)
       if: ${{ runner.os == 'Linux' }}
       run: |
         mkdir bdist
@@ -90,7 +90,7 @@ jobs:
         upx abbot
         tar cf abbot-${{ needs.create_release.outputs.version }}-${{ runner.os }}.tar.gz abbot
 
-    - name: Upload release asset for Linux
+    - name: Upload release asset (Linux)
       if: ${{ runner.os == 'Linux' }}
       id: upload-release-asset
       uses: actions/upload-release-asset@v1
@@ -102,31 +102,38 @@ jobs:
         asset_name: abbot-${{ needs.create_release.outputs.version }}-${{ runner.os }}.tar.gz
         asset_content_type: application/octet-stream
 
-# see: https://github.com/yongrenjie/update-homebrew-formula-action
+# By this point we have a few outputs which we can use.
+# ${{ needs.create_release.outputs.version }}   -- the version number without leading 'v'
+# ${{ needs.build_upload.outputs.commit_sha }}  -- the commit hash
 
-  update_formula_version:
-    name: Update the Homebrew formula with latest release
-    runs-on: ubuntu-latest
-    needs: [build_upload]
-    steps:
-      - uses: yongrenjie/update-homebrew-formula-action@main
-        with:
-          repository: yongrenjie/abbotsbury
-          tap: yongrenjie/homebrew-abbotsbury
-          formula: Formula/abbotsbury.rb
-        env:
-          GH_PERSONAL_ACCESS_TOKEN: ${{ secrets.HOMEBREW_ABBOT_API_TOKEN }}
-            
-  upload_bottle:
+  homebrew:
     name: Build and distribute Catalina Homebrew bottle
     runs-on: macOS-10.15
-    needs: [create_release, update_formula_version]
+    needs: [create_release, build_upload]
     steps:
+      - name: Checkout the Homebrew tap
+        uses: actions/checkout@v2
+        with:
+          repository: yongrenjie/homebrew-abbotsbury
+          token: ${{ secrets.HOMEBREW_ABBOT_API_TOKEN }}
+
+      - name: Edit the url field in the Homebrew formula
+        run: |
+          /usr/bin/sed -i "" -E 's/  url "https:\/\/github.com\/yongrenjie\/abbotsbury.git.+/  url "https:\/\/github.com\/yongrenjie\/abbotsbury.git", tag: "v${{ needs.create_release.outputs.version }}", revision: "${{ needs.build_upload.outputs.commit_sha }}"/g' Formula/abbotsbury.rb
+
+      - name: Update the Homebrew tap (first time)
+        run: |
+          git add -A
+          git commit -m "Update source code for v${{ needs.create_release.outputs.version }}"
+          git push
+
       - name: Build a bottle using Homebrew
         run: |
           brew tap yongrenjie/abbotsbury
           brew install --build-bottle --verbose abbotsbury
           brew bottle abbotsbury --no-rebuild
+          echo "::set-output name=executable_sha256::$(shasum -a 256 ./abbotsbury--${{ needs.create_release.outputs.version }}.catalina.bottle.tar.gz | cut -d' ' -f1)"
+
       - name: Upload the bottle to the GitHub release
         uses: actions/upload-release-asset@v1
         env:
@@ -137,17 +144,14 @@ jobs:
           asset_name: abbotsbury-${{ needs.create_release.outputs.version }}.catalina.bottle.tar.gz
           asset_content_type: application/gzip
 
-  update_formula_bottle:
-    name: Update the Homebrew formula again with bottle
-    runs-on: ubuntu-latest
-    needs: [upload_bottle]
-    steps:
-      - uses: yongrenjie/update-homebrew-formula-action@main
-        with:
-          repository: yongrenjie/abbotsbury
-          tap: yongrenjie/homebrew-abbotsbury
-          formula: Formula/abbotsbury.rb
-          message: |
-              Add Catalina bottle for abbotsbury ${{ needs.create_release.outputs.version }}
-        env:
-          GH_PERSONAL_ACCESS_TOKEN: ${{ secrets.HOMEBREW_ABBOT_API_TOKEN }}
+      - name: Edit the bottle field
+        run: |
+          /usr/bin/sed -i "" -E 's/    root_url "https:\/\/github.com.+/    root_url "https:\/\/github.com\/yongrenjie\/abbotsbury\/releases\/download\/v${{ needs.create_release.outputs.version }}"/g' Formula/abbotsbury.rb
+          /usr/bin/sed -i "" -E 's/    sha256 cellar.+/    sha256 cellar: :any, catalina: "blah"/g' abbotsbury.rb
+
+      - name: Update the Homebrew tap (second time)
+        run: 
+          git add -A
+          git commit -m "Update source code for v${{ needs.create_release.outputs.version }}"
+          git push
+
