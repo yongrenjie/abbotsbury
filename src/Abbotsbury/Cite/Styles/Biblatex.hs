@@ -124,7 +124,8 @@ bookConstructorBib b = plain (latexReplaceEscapes t)
   doEdition = not . T.null $ b ^. edition
   rules :: [(Text -> Bool, Text, Text)]
   rules =
-    [ (always         , "author"   , makePersonValue $ b ^. authors)
+    [ (ifNotNull      , "author"   , makePersonValue $ b ^. authors)
+    , (ifNotNull      , "editor"   , makePersonValue $ b ^. editors)
     , (always         , "title"    , b ^. title)
     , (const doEdition, "edition"  , b ^. edition <> " ed.")
     , (always         , "year"     , T.pack . show $ b ^. year)

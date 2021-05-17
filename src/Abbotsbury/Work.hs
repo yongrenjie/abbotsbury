@@ -31,6 +31,7 @@ module Abbotsbury.Work
   , _book
     -- * Datatype -> field 'Lens'es
   , authors
+  , editors
   , doi
   , issue
   , journalLong
@@ -165,8 +166,10 @@ data Book = Book
   , _bookPublisher    :: Text
   -- | Publisher location.
   , _bookPublisherLoc :: Text
-    -- | A book doesn't have to have an author.
+    -- | A book doesn't necessarily have an author, so this is just a list as
+    -- opposed to @NonEmpty@.
   , _bookAuthors      :: [Person]
+  , _bookEditors      :: [Person]
   , _bookYear         :: Int
   , _bookEdition      :: Text
   , _bookIsbn         :: ISBN
@@ -265,6 +268,7 @@ emptyBook = Book { _bookTitle        = ""
                  , _bookPublisher    = ""
                  , _bookPublisherLoc = ""
                  , _bookAuthors      = []
+                 , _bookEditors      = []
                  , _bookYear         = 2021
                  , _bookEdition      = ""
                  , _bookIsbn         = ""
@@ -312,7 +316,7 @@ instance Bibliographic Article where
 instance Bibliographic Book where
   getContributors = (++) <$> getAuthors <*> getEditors
   getAuthors      = (^. authors)
-  getEditors      = const []
+  getEditors      = (^. editors)
   mkIdentifier    = T.filter isDigit . (^. isbn)
   getYear         = (^. year)
   getTitle        = (^. title)

@@ -85,10 +85,13 @@ runNew args input = do
 
 pWorkType :: Parser Work
 pWorkType = choice
-  -- To make the YAML easier to edit, we create a phantom author.
   [ ArticleWork emptyArticle <$ string' "article"
-  , BookWork (emptyBook & authors .~ [emptyPerson]) <$ string' "book"
+  , BookWork newEmptyBook <$ string' "book"
   ]
  where
   emptyPerson :: Person
   emptyPerson = Person (Just "") "" Nothing
+  -- To make the YAML easier to edit, we create phantom authors and editors.
+  newEmptyBook :: Book
+  newEmptyBook = emptyBook & authors .~ [emptyPerson]
+                           & editors .~ [emptyPerson]

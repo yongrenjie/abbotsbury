@@ -209,9 +209,9 @@ parseBook messageObj = do
   -- Publisher and their location
   _bookPublisher    <- messageObj .: "publisher"
   _bookPublisherLoc <- messageObj .:? "publisher-location" .!= ""
-  -- Authors
-  _authorArray      <- messageObj .: "author"
-  _bookAuthors      <- mapM parsePerson _authorArray
+  -- Authors and editors
+  _bookAuthors      <- messageObj .: "author" >>= mapM parsePerson
+  _bookEditors      <- messageObj .: "editor" >>= mapM parsePerson
   -- Year (prefer print publish date over online publish date as the former is the one usually used)
   publishedObj      <-
     messageObj .: "published-print" <|> messageObj .: "published-online"
