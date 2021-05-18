@@ -5,6 +5,7 @@ module Main where
 import           Abbotsbury                     ( cite
                                                 , fetchWorks
                                                 , getDoiFromException
+                                                , htmlFormat
                                                 )
 import           Commands                       ( runCmdWith )
 import           Control.Exception              ( IOException
@@ -19,7 +20,9 @@ import           Control.Monad.Catch            ( catchIOError )
 import           Control.Monad.State            ( StateT(..)
                                                 , evalStateT
                                                 )
-import           Data.Either                    ( isLeft )
+import           Data.Either                    ( isLeft
+                                                , partitionEithers
+                                                )
 import           Data.IntMap                    ( IntMap )
 import qualified Data.IntMap                   as IM
 import           Data.Maybe                     ( fromJust
@@ -29,6 +32,7 @@ import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           Data.Version                   ( showVersion )
+import           Internal.Copy
 import           Internal.MInputT               ( MInputT
                                                 , defaultSettings
                                                 , mGetInputLine
@@ -37,7 +41,7 @@ import           Internal.MInputT               ( MInputT
                                                 , mRunInputT
                                                 , mWithInterrupt
                                                 )
-import           Internal.Monad
+import Internal.Monad
 import           Internal.Path                  ( expandDirectory
                                                 , readRefs
                                                 , saveRefs
@@ -48,7 +52,7 @@ import           Internal.Style                 ( makeError
                                                 , setColor
                                                 , setItalic
                                                 )
-import           Lens.Micro.Platform
+import Lens.Micro.Platform ( (.=), use, makeLenses )
 import           Options                        ( AbbotCiteOptions
                                                   ( AbbotCiteOptions
                                                   )
@@ -61,6 +65,7 @@ import           Options                        ( AbbotCiteOptions
                                                   )
                                                 , abbotParserPrefs
                                                 , parserInfo
+                                                , CopyOption (..)
                                                 )
 import           Options.Applicative            ( customExecParser )
 import           Paths_abbotsbury               ( version )
@@ -70,7 +75,7 @@ import           System.Exit                    ( exitFailure
                                                 , exitSuccess
                                                 )
 import           System.IO                      ( stderr )
-import           System.Process                 ( readProcess )
+import           System.Process                 ( readProcess, waitForProcess )
 
 -- | All information needed for the main loop.
 data LoopState = LoopState
@@ -195,7 +200,7 @@ printErr = mOutputStrLn . T.unpack . makeError
 
 runAbbotCite :: AbbotCiteOptions -> IO ()
 runAbbotCite citeOptions = do
-  let AbbotCiteOptions dois style' format' useGit = citeOptions
+  let AbbotCiteOptions dois style' format' copy' useGit = citeOptions
   email <- if useGit
     then
       (do
@@ -213,16 +218,29 @@ runAbbotCite citeOptions = do
         pure (fromJust maybeE)
       )
   eitherWorks <- fetchWorks email dois
-  forM_ eitherWorks $ \case
-    Left exc -> do
-      displayError
-        (  "could not find metadata for DOI '"
-        <> getDoiFromException exc
-        <> "' on Crossref"
-        )
-    Right work -> do
-      TIO.putStrLn $ cite style' format' work
-  if not (any isLeft eitherWorks) then exitSuccess else exitFailure
+  let (excs, works) = partitionEithers eitherWorks
+  -- Print the errors
+  forM_ excs $ \exc -> displayError (  "could not find metadata for DOI '"
+                                     <> getDoiFromException exc
+                                     <> "' on Crossref"
+                                     )
+  -- Print the citations
+  let citations = T.intercalate "\n" $ map (cite style' format') works
+  TIO.putStrLn citations
+  -- Copy them if requested
+  maybeHandle <- case copy' of
+       NoCopy -> pure Nothing
+       CopyAsText -> copy citations
+       CopyAsRtf -> do
+         let htmlCitations = map (cite style' htmlFormat) works
+         copyHtmlLinesAsRtf htmlCitations
+  -- We must block until the copying finishes, or else the thread running the
+  -- copy will be silently killed!
+  case maybeHandle of
+       Just ph -> void $ waitForProcess ph
+       Nothing -> pure ()
+  -- Exit successfully only if every DOI was valid.
+  if not (null excs) then exitSuccess else exitFailure
  where
   noGitEmailText :: Text
   noGitEmailText =
@@ -231,7 +249,8 @@ runAbbotCite citeOptions = do
       <> "       See https://github.com/CrossRef/rest-api-doc#etiquette for more information."
   noAbbotEmailText :: Text
   noAbbotEmailText =
-    "Please set the ABBOT_EMAIL environment variable to your email before using `abbot cite`.\n"
+    "Please set the ABBOT_EMAIL environment variable to your email before using `abbot cite`, "
+      <> "       or use `--use-git-email` to let abbot use your .gitconfig email.\n"
       <> "       Abbot needs this information to make 'polite' calls to the Crossref API.\n"
       <> "       See https://github.com/CrossRef/rest-api-doc#etiquette for more information."
   displayError :: Text -> IO ()

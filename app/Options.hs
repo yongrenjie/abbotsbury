@@ -31,7 +31,7 @@ data AbbotMainOptions = AbbotMainOptions
 
 abbotParserPrefs :: ParserPrefs
 abbotParserPrefs =
-  prefs (multiSuffix "..." <> showHelpOnError <> showHelpOnEmpty)
+  prefs (multiSuffix "..." <> showHelpOnEmpty)
 
 -- | Wraps the command-line Parser into a ParserInfo structure, which contains "top-level"
 -- information. This is a required step for actually executing a parser (see optparse README).
@@ -73,9 +73,14 @@ data AbbotCiteOptions = AbbotCiteOptions
     -- | The output format to use.
     format      :: Format
   ,
+    -- | The output format to use.
+    copy        :: CopyOption
+  ,
     -- | Whether to get the email from `git config --get user.email`.
     useGitEmail :: Bool
   }
+
+data CopyOption = NoCopy | CopyAsText | CopyAsRtf deriving (Eq, Show, Bounded, Enum)
 
 -- | Option reader which converts a string (given on command line) to a concrete style.
 styleReader :: ReadM Style
@@ -85,13 +90,9 @@ styleReader = eitherReader $ \s ->
     case s' of
       _
         | s' `elem` ["a", "acs"] -> Right acsStyle
-        | s' == "acs-short" -> Right acsShortStyle
+        | s' `elem` ["as", "acs-short"] -> Right acsShortStyle
         | s' `elem` ["b", "bib"] -> Right bibStyle
-        | otherwise -> Left $ mconcat
-          [ "style '"
-          , s
-          , "' not recognised.\nRun `abbot cite -h` to see acceptable values."
-          ]
+        | otherwise -> Left $ makeInvalidArgMessage s
 
 -- | Option reader which converts a string (given on command line) to a concrete format.
 formatReader :: ReadM Format
@@ -104,11 +105,26 @@ formatReader = eitherReader $ \f ->
         | f' `elem` ["m", "md", "markdown"] -> Right markdownFormat
         | f' `elem` ["r", "rst", "restructured"] -> Right restructuredFormat
         | f' `elem` ["h", "html"] -> Right htmlFormat
-        | otherwise -> Left $ mconcat
-          [ "format '"
-          , f
-          , "' not recognised.\nRun `abbot cite -h` to see acceptable values."
-          ]
+        | otherwise -> Left $ makeInvalidArgMessage f
+
+-- | Option reader which converts a string (given on command line) to a concrete format.
+copyReader :: ReadM CopyOption
+copyReader = eitherReader $ \c ->
+  let c' = map toLower c
+  in
+    case c' of
+      _
+        | c' == "none" -> Right NoCopy
+        | c' == "text" -> Right CopyAsText
+        | c' == "rtf"  -> Right CopyAsRtf
+        | otherwise -> Left $ makeInvalidArgMessage c
+
+makeInvalidArgMessage :: String -> String
+makeInvalidArgMessage badArgVal = mconcat
+  [ "argument '"
+  , badArgVal
+  , "' not recognised.\nRun `abbot cite -h` to see acceptable values."
+  ]
 
 citeParser :: Parser AbbotCommand
 citeParser =
@@ -128,6 +144,14 @@ citeParser =
               <> value textFormat
               <> helpDoc (Just formatHelp)
               )
+        <*> option
+              copyReader
+              (  metavar "COPY"
+              <> long "copy"
+              <> short 'c'
+              <> value NoCopy
+              <> helpDoc (Just copyHelp)
+              )
         <*> switch
               (  long "use-git-email"
               <> help "Use email from `git config` to fetch metadata"
@@ -139,7 +163,8 @@ citeParser =
   styleHelp :: PP.Doc
   styleHelp = PP.nest 2 $ PP.vsep
     [ PP.text "Citation style to use. Acceptable options:"
-    , PP.text "{a, acs}               - ACS"
+    , PP.text "{a, acs}               - ACS, with title and DOI"
+    , PP.text "{as, acs-short}        - ACS, no title or DOI"
     , PP.text "{b, bib}               - BibLaTeX"
     ]
   formatHelp :: PP.Doc
@@ -149,6 +174,13 @@ citeParser =
     , PP.text "{m, md, markdown}      - Markdown"
     , PP.text "{r, rst, restructured} - reStructuredText"
     , PP.text "{h, html}              - HTML"
+    ]
+  copyHelp :: PP.Doc
+  copyHelp = PP.nest 2 $ PP.vsep
+    [ PP.text "Whether to copy text to clipboard. Acceptable options:"
+    , PP.text "none                   - don't copy (default)"
+    , PP.text "yes                    - copy as plain text"
+    , PP.text "rtf                    - copy as formatted text (only on macOS)"
     ]
 
 citeParserInfo :: ParserInfo AbbotCommand
