@@ -12,6 +12,7 @@ testWorks = IM.fromList $ zip [1..] [ testWork1
                                     , testWork3
                                     , testWork4
                                     , testWork5
+                                    , testWork6
                                     ]
 
 testWork1 :: Work
@@ -142,3 +143,28 @@ testWork5 = ArticleWork $ Article { _articleTitle        = t
   i   = "1"
   p   = PageRange "1-3"
   doi = "10.1021/acs.orglett.7b03845"
+
+testWork6 :: Work
+testWork6 = BookWork $ Book { _bookTitle        = t 
+                            , _bookPublisher    = pub
+                            , _bookPublisherLoc = loc
+                            , _bookAuthors      = auths
+                            , _bookEditors      = []
+                            , _bookYear         = year
+                            , _bookEdition      = ""
+                            , _bookIsbn         = isbn
+                            , _bookSeries       = ser
+                            , _bookNumber       = ""
+                            }
+  where
+    t = "Applications of Quantum Dynamics in Chemistry"
+    pub = "Springer International Publishing"
+    loc = "Cham"   -- In Switzerland, but Crossref doesn't tell us anything more.
+    auths = [ mkPerson "Fabien" "Gatti"
+            , mkPerson "Benjamin" "Lasorne"
+            , mkPerson "Hans-Dieter" "Meyer"
+            , mkPerson "André" "Nauts"
+            ]
+    year = 2017
+    isbn = "9783319539218"
+    ser = "Lecture Notes in Chemistry"

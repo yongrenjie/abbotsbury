@@ -44,6 +44,8 @@ module Abbotsbury.Work
   , isbn
   , publisher
   , publisherLoc
+  , series
+  , number
     -- * Person -> field 'Lens'es
   , given
   , family
@@ -173,6 +175,10 @@ data Book = Book
   , _bookYear         :: Int
   , _bookEdition      :: Text
   , _bookIsbn         :: ISBN
+    -- | These two fields deal with the case where a book is part of an extended
+    -- series, e.g. "Topics in Current Chemistry" or similar.
+  , _bookSeries       :: Text
+  , _bookNumber       :: Text
   }
   deriving (Generic, Show, Eq)
 
@@ -272,6 +278,8 @@ emptyBook = Book { _bookTitle        = ""
                  , _bookYear         = 2021
                  , _bookEdition      = ""
                  , _bookIsbn         = ""
+                 , _bookSeries       = ""
+                 , _bookNumber       = ""
                  }
 
 -- | Quick constructor for a 'Person' who doesn't have a suffix, which is the
@@ -361,4 +369,3 @@ instance FromJSON Article
 instance FromJSON Book
 
 instance FromJSON Person
-

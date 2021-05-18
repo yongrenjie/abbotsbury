@@ -132,6 +132,8 @@ bookConstructorBib b = plain (latexReplaceEscapes t)
     , (always         , "publisher", b ^. publisher)
     , (always         , "location" , b ^. publisherLoc)
     , (always         , "isbn"     , b ^. isbn)
+    , (ifNotNull      , "series"   , b ^. series)
+    , (ifNotNull      , "number"   , b ^. number)
     ]
   fields :: [Text]
   fields = mapMaybe (\(a, b, c) -> makeMaybeBibFieldWith a b c) rules

@@ -210,8 +210,8 @@ parseBook messageObj = do
   _bookPublisher    <- messageObj .: "publisher"
   _bookPublisherLoc <- messageObj .:? "publisher-location" .!= ""
   -- Authors and editors
-  _bookAuthors      <- messageObj .: "author" >>= mapM parsePerson
-  _bookEditors      <- messageObj .: "editor" >>= mapM parsePerson
+  _bookAuthors      <- (messageObj .: "author" >>= mapM parsePerson) <|> pure []
+  _bookEditors      <- (messageObj .: "editor" >>= mapM parsePerson) <|> pure []
   -- Year (prefer print publish date over online publish date as the former is the one usually used)
   publishedObj      <-
     messageObj .: "published-print" <|> messageObj .: "published-online"
@@ -219,6 +219,13 @@ parseBook messageObj = do
     $ safeHead "date-parts was empty" (publishedObj .: "date-parts")
   _bookEdition <- messageObj .:? "edition" .!= ""
   _bookIsbn    <- safeHead "ISBN was empty" (messageObj .: "ISBN") <|> pure ""
+  _bookSeries  <-
+    safeHead "container-title was empty" (messageObj .: "container-title")
+      <|> pure ""
+  -- TODO: I can't find an example of a book with "number" metadata correctly
+  -- entered in Crossref. We'll just let it be empty for now. The user can fill
+  -- it in manually if they want.
+  let _bookNumber = ""
   pure $ Book { .. }
 
 safeHead
