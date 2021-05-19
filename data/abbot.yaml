@@ -8,10 +8,12 @@
       - _suffix: null
         _given: Timothy D. W.
         _family: Claridge
+      _bookNumber: ''
       _bookYear: 2016
       _bookPublisher: Elsevier
       _bookPublisherLoc: Amsterdam
       _bookIsbn: 978-0-08-099986-9
+      _bookSeries: ''
       _bookEdition: 3rd
     tag: BookWork
   _tags:
