@@ -3,6 +3,7 @@
 -- DOI.
 module Abbotsbury.Cite.Styles.Acs
   ( acsStyle
+  , acsShortStyle
   ) where
 
 import           Abbotsbury.Cite.Helpers.Person
@@ -13,6 +14,8 @@ import qualified Data.List.NonEmpty            as NE
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import           Lens.Micro
+
+data AcsLength = Short | Long
 
 -- | The American Chemical Society style, as specified in the 3rd edition of the
 -- ACS Style Guide. ACS seem to have removed this from their website in favour
@@ -30,13 +33,21 @@ import           Lens.Micro
 -- talyzed Synthesis of Ynamides from 1,2-Dichloroenamides. *Org. Lett.* **2019,** *21* (8), 2918-29
 -- 22. DOI: [10.1021/acs.orglett.9b00971](https://doi.org/10.1021/acs.orglett.9b00971).
 acsStyle :: Style
-acsStyle = Style { articleConstructor = articleConstructorACS
-                 , bookConstructor    = bookConstructorACS
+acsStyle = Style { articleConstructor = articleConstructorACS Long
+                 , bookConstructor    = bookConstructorACS Long
                  }
 
-articleConstructorACS :: Article -> CitationPart
-articleConstructorACS a = mconcat
-  $ L.intersperse space [authorP, titleP, journalInfoP, doiP]
+-- A shorter version of the ACS style, useful for presentations etc. where
+-- there's just not so much space.
+acsShortStyle :: Style
+acsShortStyle = Style { articleConstructor = articleConstructorACS Short
+                      , bookConstructor    = bookConstructorACS Short
+                      }
+
+articleConstructorACS :: AcsLength -> Article -> CitationPart
+articleConstructorACS lgth a = mconcat . L.intersperse space $ case lgth of
+  Long  -> [authorP, titleP, journalInfoP, doiP]
+  Short -> [authorP, journalInfoP]
  where
   authorP, titleP, journalInfoP, doiP :: CitationPart
   authorP = plain . addEndingDot . T.intercalate "; " $ fmap
@@ -67,12 +78,11 @@ formatJInfoACS a = mconcat
   addParen :: Text -> Text
   addParen t = "(" <> t <> ")"
 
-bookConstructorACS :: Book -> CitationPart
-bookConstructorACS b =
-  mconcat
-    . L.intersperse space
-    . filter (/= mempty)
-    $ [authorP, titleP, editorP, seriesP, publishP]
+bookConstructorACS :: AcsLength -> Book -> CitationPart
+bookConstructorACS lgth b =
+  mconcat . L.intersperse space . filter (/= mempty) $ case lgth of
+    Long  -> [authorP, titleP, editorP, seriesP, publishP]
+    Short -> [authorP, titleP, editorP, yearP]
  where
   authorP = plain . addEndingDot . T.intercalate "; " $ fmap
     (formatPerson FamilyInitials)
@@ -94,6 +104,7 @@ bookConstructorACS b =
   yearText = T.pack . show $ b ^. year
   publishP = plain
     (b ^. publisher <> ": " <> b ^. publisherLoc <> ", " <> yearText <> ".")
+  yearP = plain (yearText <> ".")
 
 space :: CitationPart
 space = plain " "
