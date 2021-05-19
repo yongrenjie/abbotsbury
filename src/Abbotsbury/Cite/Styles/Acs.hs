@@ -1,7 +1,9 @@
 -- | Defines the ACS citation style. This refers to the "long" citation style,
 -- i.e. includes full author list, title, year, journal volume/issue, pages,
 -- DOI.
-module Abbotsbury.Cite.Styles.Acs where
+module Abbotsbury.Cite.Styles.Acs
+  ( acsStyle
+  ) where
 
 import           Abbotsbury.Cite.Helpers.Person
 import           Abbotsbury.Cite.Internal
@@ -29,15 +31,13 @@ import           Lens.Micro
 -- 22. DOI: [10.1021/acs.orglett.9b00971](https://doi.org/10.1021/acs.orglett.9b00971).
 acsStyle :: Style
 acsStyle = Style { articleConstructor = articleConstructorACS
-                 , bookConstructor    = const (plain "not yet done")
+                 , bookConstructor    = bookConstructorACS
                  }
 
 articleConstructorACS :: Article -> CitationPart
 articleConstructorACS a = mconcat
   $ L.intersperse space [authorP, titleP, journalInfoP, doiP]
  where
-  addEndingDot :: Text -> Text
-  addEndingDot t = if not (T.null t) && T.last t /= '.' then t <> "." else t
   authorP, titleP, journalInfoP, doiP :: CitationPart
   authorP = plain . addEndingDot . T.intercalate "; " $ fmap
     (formatPerson FamilyInitials)
@@ -67,5 +67,34 @@ formatJInfoACS a = mconcat
   addParen :: Text -> Text
   addParen t = "(" <> t <> ")"
 
+bookConstructorACS :: Book -> CitationPart
+bookConstructorACS b =
+  mconcat
+    . L.intersperse space
+    . filter (/= mempty)
+    $ [authorP, titleP, editorP, seriesP, publishP]
+ where
+  authorP = plain . addEndingDot . T.intercalate "; " $ fmap
+    (formatPerson FamilyInitials)
+    (b ^. authors)
+  titleP = case b ^. edition of
+    ""  -> italic (b ^. title <> ";")
+    edn -> italic (b ^. title <> ", ") <> plain (edn <> ";")
+  editorP = case b ^. editors of
+    []  -> mempty
+    eds -> plain . (<> ", Eds.;") . addEndingDot . T.intercalate "; " $ fmap
+      (formatPerson FamilyInitials)
+      eds
+  seriesP = case (b ^. series, b ^. number) of
+    ("" , "" ) -> mempty
+    (ser, "" ) -> plain (ser <> ";")
+    (ser, num) -> plain (ser <> " " <> num <> ";")
+  yearText = T.pack . show $ b ^. year
+  publishP = plain
+    (b ^. publisher <> ": " <> b ^. publisherLoc <> ", " <> yearText <> ".")
+
 space :: CitationPart
 space = plain " "
+
+addEndingDot :: Text -> Text
+addEndingDot t = if not (T.null t) && T.last t /= '.' then t <> "." else t

@@ -1,4 +1,6 @@
-module Abbotsbury.Cite.Formats.Markdown where
+module Abbotsbury.Cite.Formats.Markdown
+  ( markdownFormat
+  ) where
 
 import           Abbotsbury.Cite.Formats.Internal
                                                 ( surroundWith )

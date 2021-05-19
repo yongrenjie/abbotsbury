@@ -1,6 +1,8 @@
 -- | Defines the ACS citation style. This refers to a "short" citation style,
 -- which omits the title and the DOI.
-module Abbotsbury.Cite.Styles.AcsShort where
+module Abbotsbury.Cite.Styles.AcsShort
+  ( acsShortStyle
+  ) where
 
 import           Abbotsbury.Cite.Helpers.Person
 import           Abbotsbury.Cite.Internal
@@ -28,15 +30,13 @@ import           Lens.Micro
 -- oi.org/10.1021/acs.orglett.9b00971).
 acsShortStyle :: Style
 acsShortStyle = Style { articleConstructor = articleConstructorACSShort
-                      , bookConstructor    = const (plain "not yet done")
+                      , bookConstructor    = bookConstructorACSShort
                       }
 
 articleConstructorACSShort :: Article -> CitationPart
 articleConstructorACSShort a = mconcat
   $ L.intersperse space [authorP, journalInfoP]
  where
-  addEndingDot :: Text -> Text
-  addEndingDot t = if not (T.null t) && T.last t /= '.' then t <> "." else t
   authorP, journalInfoP :: CitationPart
   authorP = plain . addEndingDot . T.intercalate "; " $ fmap
     (formatPerson FamilyInitials)
@@ -62,5 +62,28 @@ formatJInfoACS a = mconcat
   addParen :: Text -> Text
   addParen t = "(" <> t <> ")"
 
+bookConstructorACSShort :: Book -> CitationPart
+bookConstructorACSShort b =
+  mconcat
+    . L.intersperse space
+    . filter (/= mempty)
+    $ [authorP, titleP, editorP, yearP]
+ where
+  authorP = plain . addEndingDot . T.intercalate "; " $ fmap
+    (formatPerson FamilyInitials)
+    (b ^. authors)
+  titleP = case b ^. edition of
+    ""  -> italic (b ^. title <> ";")
+    edn -> italic (b ^. title <> ", ") <> plain (edn <> ";")
+  editorP = case b ^. editors of
+    []  -> mempty
+    eds -> plain . (<> ", Eds.;") . addEndingDot . T.intercalate "; " $ fmap
+      (formatPerson FamilyInitials)
+      eds
+  yearP = plain ((T.pack . show $ b ^. year) <> ".")
+
 space :: CitationPart
 space = plain " "
+
+addEndingDot :: Text -> Text
+addEndingDot t = if not (T.null t) && T.last t /= '.' then t <> "." else t

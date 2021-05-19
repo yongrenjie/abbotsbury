@@ -1,4 +1,6 @@
-module Abbotsbury.Cite.Formats.Restructured where
+module Abbotsbury.Cite.Formats.Restructured
+  ( restructuredFormat
+  ) where
 
 import           Abbotsbury.Cite.Formats.Internal
                                                 ( surroundWith )

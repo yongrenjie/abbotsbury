@@ -2,7 +2,9 @@
 
 -- | Defines the BibLaTeX "citation style". In practice, this actually gives an entry for a .bib
 -- file (it isn't a true citation style per se).
-module Abbotsbury.Cite.Styles.Biblatex where
+module Abbotsbury.Cite.Styles.Biblatex
+  ( bibStyle
+  ) where
 
 import           Abbotsbury.Cite.Helpers.Person
 import           Abbotsbury.Cite.Internal
@@ -155,14 +157,6 @@ makeMaybeBibFieldWith
   -> Maybe Text -- ^ Just the line, or Nothing if predicate fails.
 makeMaybeBibFieldWith pred key val =
   if pred val then Just (makeBibField key val) else Nothing
-
--- | Shortcut to make Just a BibLaTex key-value pair, but only if the value is
--- nonempty.
-makeMaybeBibField
-  :: Text -- ^ The key.
-  -> Text -- ^ The (possibly empty) value.
-  -> Maybe Text -- ^ Just the line to be printed, or Nothing for empty values.
-makeMaybeBibField = makeMaybeBibFieldWith (not . T.null)
 
 -- | Convert a name to plain ASCII. As best as we can. That is, separate all the
 -- diacritics from the original letters (that's what NFD does), and then remove

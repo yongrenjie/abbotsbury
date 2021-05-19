@@ -1,4 +1,6 @@
-module Abbotsbury.Cite.Formats.Text where
+module Abbotsbury.Cite.Formats.Text
+  ( textFormat
+  ) where
 
 import           Abbotsbury.Cite.Internal       ( Format(..) )
 

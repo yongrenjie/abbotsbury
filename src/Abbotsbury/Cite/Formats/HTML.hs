@@ -1,4 +1,6 @@
-module Abbotsbury.Cite.Formats.HTML where
+module Abbotsbury.Cite.Formats.HTML
+  ( htmlFormat
+  ) where
 
 import           Abbotsbury.Cite.Formats.Internal
                                                 ( surroundWithTag )
