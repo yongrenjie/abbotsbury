@@ -205,7 +205,11 @@ parseArticle useInternalAbbrevs messageObj = do
 
 parseBook :: Object -> DAT.Parser Book
 parseBook messageObj = do
-  _bookTitle        <- safeHead "could not get title" $ messageObj .: "title"
+  _title    <- safeHead "title was empty" $ messageObj .: "title"
+  _subtitle <- safeHead "no subtitle" (messageObj .: "subtitle") <|> pure ""
+  let _bookTitle = case _subtitle of
+        "" -> _title
+        _  -> _title <> ": " <> _subtitle
   -- Publisher and their location
   _bookPublisher    <- messageObj .: "publisher"
   _bookPublisherLoc <- messageObj .:? "publisher-location" .!= ""

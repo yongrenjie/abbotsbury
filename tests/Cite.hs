@@ -89,5 +89,15 @@ testCite6 = testCase "cite - work6 (corrected metadata)" $ actual @?= expected
   expected
     = "Gatti, F.; Lasorne, B.; Meyer, H.-D.; Nauts, A. *Applications of Quantum Dynamics in Chemistry;* Lecture Notes in Chemistry 98; Springer International Publishing: Cham, Switzerland, 2017."
 
+testCite7 :: TestTree
+testCite7 = testCase "cite - work7 (corrected metadata)" $ actual @?= expected
+ where
+  correctedWork = TW.testWorks IM.! 7 & _book . publisherLoc .~ "Cambridge, U.K."
+  actual = cite acsStyle markdownFormat correctedWork
+  -- For an example of something like this, see "Bandy, A. R., Ed." on p 302 of
+  -- the ACS Style Guide.
+  expected
+    = "*Long-lived Nuclear Spin Order: Theory and Applications;* Pileio, G., Ed.; New Developments in NMR; Royal Society of Chemistry: Cambridge, U.K., 2020."
+
 tests :: TestTree
-tests = testGroup "Cite" [testCite1, testCite2, testCite5, testCite6]
+tests = testGroup "Cite" [testCite1, testCite2, testCite5, testCite6, testCite7]

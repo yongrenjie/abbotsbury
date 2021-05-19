@@ -12,3 +12,4 @@ The papers / DOIs I've used for this are as follows:
 | 4   | 10.1126/science.280.5362.421   | Old Science article which doesn't have a short-container-title.    |
 | 5   | 10.1021/acs.orglett.7b03845    | Amos B Smith III editorial: testing name suffixes.                 |
 | 6   | 10.1007/978-3-319-53923-2      | A book (part of the 'Lecture Notes in Chemistry' Springer series). |
+| 7   | 10.1039/9781788019972          | A book with editors ('New Developments in NMR' RSC series).        |

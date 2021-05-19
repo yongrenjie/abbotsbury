@@ -13,6 +13,7 @@ testWorks = IM.fromList $ zip [1..] [ testWork1
                                     , testWork4
                                     , testWork5
                                     , testWork6
+                                    , testWork7
                                     ]
 
 testWork1 :: Work
@@ -168,3 +169,24 @@ testWork6 = BookWork $ Book { _bookTitle        = t
     year = 2017
     isbn = "9783319539218"
     ser = "Lecture Notes in Chemistry"
+
+testWork7 :: Work
+testWork7 = BookWork $ Book { _bookTitle        = t 
+                            , _bookPublisher    = pub
+                            , _bookPublisherLoc = loc
+                            , _bookAuthors      = []
+                            , _bookEditors      = eds
+                            , _bookYear         = year
+                            , _bookEdition      = ""
+                            , _bookIsbn         = isbn
+                            , _bookSeries       = ser
+                            , _bookNumber       = ""
+                            }
+  where
+    t = "Long-lived Nuclear Spin Order: Theory and Applications"
+    pub = "Royal Society of Chemistry"
+    loc = "Cambridge"   -- In UK, but Crossref doesn't tell us anything more.
+    eds = [mkPerson "Giuseppe" "Pileio"]
+    year = 2020
+    isbn = "9781788015684"
+    ser = "New Developments in NMR"

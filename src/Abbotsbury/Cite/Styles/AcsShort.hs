@@ -76,8 +76,10 @@ bookConstructorACSShort b =
     ""  -> italic (b ^. title <> ";")
     edn -> italic (b ^. title <> ", ") <> plain (edn <> ";")
   editorP = case b ^. editors of
-    []  -> mempty
-    eds -> plain . (<> ", Eds.;") . addEndingDot . T.intercalate "; " $ fmap
+    [] -> mempty
+    [ed] ->
+      plain . (<> ", Ed.;") . addEndingDot . formatPerson FamilyInitials $ ed
+    eds -> plain . (<> ", Eds.;") . addEndingDot . T.intercalate ", " $ fmap
       (formatPerson FamilyInitials)
       eds
   yearP = plain ((T.pack . show $ b ^. year) <> ".")
