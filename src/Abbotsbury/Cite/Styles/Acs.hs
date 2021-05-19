@@ -79,7 +79,7 @@ bookConstructorACS b =
     (b ^. authors)
   titleP = case b ^. edition of
     ""  -> italic (b ^. title <> ";")
-    edn -> italic (b ^. title <> ", ") <> plain (edn <> " ed.;")
+    edn -> italic (b ^. title <> ",") <> space <> plain (edn <> " ed.;")
   editorP = case b ^. editors of
     [] -> mempty
     [ed] ->
