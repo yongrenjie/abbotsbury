@@ -6,6 +6,7 @@ import           Abbotsbury
 import           Data.IntMap                    ( IntMap )
 import qualified Data.IntMap                   as IM
 import qualified Data.Text                     as T
+import           Lens.Micro
 import           Test.Tasty
 import           Test.Tasty.HUnit
 import qualified TestWorks                     as TW
@@ -13,7 +14,7 @@ import qualified TestWorks                     as TW
 -- | This is the only test for which we will exhaustively check all formats. For
 -- other tests we can just check Markdown alone.
 testCite1 :: TestTree
-testCite1 = testGroup "cite - work 1 - all styles"
+testCite1 = testGroup "cite - work 1 (all styles)"
                       [acsText, acsMarkdown, acsRestructured, acsHtml, bib, acsShortMarkdown]
  where
   orgLett :: Work
@@ -77,5 +78,16 @@ testCite5 = testCase "cite - work5" $ actual @?= expected
   expected
     = "Smith, A. B., III. Twenty Years of Organic Letters, A Look Back...and Forward. *Org. Lett.* **2018,** *20* (1), 1–3. DOI: [10.1021/acs.orglett.7b03845](https://doi.org/10.1021/acs.orglett.7b03845)."
 
+testCite6 :: TestTree
+testCite6 = testCase "cite - work6 (corrected metadata)" $ actual @?= expected
+ where
+  -- using set over .~ because that avoids nesting parentheses
+  correctedWork = TW.testWorks IM.! 6 & _book %~ ( set number "98"
+                                                 . set publisherLoc "Cham, Switzerland"
+                                                 )
+  actual = cite acsStyle markdownFormat correctedWork
+  expected
+    = "Gatti, F.; Lasorne, B.; Meyer, H.-D.; Nauts, A. *Applications of Quantum Dynamics in Chemistry;* Lecture Notes in Chemistry 98; Springer International Publishing: Cham, Switzerland, 2017."
+
 tests :: TestTree
-tests = testGroup "Cite" [testCite1, testCite2, testCite5]
+tests = testGroup "Cite" [testCite1, testCite2, testCite5, testCite6]
