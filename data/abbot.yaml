@@ -82,3 +82,61 @@
       _articleIssue: '1'
     tag: ArticleWork
   _tags: []
+- _timeOpened: 2021-05-22T00:58:17.020509Z
+  _timeAdded: 2021-05-22T00:58:17.020509Z
+  _work:
+    contents:
+      _articleDoi: 10.1063/5.0038511
+      _articleVolume: '154'
+      _articlePages:
+        contents: '094201'
+        tag: PageRange
+      _articleJournalLong: The Journal of Chemical Physics
+      _articleJournalShort: J. Chem. Phys.
+      _articleAuthors:
+      - _suffix: null
+        _given: Jean-Baptiste
+        _family: Verstraete
+      - _suffix: null
+        _given: William K.
+        _family: Myers
+      - _suffix: null
+        _given: Mohammadali
+        _family: Foroozandeh
+      _articleYear: 2021
+      _articleTitle: Chirped ordered pulses for ultra-broadband ESR spectroscopy
+      _articleIssue: '9'
+    tag: ArticleWork
+  _tags: []
+- _timeOpened: 2021-05-22T01:24:29.238777Z
+  _timeAdded: 2021-05-22T01:24:29.238777Z
+  _work:
+    contents:
+      _articleDoi: 10.1016/j.pnmrs.2021.03.001
+      _articleVolume: 124-125
+      _articlePages:
+        contents: 1-56
+        tag: PageRange
+      _articleJournalLong: Progress in Nuclear Magnetic Resonance Spectroscopy
+      _articleJournalShort: Prog. Nucl. Magn. Reson. Spectrosc.
+      _articleAuthors:
+      - _suffix: null
+        _given: Ēriks
+        _family: Kupče
+      - _suffix: null
+        _given: Kaustubh R.
+        _family: Mote
+      - _suffix: null
+        _given: Andrew
+        _family: Webb
+      - _suffix: null
+        _given: Perunthiruthy K.
+        _family: Madhu
+      - _suffix: null
+        _given: Tim D. W.
+        _family: Claridge
+      _articleYear: 2021
+      _articleTitle: Multiplexing experiments in NMR and multi-nuclear MRI
+      _articleIssue: ''
+    tag: ArticleWork
+  _tags: []

@@ -110,6 +110,7 @@ executable abbot
     , abbotsbury
     , haskeline , ansi-terminal , colour , terminal-size
     , optparse-applicative , ansi-wl-pprint
+    , regex-tdfa
     , megaparsec
     , microlens-platform
     , directory , filepath >=1.3.0.0 , process , time , temporary
