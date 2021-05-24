@@ -8,13 +8,13 @@ import           Abbotsbury                     ( cite
                                                 , htmlFormat
                                                 )
 import           Commands                       ( runCmdWith )
-import           Control.Exception              ( IOException
-                                                , catch
-                                                )
-import           Commands.Shared                ( CmdInput(CmdInput)
-                                                , AbbotCmd(Cd, Nop, Quit)
+import           Commands.Shared                ( AbbotCmd(Cd, Nop, Quit)
+                                                , CmdInput(CmdInput)
                                                 , SCmdOutput(SCmdOutput)
                                                 , runReplParser
+                                                )
+import           Control.Exception              ( IOException
+                                                , catch
                                                 )
 import           Control.Monad.Catch            ( catchIOError )
 import           Control.Monad.State            ( StateT(..)
@@ -41,7 +41,7 @@ import           Internal.MInputT               ( MInputT
                                                 , mRunInputT
                                                 , mWithInterrupt
                                                 )
-import Internal.Monad
+import           Internal.Monad
 import           Internal.Path                  ( expandDirectory
                                                 , readRefs
                                                 , saveRefs
@@ -52,7 +52,10 @@ import           Internal.Style                 ( makeError
                                                 , setColor
                                                 , setItalic
                                                 )
-import Lens.Micro.Platform ( (.=), use, makeLenses )
+import           Lens.Micro.Platform            ( (.=)
+                                                , makeLenses
+                                                , use
+                                                )
 import           Options                        ( AbbotCiteOptions
                                                   ( AbbotCiteOptions
                                                   )
@@ -63,19 +66,23 @@ import           Options                        ( AbbotCiteOptions
                                                 , AbbotMainOptions
                                                   ( AbbotMainOptions
                                                   )
+                                                , CopyOption(..)
                                                 , abbotParserPrefs
                                                 , parserInfo
-                                                , CopyOption (..)
                                                 )
 import           Options.Applicative            ( customExecParser )
 import           Paths_abbotsbury               ( version )
 import           Reference                      ( Reference )
 import           System.Environment             ( lookupEnv )
-import           System.Exit                    ( exitFailure
+import           System.Exit                    ( ExitCode(..)
+                                                , exitFailure
                                                 , exitSuccess
+                                                , exitWith
                                                 )
 import           System.IO                      ( stderr )
-import           System.Process                 ( readProcess, waitForProcess )
+import           System.Process                 ( readProcess
+                                                , waitForProcess
+                                                )
 
 -- | All information needed for the main loop.
 data LoopState = LoopState
@@ -198,6 +205,12 @@ prompt fp = mGetInputLine . T.unpack $ mconcat
 printErr :: Text -> MInputT (StateT LoopState IO) ()
 printErr = mOutputStrLn . T.unpack . makeError
 
+-- | Run the `abbot cite` command.
+-- Exit codes are:
+--     0 if at least one DOI was found
+--     1 if something completely wrong happened (i.e. didn't even get to the
+--        point where DOIs were being looked up)
+--     2 if all DOIs failed to resolve
 runAbbotCite :: AbbotCiteOptions -> IO ()
 runAbbotCite citeOptions = do
   let AbbotCiteOptions dois style' format' copy' useGit = citeOptions
@@ -239,8 +252,8 @@ runAbbotCite citeOptions = do
   case maybeHandle of
        Just ph -> void $ waitForProcess ph
        Nothing -> pure ()
-  -- Exit successfully only if every DOI was valid.
-  if not (null excs) then exitSuccess else exitFailure
+  -- If there were any successful works found, exit with success
+  if not (null works) then exitSuccess else exitWith (ExitFailure 2)
  where
   noGitEmailText :: Text
   noGitEmailText =
