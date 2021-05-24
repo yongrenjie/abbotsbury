@@ -237,23 +237,23 @@ runAbbotCite citeOptions = do
                                      <> getDoiFromException exc
                                      <> "' on Crossref"
                                      )
-  -- Print the citations
-  let citations = T.intercalate "\n" $ map (cite style' format') works
-  TIO.putStrLn citations
-  -- Copy them if requested
-  maybeHandle <- case copy' of
-       NoCopy -> pure Nothing
-       CopyAsText -> copy citations
-       CopyAsRtf -> do
-         let htmlCitations = map (cite style' htmlFormat) works
-         copyHtmlLinesAsRtf htmlCitations
-  -- We must block until the copying finishes, or else the thread running the
-  -- copy will be silently killed!
-  case maybeHandle of
-       Just ph -> void $ waitForProcess ph
-       Nothing -> pure ()
-  -- If there were any successful works found, exit with success
-  if not (null works) then exitSuccess else exitWith (ExitFailure 2)
+  if null works then exitWith (ExitFailure 2)
+                else do
+    -- Print the citations
+    let citations = T.intercalate "\n" $ map (cite style' format') works
+    TIO.putStrLn citations
+    -- Copy them if requested
+    maybeHandle <- case copy' of
+         NoCopy -> pure Nothing
+         CopyAsText -> copy citations
+         CopyAsRtf -> do
+           let htmlCitations = map (cite style' htmlFormat) works
+           copyHtmlLinesAsRtf htmlCitations
+    -- We must block until the copying finishes, or else the thread running the
+    -- copy will be silently killed when the main process exits!
+    case maybeHandle of
+         Just ph -> void $ waitForProcess ph
+         Nothing -> pure ()
  where
   noGitEmailText :: Text
   noGitEmailText =
