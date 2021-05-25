@@ -140,3 +140,113 @@
       _articleIssue: ''
     tag: ArticleWork
   _tags: []
+- _timeOpened: 2021-05-25T23:11:20.915842Z
+  _timeAdded: 2021-05-25T23:11:20.915842Z
+  _work:
+    contents:
+      _articleDoi: 10.1126/science.275.5298.350
+      _articleVolume: '275'
+      _articlePages:
+        contents: 350-356
+        tag: PageRange
+      _articleJournalLong: Science
+      _articleJournalShort: Science
+      _articleAuthors:
+      - _suffix: null
+        _given: N. A.
+        _family: Gershenfeld
+      - _suffix: null
+        _given: I. L.
+        _family: Chuang
+      _articleYear: 1997
+      _articleTitle: Bulk Spin-Resonance Quantum Computation
+      _articleIssue: '5298'
+    tag: ArticleWork
+  _tags: []
+- _timeOpened: 2021-05-25T23:24:34.037354Z
+  _timeAdded: 2021-05-25T23:24:34.037354Z
+  _work:
+    contents:
+      _articleDoi: 10.1007/s10858-015-9913-z
+      _articleVolume: '62'
+      _articlePages:
+        contents: 43-52
+        tag: PageRange
+      _articleJournalLong: Journal of Biomolecular NMR
+      _articleJournalShort: J. Biomol. NMR
+      _articleAuthors:
+      - _suffix: null
+        _given: Peter
+        _family: Kiraly
+      - _suffix: null
+        _given: Ralph W.
+        _family: Adams
+      - _suffix: null
+        _given: Liladhar
+        _family: Paudel
+      - _suffix: null
+        _given: Mohammadali
+        _family: Foroozandeh
+      - _suffix: null
+        _given: Juan A.
+        _family: Aguilar
+      - _suffix: null
+        _given: István
+        _family: Timári
+      - _suffix: null
+        _given: Matthew J.
+        _family: Cliff
+      - _suffix: null
+        _given: Mathias
+        _family: Nilsson
+      - _suffix: null
+        _given: Péter
+        _family: Sándor
+      - _suffix: null
+        _given: Gyula
+        _family: Batta
+      - _suffix: null
+        _given: Jonathan P.
+        _family: Waltho
+      - _suffix: null
+        _given: Katalin E.
+        _family: Kövér
+      - _suffix: null
+        _given: Gareth A.
+        _family: Morris
+      _articleYear: 2015
+      _articleTitle: 'Real-time pure shift 15N HSQC of proteins: a real improvement
+        in resolution and sensitivity'
+      _articleIssue: '1'
+    tag: ArticleWork
+  _tags: []
+- _timeOpened: 2021-05-25T23:30:29.026549Z
+  _timeAdded: 2021-05-25T23:30:29.026549Z
+  _work:
+    contents:
+      _articleDoi: 10.1080/00268976.2018.1508784
+      _articleVolume: '117'
+      _articlePages:
+        contents: 1020-1027
+        tag: PageRange
+      _articleJournalLong: Molecular Physics
+      _articleJournalShort: Molecular Physics
+      _articleAuthors:
+      - _suffix: null
+        _given: Marjorie
+        _family: Ladd-Parada
+      - _suffix: null
+        _given: Megan J.
+        _family: Povey
+      - _suffix: null
+        _given: Josélio
+        _family: Vieira
+      - _suffix: null
+        _given: Michael E.
+        _family: Ries
+      _articleYear: 2019
+      _articleTitle: Fast field cycling NMR relaxometry studies of molten and cooled
+        cocoa butter
+      _articleIssue: 7-8
+    tag: ArticleWork
+  _tags: []

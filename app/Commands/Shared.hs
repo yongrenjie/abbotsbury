@@ -2,6 +2,11 @@ module Commands.Shared
   ( module Commands.Shared
   ) where
 
+import           Control.Exception              ( IOException(..)
+                                                , catch
+                                                )
+import           System.Environment
+import           System.Process
 import           Data.Char
 import           Data.Foldable                  ( maximumBy )
 import           Data.IntMap                    ( IntMap )
@@ -289,3 +294,22 @@ errorOnInvalidRefnos prefix refnos input = do
     (throwError
       (prefix <> "reference(s) " <> intercalateCommas badRefnos <> " not found")
     )
+
+-- | Attempt to get the email to use for HTTP requests.
+getUserEmail :: Text -> ExceptT Text IO Text
+getUserEmail prefix = do
+  -- Try to get the environment variable.
+  maybeEnvvar <- liftIO $ lookupEnv "ABBOT_EMAIL"
+  -- Try to get it from the gitconfig.
+  let getGitEmail =
+        Just <$> readProcess "git" ["config", "--get", "user.email"] []
+  maybeGit <- liftIO $ catch getGitEmail (\(e :: IOException) -> pure Nothing)
+  case (maybeEnvvar, maybeGit) of
+    (Just e , _      ) -> pure $ T.strip $ T.pack e
+    (Nothing, Just e') -> pure $ T.strip $ T.pack e'
+    _                  -> throwError
+      (  prefix
+      <> "no email was specified. "
+      <> "Please set either the ABBOT_EMAIL environment variable, "
+      <> "or set an email in your .gitconfig file."
+      )

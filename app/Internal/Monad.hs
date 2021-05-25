@@ -6,6 +6,7 @@ module Internal.Monad
   , Control.Monad.Except.ExceptT(..)
   , Control.Monad.Except.runExceptT
   , Control.Monad.Except.MonadError(..)
+  , Control.Monad.Trans.Class.lift
   , Control.Monad.guard
   , Control.Monad.when
   , Control.Monad.unless
@@ -30,3 +31,4 @@ import           Data.Either
 import           Data.Maybe
 -- mtl
 import           Control.Monad.IO.Class
+import           Control.Monad.Trans.Class

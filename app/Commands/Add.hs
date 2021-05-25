@@ -6,7 +6,6 @@ module Commands.Add
 
 import           Abbotsbury
 import           Commands.Shared
-import           Control.Exception
 import           Data.Either                    ( partitionEithers )
 import qualified Data.IntMap                   as IM
 import           Data.Maybe                     ( catMaybes )
@@ -21,8 +20,6 @@ import           Internal.Path                  ( PDFType(..)
                                                 )
 import           Lens.Micro.Platform
 import           Reference
-import           System.Environment
-import           System.Process
 import           Text.Regex.TDFA
 
 prefix :: Text
@@ -46,7 +43,7 @@ runAdd args input = do
       pure Nothing
     | otherwise -> pure (Just argDoi)
   -- Try to get the email to use for Crossref.
-  email <- getEmailForCrossref
+  email <- getUserEmail prefix
   -- Fetch the data from Crossref.
   let dois = catMaybes maybeDois
   unless
@@ -74,24 +71,6 @@ runAdd args input = do
   let newRefs = map (\w -> Reference w S.empty now now) newWorks
       refsout = IM.fromList $ zip [1 ..] (IM.elems refs ++ newRefs)
   pure $ SCmdOutput refsout Nothing
-
-getEmailForCrossref :: ExceptT Text IO Text
-getEmailForCrossref = do
-  -- Try to get the environment variable.
-  maybeEnvvar <- liftIO $ lookupEnv "ABBOT_EMAIL"
-  -- Try to get it from the gitconfig.
-  let getGitEmail =
-        Just <$> readProcess "git" ["config", "--get", "user.email"] []
-  maybeGit <- liftIO $ catch getGitEmail (\(e :: IOException) -> pure Nothing)
-  case (maybeEnvvar, maybeGit) of
-    (Just e , _      ) -> pure $ T.pack e
-    (Nothing, Just e') -> pure $ T.pack e'
-    _                  -> throwError
-      (  prefix
-      <> "no email was specified. "
-      <> "Please set either the ABBOT_EMAIL environment variable, "
-      <> "or set an email in your .gitconfig file."
-      )
 
 -- | This regex check is VERY basic, I don't intend for it to be very selective.
 -- It's just to weed out extremely obvious mistakes.
