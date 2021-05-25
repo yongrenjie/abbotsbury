@@ -154,7 +154,7 @@ pRefnos :: Parser Refnos
 pRefnos = pLast <|> pSetOf
  where
   pLast :: Parser Refnos
-  pLast  = Last <$ string' "last"
+  pLast  = Last <$ (string' "last" <* (eof <|> space1))
   pSetOf :: Parser Refnos
   pSetOf = SetOf . IS.unions <$> many (pNum <* pSeparator)
   pNum, pNumLit, pNumRange :: Parser IntSet
