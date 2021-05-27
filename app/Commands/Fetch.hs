@@ -4,6 +4,8 @@ module Commands.Fetch
   ( runFetch
   ) where
 
+import Data.List (intersperse)
+
 import           Commands.Shared
 import qualified Data.ByteString.Char8         as B
 import qualified Data.ByteString.Lazy.Char8    as LB
@@ -17,8 +19,10 @@ import           Data.Monoid                    ( First(..)
                                                 )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
-import           Data.Text.Encoding             ( decodeUtf8
+import           Data.Text.Encoding             ( Decoding(..)
+                                                , decodeUtf8
                                                 , encodeUtf8
+                                                , streamDecodeUtf8
                                                 )
 import qualified Data.Text.IO                  as TIO
 import           Internal.Monad
@@ -30,6 +34,10 @@ import           Network.HTTP.Types.Header
 import           Reference
 import           Replace.Megaparsec             ( breakCap )
 import           System.Directory               ( doesFileExist )
+import           System.IO                      ( Handle(..)
+                                                , IOMode(..)
+                                                , withBinaryFile
+                                                )
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 
@@ -54,8 +62,8 @@ runFetch args input = do
       getRnoDoiPairs rno = do
         let w        = refs ^?! ix rno . work
         let maybeDoi = w ^? _article . doi
+        -- Check if full text is already present
         fullTextExists <- liftIO $ doesFileExist $ getPDFPath FullText cwd w
-        -- Error out fi
         when
           fullTextExists
           (throwError
@@ -65,6 +73,7 @@ runFetch args input = do
             <> ": full text already found in library"
             )
           )
+        -- Check if the work has a DOI (books don't)
         case maybeDoi of
           Nothing ->
             throwError
@@ -79,16 +88,31 @@ runFetch args input = do
     (IS.toList specifiedRefnos)
   -- Print errors as necessary
   forM_ errors printError
-  -- Filter out anything that already has a full text
-  let (refnosToFetch, doisToFetch) = unzip refnosAndDois
   -- Real work starts here.
+  let (refnosToFetch, doisToFetch) = unzip refnosAndDois
+      refsToFetch                  = [ refs IM.! rno | rno <- refnosToFetch ]
+  when (null refsToFetch) (throwError $ prefix <> "no references to fetch")
   email      <- getUserEmail prefix
-  eitherUrls <- liftIO $ mapM (runExceptT . getFullTextUrl email) doisToFetch
-  let refnosAndEUrls = zip refnosToFetch eitherUrls
+  manager    <- liftIO $ NHC.newManager tlsManagerSettings
+  -- TODO: parallelise?? I think mapM is sequential...
+  eitherUrls <- liftIO
+    $ mapM (runExceptT . getFullTextUrl email manager) doisToFetch
+  -- Print errors for the unsuccessful results
+  let failedRefnos = [ rno | (rno, Left err) <- zip refnosToFetch eitherUrls ]
+  forM_
+    failedRefnos
+    (\rno ->
+      printError
+        $  prefix
+        <> "refno "
+        <> T.pack (show rno)
+        <> ": could not get URL for full text"
+    )
   -- Filter only the successful results
-  let refnosAndUrls  = [ (rno, url) | (rno, Right url) <- refnosAndEUrls ]
-  liftIO $ print refnosAndUrls
-  throwError (prefix <> "not finished implementing yet")
+  let refsAndUrls =
+        [ (ref, url) | (ref, Right url) <- zip refsToFetch eitherUrls ]
+  mapM_ (downloadPdf cwd email manager) refsAndUrls
+  pure $ SCmdOutput refs (Just $ IS.fromList refnosToFetch)
 
 data Publisher = ACS | Nature
                | Science | Springer
@@ -98,40 +122,46 @@ data Publisher = ACS | Nature
 type Identifier = Text
 
 -- | Get the URL to the full text PDF.
---
--- Unfortunately, Springer refuses to return proper information if I use the
--- "true" user-agent header, so I have to feed it something which looks like a
--- web browser. However, even with this spoofed user-agent, T&F papers don't
--- work. It refuses to give me proper headers. To be fair, T&F is kind of an
--- edge case...
-getFullTextUrl :: Text -> DOI -> ExceptT Text IO Text
-getFullTextUrl email doi = do
+getFullTextUrl :: Text -> NHC.Manager -> DOI -> ExceptT Text IO Text
+getFullTextUrl email manager doi = do
+  liftIO $ TIO.putStrLn $ "getting PDF link for DOI " <> doi <> "..."
   let doi_url = T.unpack $ "https://doi.org/" <> doi
   -- Check the website to see what headers it returns us.
-  manager        <- liftIO $ NHC.newManager tlsManagerSettings
-  initialRequest <- NHC.parseUrlThrow doi_url
-  -- let userAgent = fromString $ "abbotsbury/" <> showVersion version
-  let userAgent =
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
-          <> " AppleWebKit/537.36 (KHTML, like Gecko)"
-          <> " Chrome/90.0.4430.212 Safari/537.36"
-  let request = initialRequest
-        { NHC.requestHeaders = [ ("mailto"    , encodeUtf8 email)
-                               , ("user-agent", userAgent)
-                               ]
-        }
-  response <- liftIO $ NHC.httpLbs request manager
-  let headers   = NHC.responseHeaders response
-      lbsToText = decodeUtf8 . B.concat . LB.toChunks
-      bodyLines = T.lines . lbsToText $ NHC.responseBody response
-  -- we'll get rid of these variables later; for now it's just debugging
-  let x = getPublFromHeaders doi headers
-      y = getPublFromBody doi bodyLines
-  liftIO $ print x
-  liftIO $ print y
-  case x <|> y of
+  req <- politeReq email <$> NHC.parseUrlThrow doi_url
+  maybePubl <- liftIO $ NHC.withResponse req manager $ \resp -> do
+    -- Try to get the information from the headers first.
+    case getPublFromHeaders doi (NHC.responseHeaders resp) of
+      Just (p, i) -> pure $ Just (p, i)
+      Nothing     -> do
+         -- If that failed, then we'll have to use the body. And this is going
+         -- to be a bit ugly, because I can't wrap my head around http-conduit
+         -- at the moment.
+        let
+          getPubl2 decodeContinuation leftover = do
+            -- Read in a ByteString. This can be cut in the middle of a UTF-8
+            -- character, and also can be cut in the middle of a line... We use
+            -- Data.Text.Encoding.streamDecodeUtf8 to handle the first case; and
+            -- we also manually keep track of line breaks to handle the second
+            -- case. Note that this requires we use T.splitOn "\n" instead of
+            -- T.lines, because the latter misbehaves if the string ends with a
+            -- newline.
+            bs <- NHC.brRead $ NHC.responseBody resp
+            if B.null bs && T.null leftover
+              then pure Nothing     -- body ended
+              else do
+                let (Some text _ cont') = decodeContinuation bs
+                    (ts, leftover') = case T.splitOn "\n" (leftover <> text) of
+                      []  -> ([], "")
+                      [x] -> ([x], "")
+                      xs  -> (init xs, last xs)
+                -- mapM_ TIO.putStrLn (intersperse "------------" ts)
+                case getFirst $ foldMap (First . getPublFromBody doi) ts of
+                  Just (p', i') -> pure $ Just (p', i')
+                  Nothing       -> getPubl2 cont' leftover'
+        getPubl2 streamDecodeUtf8 ""
+  case maybePubl of
     Just (p, i) -> pure $ publisherToUrl p i
-    Nothing     -> throwError "full text not found"
+    Nothing     -> throwError ""
 
 -- | We assume (and this is borne out in practice) that the URL of the full text
 -- PDF can be uniquely determined given knowledge of: (a) the publisher; and (b)
@@ -178,8 +208,8 @@ getPublFromHeaders doi headers
 -- | Attempt to detect the (publisher, identifier) combination from the HTTP
 -- body. This is rather more involved. The input to this function must be a list
 -- of lines of Text, which have already been decoded.
-getPublFromBody :: DOI -> [Text] -> Maybe (Publisher, Identifier)
-getPublFromBody doi = getFirst . foldMap (First . breakCap' pPubl)
+getPublFromBody :: DOI -> Text -> Maybe (Publisher, Identifier)
+getPublFromBody doi = breakCap' pPubl
  where
   -- Version of breakCap that throws away the prefix and suffix. Type is a bit
   -- specialised, but not hugely important here.
@@ -277,3 +307,83 @@ getFirstHeaderValue headerName hdrs =
   case filter ((== CI.mk (encodeUtf8 headerName)) . fst) hdrs of
     []      -> ""
     (h : _) -> decodeUtf8 . snd $ h
+
+-- | Download a PDF.
+downloadPdf
+  :: FilePath -> Text -> NHC.Manager -> (Reference, Text) -> ExceptT Text IO ()
+downloadPdf cwd email manager (ref, url) = do
+  liftIO
+    $  TIO.putStrLn
+    $  "downloading PDF for DOI "
+    <> ref
+    ^. work
+    .  _article
+    .  doi
+    <> "..."
+  let destination = getPDFPath FullText cwd ref
+  req       <- politeReq email <$> NHC.parseUrlThrow (T.unpack url)
+  succeeded <- liftIO $ NHC.withResponse req manager $ \resp -> do
+    let hdrs = NHC.responseHeaders resp
+        body = NHC.responseBody resp
+    if
+      | isInHeaders "application/pdf" "content-type" hdrs
+      -> withBinaryFile destination WriteMode (normalDownloadPdf body)
+      | "sciencedirect"
+        `T.isInfixOf` url
+        &&            isInHeaders "text/html" "content-type" hdrs
+      -> withBinaryFile destination WriteMode (elsevierDownloadPdf body)
+      | otherwise
+      -> pure False
+  if succeeded
+    then pure ()
+    else printError $ prefix <> "PDF download failed for link " <> url
+ where
+  normalDownloadPdf :: NHC.BodyReader -> Handle -> IO Bool
+  normalDownloadPdf body hdl = do
+    let loop = do
+          bs <- NHC.brRead body
+          if B.null bs then pure () else B.hPut hdl bs >> loop
+    loop
+    pure True
+  -- Elsevier's "PDF URL" is not really a PDF, but rather a HTML page which
+  -- redirect us to a PDF. This wouldn't be problematic if they would just use
+  -- ordinary HTTP redirects; however, for whatever reason, they redirect us
+  -- with /JavaScript/ which means we need to parse the body.
+  elsevierDownloadPdf :: NHC.BodyReader -> Handle -> IO Bool
+  elsevierDownloadPdf body hdl = do
+    -- It's quite a small page, so just read the whole thing in.
+    text <- decodeUtf8 . B.concat <$> NHC.brConsume body
+    let
+      ws =
+        filter ("window.location" `T.isPrefixOf`) . map T.strip . T.lines $ text
+    case ws of
+      []      -> pure False
+      (x : _) -> do
+        case T.splitOn "'" x of
+          [_, link, _] -> do
+            TIO.putStrLn "redirected by Elsevier..."
+            req' <- politeReq email <$> NHC.parseUrlThrow (T.unpack link)
+            NHC.withResponse req' manager $ \resp' -> do
+              let body' = NHC.responseBody resp'
+              normalDownloadPdf body' hdl
+          _ -> pure False
+
+-- | Add some courtesy headers to a request.
+--
+-- Unfortunately, Springer refuses to return proper information if I use the
+-- "true" user-agent header, so I have to feed it something which looks like a
+-- web browser. However, even with this spoofed user-agent, T&F papers don't
+-- work. It refuses to give me proper headers. To be fair, T&F is kind of an
+-- edge case...
+politeReq :: Text -> NHC.Request -> NHC.Request
+politeReq email r = r
+  { NHC.requestHeaders = [ ("mailto"    , encodeUtf8 email)
+                         , ("user-agent", userAgent)
+                         ]
+  }
+ where
+  userAgent :: B.ByteString
+  userAgent =
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+      <> " AppleWebKit/537.36 (KHTML, like Gecko)"
+      <> " Chrome/90.0.4430.212 Safari/537.36"
