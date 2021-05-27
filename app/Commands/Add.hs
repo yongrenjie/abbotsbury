@@ -1,11 +1,15 @@
 {-# LANGUAGE MultiWayIf #-}
 
+{-# OPTIONS_GHC -Wno-deferred-type-errors #-}
 module Commands.Add
   ( runAdd
   ) where
 
 import           Abbotsbury
 import           Commands.Shared
+import           Data.Char                      ( isDigit
+                                                , isSpace
+                                                )
 import           Data.Either                    ( partitionEithers )
 import qualified Data.IntMap                   as IM
 import           Data.Maybe                     ( catMaybes )
@@ -20,7 +24,8 @@ import           Internal.Path                  ( PDFType(..)
                                                 )
 import           Lens.Micro.Platform
 import           Reference
-import           Text.Regex.TDFA
+import           Text.Megaparsec
+import           Text.Megaparsec.Char
 
 prefix :: Text
 prefix = "add: "
@@ -71,8 +76,3 @@ runAdd args input = do
   let newRefs = map (\w -> Reference w S.empty now now) newWorks
       refsout = IM.fromList $ zip [1 ..] (IM.elems refs ++ newRefs)
   pure $ SCmdOutput refsout Nothing
-
--- | This regex check is VERY basic, I don't intend for it to be very selective.
--- It's just to weed out extremely obvious mistakes.
-isValidDoi :: DOI -> Bool
-isValidDoi doi = doi =~ ("\\`10\\.[0-9]{4,9}/[^[:space:]]+\\'" :: Text)

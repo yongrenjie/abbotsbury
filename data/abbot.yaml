@@ -250,3 +250,115 @@
       _articleIssue: 7-8
     tag: ArticleWork
   _tags: []
+- _timeOpened: 2021-05-26T23:41:50.910465Z
+  _timeAdded: 2021-05-26T23:41:50.910465Z
+  _work:
+    contents:
+      _articleDoi: 10.1039/c5cc06293d
+      _articleVolume: '51'
+      _articlePages:
+        contents: 15410-15413
+        tag: PageRange
+      _articleJournalLong: Chemical Communications
+      _articleJournalShort: Chem. Commun.
+      _articleAuthors:
+      - _suffix: null
+        _given: M.
+        _family: Foroozandeh
+      - _suffix: null
+        _given: R. W.
+        _family: Adams
+      - _suffix: null
+        _given: P.
+        _family: Kiraly
+      - _suffix: null
+        _given: M.
+        _family: Nilsson
+      - _suffix: null
+        _given: G. A.
+        _family: Morris
+      _articleYear: 2015
+      _articleTitle: 'Measuring couplings in crowded NMR spectra: pure shift NMR with
+        multiplet analysis'
+      _articleIssue: '84'
+    tag: ArticleWork
+  _tags: []
+- _timeOpened: 2021-05-26T23:56:34.838788Z
+  _timeAdded: 2021-05-26T23:56:34.838788Z
+  _work:
+    contents:
+      _articleDoi: 10.1002/anie.201404111
+      _articleVolume: '53'
+      _articlePages:
+        contents: 6990-6992
+        tag: PageRange
+      _articleJournalLong: Angewandte Chemie International Edition
+      _articleJournalShort: Angew. Chem. Int. Ed.
+      _articleAuthors:
+      - _suffix: null
+        _given: Mohammadali
+        _family: Foroozandeh
+      - _suffix: null
+        _given: Ralph W.
+        _family: Adams
+      - _suffix: null
+        _given: Nicola J.
+        _family: Meharry
+      - _suffix: null
+        _given: Damien
+        _family: Jeannerat
+      - _suffix: null
+        _given: Mathias
+        _family: Nilsson
+      - _suffix: null
+        _given: Gareth A.
+        _family: Morris
+      _articleYear: 2014
+      _articleTitle: Ultrahigh-Resolution NMR Spectroscopy
+      _articleIssue: '27'
+    tag: ArticleWork
+  _tags: []
+- _timeOpened: 2021-05-27T00:15:49.788816Z
+  _timeAdded: 2021-05-27T00:15:49.788816Z
+  _work:
+    contents:
+      _articleDoi: 10.1016/j.jmr.2020.106768
+      _articleVolume: '318'
+      _articlePages:
+        contents: '106768'
+        tag: PageRange
+      _articleJournalLong: Journal of Magnetic Resonance
+      _articleJournalShort: J. Magn. Reson.
+      _articleAuthors:
+      - _suffix: null
+        _given: Mohammadali
+        _family: Foroozandeh
+      _articleYear: 2020
+      _articleTitle: 'Spin dynamics during chirped pulses: applications to homonuclear
+        decoupling and broadband excitation'
+      _articleIssue: ''
+    tag: ArticleWork
+  _tags: []
+- _timeOpened: 2021-05-27T00:18:46.081208Z
+  _timeAdded: 2021-05-27T00:18:46.081208Z
+  _work:
+    contents:
+      _articleDoi: 10.1146/annurev-anchem-071213-020208
+      _articleVolume: '7'
+      _articlePages:
+        contents: 129-161
+        tag: PageRange
+      _articleJournalLong: Annual Review of Analytical Chemistry
+      _articleJournalShort: Annual Rev. Anal. Chem.
+      _articleAuthors:
+      - _suffix: null
+        _given: Patrick
+        _family: Giraudeau
+      - _suffix: null
+        _given: Lucio
+        _family: Frydman
+      _articleYear: 2014
+      _articleTitle: 'Ultrafast 2D NMR: An Emerging Tool in Analytical Spectroscopy'
+      _articleIssue: '1'
+    tag: ArticleWork
+  _tags: []

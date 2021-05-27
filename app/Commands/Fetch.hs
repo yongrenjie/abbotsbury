@@ -5,24 +5,36 @@ module Commands.Fetch
   ) where
 
 import           Commands.Shared
+import qualified Data.ByteString.Char8         as B
+import qualified Data.ByteString.Lazy.Char8    as LB
 import           Data.ByteString.UTF8           ( fromString )
 import qualified Data.CaseInsensitive          as CI
+import           Data.Either                    ( partitionEithers )
 import qualified Data.IntMap                   as IM
 import qualified Data.IntSet                   as IS
+import           Data.Monoid                    ( First(..)
+                                                , getFirst
+                                                )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import           Data.Text.Encoding             ( decodeUtf8
                                                 , encodeUtf8
                                                 )
 import qualified Data.Text.IO                  as TIO
--- import           Data.Version                   ( showVersion )
 import           Internal.Monad
+import           Internal.Path
 import           Lens.Micro.Platform
 import qualified Network.HTTP.Client           as NHC
 import           Network.HTTP.Client.TLS        ( tlsManagerSettings )
 import           Network.HTTP.Types.Header
--- import           Paths_abbotsbury               ( version )
 import           Reference
+import           Replace.Megaparsec             ( breakCap )
+import           System.Directory               ( doesFileExist )
+import           Text.Megaparsec
+import           Text.Megaparsec.Char
+
+-- import           Data.Version                   ( showVersion )
+-- import           Paths_abbotsbury               ( version )
 
 prefix :: Text
 prefix = "fetch: "
@@ -36,24 +48,47 @@ runFetch args input = do
   -- Parse arguments
   refnos <- parseInCommand pRefnos args prefix
   let argsRefnos = resolveRefnosWith refs refnos
-  -- Figure out which refnos to print
-  refnosToFetch <- getActiveRefnos prefix argsRefnos input
-  let doisToFetch =
-        (refs `IM.restrictKeys` refnosToFetch) ^.. each . work . _article . doi
-  -- Error out if there's nothing to do (e.g. if a book was selected)
-  when (null doisToFetch) $ throwError (prefix <> "no works to fetch")
+  specifiedRefnos <- getActiveRefnos prefix argsRefnos input
+  -- Filter out anything that shouldn't be fetched
+  let getRnoDoiPairs :: Int -> ExceptT Text IO (Int, DOI)
+      getRnoDoiPairs rno = do
+        let w        = refs ^?! ix rno . work
+        let maybeDoi = w ^? _article . doi
+        fullTextExists <- liftIO $ doesFileExist $ getPDFPath FullText cwd w
+        -- Error out fi
+        when
+          fullTextExists
+          (throwError
+            (  prefix
+            <> "refno "
+            <> T.pack (show rno)
+            <> ": full text already found in library"
+            )
+          )
+        case maybeDoi of
+          Nothing ->
+            throwError
+              (  prefix
+              <> "refno "
+              <> T.pack (show rno)
+              <> ": DOI is not available"
+              )
+          Just doi' -> pure (rno, doi')
+  (errors, refnosAndDois) <- liftIO $ partitionEithers <$> mapM
+    (runExceptT . getRnoDoiPairs)
+    (IS.toList specifiedRefnos)
+  -- Print errors as necessary
+  forM_ errors printError
+  -- Filter out anything that already has a full text
+  let (refnosToFetch, doisToFetch) = unzip refnosAndDois
   -- Real work starts here.
-  eitherEitherUrls <- liftIO
-    $ mapM (runExceptT . runExceptT . getFullTextUrl) doisToFetch
-  let refnosAndeEUrls = zip (IS.toList refnosToFetch) eitherEitherUrls
-  -- Filter only the successful results, which have the form Right (Left (P, I))
-  let refnosAndUrls = do
-        (rno, x) <- refnosAndeEUrls
-        case x of
-          Right (Left url) -> pure (rno, url)
-          _                -> []
+  email      <- getUserEmail prefix
+  eitherUrls <- liftIO $ mapM (runExceptT . getFullTextUrl email) doisToFetch
+  let refnosAndEUrls = zip refnosToFetch eitherUrls
+  -- Filter only the successful results
+  let refnosAndUrls  = [ (rno, url) | (rno, Right url) <- refnosAndEUrls ]
   liftIO $ print refnosAndUrls
-  throwError (prefix <> "not implemented yet")
+  throwError (prefix <> "not finished implementing yet")
 
 data Publisher = ACS | Nature
                | Science | Springer
@@ -61,63 +96,48 @@ data Publisher = ACS | Nature
                | AnnRev | RSC | Elsevier
                deriving (Eq, Show, Ord)
 type Identifier = Text
-type ErrorText = Text
-type FullTextUrl = Text
 
--- | The type signature of this is a bit odd.
--- The outer layer of ExceptT is for short-circuiting from the function /with a
--- successful result/, i.e. having identified the correct publisher and
--- identifier.
--- The inner layer of ExceptT is for reporting errors.
--- Note that because monad transformers work "inside out"... the return result
--- of @Left X@ indicates an error, whereas a successful early return corresponds
--- to @Right (Left (P, I))@.
-getFullTextUrl :: DOI -> ExceptT FullTextUrl (ExceptT ErrorText IO) ()
-getFullTextUrl doi = do
-  let fail :: ErrorText -> ExceptT FullTextUrl (ExceptT ErrorText IO) ()
-      fail = lift . throwError
-  let earlyReturn
-        :: Publisher
-        -> Identifier
-        -> ExceptT FullTextUrl (ExceptT ErrorText IO) ()
-      earlyReturn p i = throwError (publisherToUrl p i)
+-- | Get the URL to the full text PDF.
+--
+-- Unfortunately, Springer refuses to return proper information if I use the
+-- "true" user-agent header, so I have to feed it something which looks like a
+-- web browser. However, even with this spoofed user-agent, T&F papers don't
+-- work. It refuses to give me proper headers. To be fair, T&F is kind of an
+-- edge case...
+getFullTextUrl :: Text -> DOI -> ExceptT Text IO Text
+getFullTextUrl email doi = do
   let doi_url = T.unpack $ "https://doi.org/" <> doi
   -- Check the website to see what headers it returns us.
-  email          <- lift $ encodeUtf8 <$> getUserEmail prefix
   manager        <- liftIO $ NHC.newManager tlsManagerSettings
   initialRequest <- NHC.parseUrlThrow doi_url
-  -- Unfortunately, Springer refuses to return proper information if I use the
-  -- "true" user-agent header, so I have to feed it something which looks like a
-  -- web browser.
   -- let userAgent = fromString $ "abbotsbury/" <> showVersion version
-  let userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36"
+  let userAgent =
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+          <> " AppleWebKit/537.36 (KHTML, like Gecko)"
+          <> " Chrome/90.0.4430.212 Safari/537.36"
   let request = initialRequest
-        { NHC.requestHeaders = [("mailto", email), ("user-agent", userAgent)]
+        { NHC.requestHeaders = [ ("mailto"    , encodeUtf8 email)
+                               , ("user-agent", userAgent)
+                               ]
         }
-  response <- liftIO $ NHC.httpNoBody request manager
-  let headers = NHC.responseHeaders response
-  if
-    | isInHeaders "pubs.acs.org" "Content-Security-Policy" headers
-    -> earlyReturn ACS doi
-    | isInHeaders "www.nature.com" "X-Forwarded-Host" headers
-    -> earlyReturn Nature (T.tail . snd . T.breakOn "/" $ doi)
-    | isInHeaders "science.sciencemag.org" "Link" headers
-    -> do
-      let link = getFirstHeaderValue "Link" headers
-      earlyReturn
-        Science
-        (snd . T.breakOnEnd "/content/" . fst . T.breakOn ">" $ link)
-    | isInHeaders ".springer.com" "Set-Cookie" headers
-    -> earlyReturn Springer doi
-    | otherwise
-    -> do
-      liftIO $ print $ NHC.responseHeaders response  -- for debugging purposes
-      -- should start to read and parse the body here.
-  -- Bugs: tandf doesn't work. It refuses to give me proper headers. It's kind
-  -- of an edge case, to be honest...
-    
+  response <- liftIO $ NHC.httpLbs request manager
+  let headers   = NHC.responseHeaders response
+      lbsToText = decodeUtf8 . B.concat . LB.toChunks
+      bodyLines = T.lines . lbsToText $ NHC.responseBody response
+  -- we'll get rid of these variables later; for now it's just debugging
+  let x = getPublFromHeaders doi headers
+      y = getPublFromBody doi bodyLines
+  liftIO $ print x
+  liftIO $ print y
+  case x <|> y of
+    Just (p, i) -> pure $ publisherToUrl p i
+    Nothing     -> throwError "full text not found"
 
-publisherToUrl :: Publisher -> Identifier -> FullTextUrl
+-- | We assume (and this is borne out in practice) that the URL of the full text
+-- PDF can be uniquely determined given knowledge of: (a) the publisher; and (b)
+-- some kind of identifier, which may be the DOI, or something else entirely.
+-- This function provides the rules for constructing this URL.
+publisherToUrl :: Publisher -> Identifier -> Text
 publisherToUrl p iden
   | p == ACS
   = "https://pubs.acs.org/doi/pdf/" <> iden
@@ -138,13 +158,120 @@ publisherToUrl p iden
   | p == RSC
   = "https://pubs.rsc.org/en/content/articlepdf/" <> iden
 
+-- | Attempt to detect the (publisher, identifier) combination from the HTTP
+-- headers alone. This means we don't have to parse the body.
+getPublFromHeaders :: DOI -> ResponseHeaders -> Maybe (Publisher, Identifier)
+getPublFromHeaders doi headers
+  | isInHeaders "pubs.acs.org" "Content-Security-Policy" headers = Just
+    (ACS, doi)
+  | isInHeaders "www.nature.com" "X-Forwarded-Host" headers = Just
+    (Nature, T.tail . snd . T.breakOn "/" $ doi)
+  | isInHeaders "science.sciencemag.org" "Link" headers = Just
+    ( Science
+    , snd . T.breakOnEnd "/content/" . fst . T.breakOn ">" $ getFirstHeaderValue
+      "Link"
+      headers
+    )
+  | isInHeaders ".springer.com" "Set-Cookie" headers = Just (Springer, doi)
+  | otherwise = Nothing
 
+-- | Attempt to detect the (publisher, identifier) combination from the HTTP
+-- body. This is rather more involved. The input to this function must be a list
+-- of lines of Text, which have already been decoded.
+getPublFromBody :: DOI -> [Text] -> Maybe (Publisher, Identifier)
+getPublFromBody doi = getFirst . foldMap (First . breakCap' pPubl)
+ where
+  -- Version of breakCap that throws away the prefix and suffix. Type is a bit
+  -- specialised, but not hugely important here.
+  breakCap' :: Parser a -> Text -> Maybe a
+  breakCap' parser input = (\(_, m, _) -> m) <$> breakCap parser input
+  -- Bunch of helper functions.
+  isQuote :: Char -> Bool
+  isQuote c = c == '\'' || c == '\"'
+  quote :: Parser Char
+  quote = satisfy isQuote
+  notQuote :: Parser Text
+  notQuote = takeWhileP Nothing (not . isQuote)
+  inQuotes :: Parser Text -> Parser Text
+  inQuotes p = quote *> p <* quote
+  -- The actual parsers
+  pPubl, pRsc, pWiley, pElsevier, pAnnRev, pTaylorFrancis
+    :: Parser (Publisher, Identifier)
+  pPubl = choice $ map try [pRsc, pWiley, pElsevier, pAnnRev, pTaylorFrancis]
+  pRsc  = do
+    string "<meta content="
+    iden <- inQuotes
+      (string "https://pubs.rsc.org/en/content/articlepdf/" *> notQuote)
+    space1
+    string "name="
+    inQuotes (string "citation_pdf_url")
+    space
+    string "/>"
+    pure (RSC, iden)
+  pWiley = do
+    string "<meta name="
+    inQuotes (string "citation_publisher")
+    space1
+    string "content="
+    publisherName <- inQuotes notQuote
+    guard $ "John Wiley" `T.isInfixOf` publisherName
+    space
+    optional $ char '/'
+    char '>'
+    pure (Wiley, doi)
+  pElsevier = do
+    string "<input type="
+    inQuotes (string "hidden")
+    space1
+    string "name="
+    inQuotes (string "redirectURL")
+    space1
+    string "value="
+    idenWithSuffix <- inQuotes
+      (string "https%3A%2F%2Fwww.sciencedirect.com%2Fscience%2Farticle%2Fpii%2F"
+      *> notQuote
+      )
+    let maybeIden = T.stripSuffix "%3Fvia%253Dihub" idenWithSuffix
+    space1
+    string "id="
+    inQuotes (string "redirectURL")
+    string "/>"
+    case maybeIden of
+      Just iden -> pure (Elsevier, iden)
+      Nothing   -> fail ""
+  pAnnRev = do
+    string "<meta name="
+    inQuotes (string "dc.Publisher")
+    space1
+    string "content="
+    publisherName <- inQuotes notQuote
+    guard $ "Annual Reviews" `T.isInfixOf` publisherName
+    space
+    optional $ char '/'
+    char '>'
+    pure (AnnRev, doi)
+  pTaylorFrancis = do
+    string "<meta name="
+    inQuotes (string "dc.Publisher")
+    space1
+    string "content="
+    publisherName <- inQuotes notQuote
+    guard $ "Taylor" `T.isInfixOf` publisherName
+    space
+    optional $ char '/'
+    char '>'
+    pure (TaylorFrancis, doi)
+
+-- | @isInHeaders val name headers@ checks if:
+--  (a) there is one or more headers with the given @name@;
+--  (b) any of the values of these headers contains the text @val@ anywhere in
+--  it.
 isInHeaders :: Text -> Text -> ResponseHeaders -> Bool
 isInHeaders value headerName = any (T.isInfixOf value . decodeUtf8 . snd)
   . filter ((== CI.mk (encodeUtf8 headerName)) . fst)
 
-
--- | Returns an empty Text if the header is not found.
+-- | Get the value of the first header with the specified name. Returns an empty
+-- Text if the header is not found.
 getFirstHeaderValue :: Text -> ResponseHeaders -> Text
 getFirstHeaderValue headerName hdrs =
   case filter ((== CI.mk (encodeUtf8 headerName)) . fst) hdrs of

@@ -313,3 +313,18 @@ getUserEmail prefix = do
       <> "Please set either the ABBOT_EMAIL environment variable, "
       <> "or set an email in your .gitconfig file."
       )
+
+-- | This regex check is VERY basic, I don't intend for it to be very selective.
+-- It's just to weed out extremely obvious mistakes.
+isValidDoi :: DOI -> Bool
+isValidDoi = isJust . parseMaybe pDoi
+  where
+    pDoi :: Parser ()
+    pDoi = do
+      void $ string "10."
+      numbers <- takeWhileP Nothing isDigit
+      guard $ 4 <= T.length numbers && T.length numbers <= 9
+      void $ char '/'
+      void $ takeWhileP Nothing (not . isSpace)
+      eof
+      pure ()
