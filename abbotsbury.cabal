@@ -117,6 +117,7 @@ executable abbot
     , yaml
     , utf8-string
     , http-types , case-insensitive
+    , async
   ghc-options:
     -threaded
 

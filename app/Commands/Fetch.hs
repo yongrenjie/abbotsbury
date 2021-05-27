@@ -5,6 +5,7 @@ module Commands.Fetch
   ) where
 
 import           Commands.Shared
+import           Control.Concurrent.Async       ( forConcurrently )
 import           Data.Bifunctor                 ( first )
 import qualified Data.ByteString.Char8         as B
 import qualified Data.CaseInsensitive          as CI
@@ -76,30 +77,24 @@ runFetch args input = do
   -- Real work starts here.
   let (refnosToFetch, doisToFetch) = unzip refnosAndDois
   when (null refnosToFetch) (throwError $ prefix <> "no references to fetch")
-  email     <- getUserEmail prefix
-  manager   <- liftIO $ NHC.newManager tlsManagerSettings
-  -- TODO: parallelise?? I think mapM is sequential...
-  maybeUrls <- liftIO $ mapM (getFullTextUrl email manager) doisToFetch
-  -- Partition the results into successes and failures. The first component of
-  -- the result tuple are all the Just values.
-  let partitionSndMaybes :: [(a, Maybe b)] -> ([(a, b)], [a])
-      partitionSndMaybes = foldr select ([], [])
-       where
-        select :: (a, Maybe b) -> ([(a, b)], [a]) -> ([(a, b)], [a])
-        select (x, Just y ) (js, ns) = ((x, y) : js, ns)
-        select (x, Nothing) (js, ns) = (js, x : ns)
-  let (successRefnosUrls, failedRefnos) =
-        partitionSndMaybes $ zip refnosToFetch maybeUrls
-  -- Print errors for the failure cases
-  forM_
-    failedRefnos
-    (\rno ->
-      printError $ prefix <> refnoT rno <> "could not get URL for full text"
-    )
-  -- Download the PDFs for the success cases
-  let refsAndUrls = map (first (refs IM.!)) successRefnosUrls
-  mapM_ (uncurry $ downloadPdf cwd email manager) refsAndUrls
-  pure $ SCmdOutput refs (Just $ IS.fromList $ map fst successRefnosUrls)
+  email         <- getUserEmail prefix
+  manager       <- liftIO $ NHC.newManager tlsManagerSettings
+  refnoOutcomes <- liftIO $ forConcurrently refnosAndDois $ \(rno, doi) -> do
+    -- Get the URL first.
+    maybeUrl <- getFullTextUrl email manager doi
+    case maybeUrl of
+      Nothing -> do
+        printErrorIO $ prefix <> refnoT rno <> "could not get URL for full text"
+        pure Nothing
+      -- If we managed to get it, then download the PDF.
+      Just url -> do
+        let destination = getPDFPath FullText cwd (refs IM.! rno)
+        TIO.putStrLn $ "downloading PDF for DOI " <> doi <> "..."
+        success <- downloadPdf email manager url destination
+        unless success (printErrorIO $ prefix <> refnoT rno <> "PDF download failed")
+        pure $ Just rno
+  -- We return the refnos that succeeded.
+  pure $ SCmdOutput refs (IS.fromList <$> sequence refnoOutcomes)
 
 data Publisher = ACS | Nature
                | Science | Springer
@@ -291,21 +286,12 @@ publisherToUrl p iden
   | p == RSC
   = "https://pubs.rsc.org/en/content/articlepdf/" <> iden
 
--- | Download a PDF.
+-- | Download a PDF. The returned Bool indicates whether the download succeeded.
 downloadPdf
-  :: FilePath -> Text -> NHC.Manager -> Reference -> Text -> ExceptT Text IO ()
-downloadPdf cwd email manager ref url = do
-  liftIO
-    $  TIO.putStrLn
-    $  "downloading PDF for DOI "
-    <> ref
-    ^. work
-    .  _article
-    .  doi
-    <> "..."
-  let destination = getPDFPath FullText cwd ref
+  :: Text -> NHC.Manager -> Text -> FilePath -> IO Bool
+downloadPdf email manager url destination = do
   req       <- politeReq email <$> NHC.parseUrlThrow (T.unpack url)
-  succeeded <- liftIO $ NHC.withResponse req manager $ \resp -> do
+  NHC.withResponse req manager $ \resp -> do
     let hdrs = NHC.responseHeaders resp
         body = NHC.responseBody resp
     if
@@ -317,9 +303,6 @@ downloadPdf cwd email manager ref url = do
       -> withBinaryFile destination WriteMode (elsevierDownloadPdf body)
       | otherwise
       -> pure False
-  if succeeded
-    then pure ()
-    else printError $ prefix <> "PDF download failed for link " <> url
  where
   normalDownloadPdf :: NHC.BodyReader -> Handle -> IO Bool
   normalDownloadPdf body hdl = do
@@ -386,4 +369,3 @@ getFirstHeaderValue headerName hdrs =
   case filter ((== CI.mk (encodeUtf8 headerName)) . fst) hdrs of
     []      -> ""
     (h : _) -> decodeUtf8 . snd $ h
-

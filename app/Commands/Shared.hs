@@ -251,7 +251,11 @@ intercalateCommas = T.intercalate "," . map (T.pack . show) . IS.toList
 
 -- | A handy wrapper.
 printError :: Text -> ExceptT Text IO ()
-printError text = liftIO $ TIO.putStrLn (makeError text)
+printError = liftIO . printErrorIO
+
+-- | If you don't want ExceptT.
+printErrorIO :: Text -> IO ()
+printErrorIO = TIO.putStrLn . makeError
 
 -- | A monadic version of 'either' from base.
 mEither :: Monad m => Either a b -> (a -> m c) -> (b -> m c) -> m c
