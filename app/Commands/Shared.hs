@@ -147,8 +147,10 @@ pComposedCmd = do
   pure $ Composed cmd1 cmd2
 
 -- | In the REPL, refnos can be specified either using the word 'last' (which
--- is resolved to the most recently opened ref), or as a set of integers.
+-- is resolved to the most recently opened ref), the word 'all' (which refers to
+-- all refs), or as a set of integers.
 data Refnos = Last
+            | All
             | SetOf IntSet
 
 -- | Parse a series of reference numbers. The format is:
@@ -156,10 +158,12 @@ data Refnos = Last
 -- <Num> = <NumLit> | <NumRange>
 -- <Refnos> = 0 or more <Num>, separated by commas and/or spaces
 pRefnos :: Parser Refnos
-pRefnos = pLast <|> pSetOf
+pRefnos = pLast <|> pAll <|> pSetOf
  where
   pLast :: Parser Refnos
   pLast  = Last <$ (string' "last" <* (eof <|> space1))
+  pAll :: Parser Refnos
+  pAll  = All <$ (string' "all" <* (eof <|> space1))
   pSetOf :: Parser Refnos
   pSetOf = SetOf . IS.unions <$> many (pNum <* pSeparator)
   pNum, pNumLit, pNumRange :: Parser IntSet
@@ -178,6 +182,7 @@ resolveRefnosWith refs rnos = if IM.null refs
   then IS.empty
   else case rnos of
     Last    -> IS.singleton . fst $ maximumBy mostRecent (IM.assocs refs)
+    All     -> IM.keysSet refs
     SetOf s -> s
   where
     mostRecent :: (Int, Reference) -> (Int, Reference) -> Ordering
