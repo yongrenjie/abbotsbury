@@ -24,8 +24,7 @@ module Abbotsbury.Crossref
 
 import           Abbotsbury.Crossref.Internal
 import           Abbotsbury.Work
-import           Control.Concurrent
-import           Control.Monad
+import           Control.Concurrent.Async       ( forConcurrently )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Network.HTTP.Client           as NHC
@@ -207,28 +206,12 @@ fetchWorks'
 fetchWorks' maybeManager useInternalAbbrevs email dois = if null dois
   then pure [] -- Avoid doing more work than we need to.
   else do
-                                                 -- Set up the manager. If it's not specified, create a new one using default settings.
+    -- Set up the manager. If it's not specified, create a new one using default
+    -- settings.
     manager <- case maybeManager of
       Nothing -> NHC.newManager NHCT.tlsManagerSettings
       Just m  -> pure m
-    -- Create a bunch of mvars.
-    let n = length dois
-    mvars <- replicateM n newEmptyMVar
-    -- Fetch metadata concurrently.
-    forM_
-      (zip mvars dois)
-      (\(mvar, doi') -> forkIO $ do
-          -- Get the JSON data.
-        eitherErrorJson <- getCrossrefJson manager email doi'
-        -- Parse the JSON data. (Note that the argument to 'pure' runs in the
-        -- Either monad, not IO.)
-        let eitherErrorWork =
-              eitherErrorJson
-                >>= getJsonMessage doi'
-                >>= parseCrossrefMessage doi' useInternalAbbrevs
-        putMVar mvar eitherErrorWork
-      )
-    mapM takeMVar mvars
+    forConcurrently dois $ fetchWork' (Just manager) useInternalAbbrevs email
 
 -- | Get a Work by reading in JSON data from a file. This automatically uses
 -- @abbotsbury@'s internal abbreviation list, and also uses the filename passed

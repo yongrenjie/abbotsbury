@@ -37,6 +37,7 @@ common abbot-deps
     , http-client , http-client-tls , network-uri
     , raw-strings-qq
     , microlens , microlens-th
+    , async
   default-language:
     Haskell2010
   default-extensions:
@@ -117,7 +118,6 @@ executable abbot
     , yaml
     , utf8-string
     , http-types , case-insensitive
-    , async
   ghc-options:
     -threaded
 
