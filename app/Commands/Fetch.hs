@@ -4,12 +4,9 @@ module Commands.Fetch
   ( runFetch
   ) where
 
-import Data.List (intersperse)
-
 import           Commands.Shared
+import           Data.Bifunctor                 ( first )
 import qualified Data.ByteString.Char8         as B
-import qualified Data.ByteString.Lazy.Char8    as LB
-import           Data.ByteString.UTF8           ( fromString )
 import qualified Data.CaseInsensitive          as CI
 import           Data.Either                    ( partitionEithers )
 import qualified Data.IntMap                   as IM
@@ -41,9 +38,6 @@ import           System.IO                      ( Handle(..)
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 
--- import           Data.Version                   ( showVersion )
--- import           Paths_abbotsbury               ( version )
-
 prefix :: Text
 prefix = "fetch: "
 
@@ -67,21 +61,12 @@ runFetch args input = do
         when
           fullTextExists
           (throwError
-            (  prefix
-            <> "refno "
-            <> T.pack (show rno)
-            <> ": full text already found in library"
-            )
+            (prefix <> refnoT rno <> "full text already found in library")
           )
         -- Check if the work has a DOI (books don't)
         case maybeDoi of
           Nothing ->
-            throwError
-              (  prefix
-              <> "refno "
-              <> T.pack (show rno)
-              <> ": DOI is not available"
-              )
+            throwError (prefix <> refnoT rno <> "DOI is not available")
           Just doi' -> pure (rno, doi')
   (errors, refnosAndDois) <- liftIO $ partitionEithers <$> mapM
     (runExceptT . getRnoDoiPairs)
@@ -90,29 +75,31 @@ runFetch args input = do
   forM_ errors printError
   -- Real work starts here.
   let (refnosToFetch, doisToFetch) = unzip refnosAndDois
-      refsToFetch                  = [ refs IM.! rno | rno <- refnosToFetch ]
-  when (null refsToFetch) (throwError $ prefix <> "no references to fetch")
-  email      <- getUserEmail prefix
-  manager    <- liftIO $ NHC.newManager tlsManagerSettings
+  when (null refnosToFetch) (throwError $ prefix <> "no references to fetch")
+  email     <- getUserEmail prefix
+  manager   <- liftIO $ NHC.newManager tlsManagerSettings
   -- TODO: parallelise?? I think mapM is sequential...
-  eitherUrls <- liftIO
-    $ mapM (runExceptT . getFullTextUrl email manager) doisToFetch
-  -- Print errors for the unsuccessful results
-  let failedRefnos = [ rno | (rno, Left err) <- zip refnosToFetch eitherUrls ]
+  maybeUrls <- liftIO $ mapM (getFullTextUrl email manager) doisToFetch
+  -- Partition the results into successes and failures. The first component of
+  -- the result tuple are all the Just values.
+  let partitionSndMaybes :: [(a, Maybe b)] -> ([(a, b)], [a])
+      partitionSndMaybes = foldr select ([], [])
+       where
+        select :: (a, Maybe b) -> ([(a, b)], [a]) -> ([(a, b)], [a])
+        select (x, Just y ) (js, ns) = ((x, y) : js, ns)
+        select (x, Nothing) (js, ns) = (js, x : ns)
+  let (successRefnosUrls, failedRefnos) =
+        partitionSndMaybes $ zip refnosToFetch maybeUrls
+  -- Print errors for the failure cases
   forM_
     failedRefnos
     (\rno ->
-      printError
-        $  prefix
-        <> "refno "
-        <> T.pack (show rno)
-        <> ": could not get URL for full text"
+      printError $ prefix <> refnoT rno <> "could not get URL for full text"
     )
-  -- Filter only the successful results
-  let refsAndUrls =
-        [ (ref, url) | (ref, Right url) <- zip refsToFetch eitherUrls ]
-  mapM_ (downloadPdf cwd email manager) refsAndUrls
-  pure $ SCmdOutput refs (Just $ IS.fromList refnosToFetch)
+  -- Download the PDFs for the success cases
+  let refsAndUrls = map (first (refs IM.!)) successRefnosUrls
+  mapM_ (uncurry $ downloadPdf cwd email manager) refsAndUrls
+  pure $ SCmdOutput refs (Just $ IS.fromList $ map fst successRefnosUrls)
 
 data Publisher = ACS | Nature
                | Science | Springer
@@ -121,23 +108,38 @@ data Publisher = ACS | Nature
                deriving (Eq, Show, Ord)
 type Identifier = Text
 
--- | Get the URL to the full text PDF.
-getFullTextUrl :: Text -> NHC.Manager -> DOI -> ExceptT Text IO Text
+-- | Get the URL to the full text PDF. Returns @Just url@ if it succeeds and
+-- @Nothing@ if it fails.
+getFullTextUrl :: Text -> NHC.Manager -> DOI -> IO (Maybe Text)
 getFullTextUrl email manager doi = do
-  liftIO $ TIO.putStrLn $ "getting PDF link for DOI " <> doi <> "..."
+  TIO.putStrLn $ "getting PDF link for DOI " <> doi <> "..."
   let doi_url = T.unpack $ "https://doi.org/" <> doi
   -- Check the website to see what headers it returns us.
   req <- politeReq email <$> NHC.parseUrlThrow doi_url
-  maybePubl <- liftIO $ NHC.withResponse req manager $ \resp -> do
+  maybePubl <- NHC.withResponse req manager (getPublFromResponse doi)
+  pure $ uncurry publisherToUrl <$> maybePubl
+
+-- | Identify the publisher and the identifier from a HTML response. The @doi@
+-- parameter is passed in to help construct the identifier (for some publishers,
+-- the identifier is the DOI itself, or something closely related to it).
+-- The IO in the type signature is needed because at this point we haven't read
+-- in the response body yet. (We /could/ do so before this, but that would
+-- necessitate holding the entire response in memory.)
+--
+-- Implementation-wise, this tries to first get it from the headers (using
+-- 'getPublFromHeaders'); then it tries to get it by parsing the body (using
+-- 'getPublFromBodyLines').
+getPublFromResponse
+  :: DOI -> NHC.Response NHC.BodyReader -> IO (Maybe (Publisher, Identifier))
+getPublFromResponse doi resp = do
     -- Try to get the information from the headers first.
-    case getPublFromHeaders doi (NHC.responseHeaders resp) of
-      Just (p, i) -> pure $ Just (p, i)
-      Nothing     -> do
-         -- If that failed, then we'll have to use the body. And this is going
-         -- to be a bit ugly, because I can't wrap my head around http-conduit
-         -- at the moment.
-        let
-          getPubl2 decodeContinuation leftover = do
+  case getPublFromHeaders doi (NHC.responseHeaders resp) of
+    Just (p, i) -> pure $ Just (p, i)
+    Nothing     -> do
+       -- If that failed, then we'll have to use the body. And this is going
+       -- to be a bit ugly, because I can't wrap my head around http-conduit
+       -- at the moment.
+      let getPubl2 decodeContinuation leftover = do
             -- Read in a ByteString. This can be cut in the middle of a UTF-8
             -- character, and also can be cut in the middle of a line... We use
             -- Data.Text.Encoding.streamDecodeUtf8 to handle the first case; and
@@ -154,39 +156,10 @@ getFullTextUrl email manager doi = do
                       []  -> ([], "")
                       [x] -> ([x], "")
                       xs  -> (init xs, last xs)
-                -- mapM_ TIO.putStrLn (intersperse "------------" ts)
-                case getFirst $ foldMap (First . getPublFromBody doi) ts of
+                case getFirst $ foldMap (First . getPublFromBodyLine doi) ts of
                   Just (p', i') -> pure $ Just (p', i')
                   Nothing       -> getPubl2 cont' leftover'
-        getPubl2 streamDecodeUtf8 ""
-  case maybePubl of
-    Just (p, i) -> pure $ publisherToUrl p i
-    Nothing     -> throwError ""
-
--- | We assume (and this is borne out in practice) that the URL of the full text
--- PDF can be uniquely determined given knowledge of: (a) the publisher; and (b)
--- some kind of identifier, which may be the DOI, or something else entirely.
--- This function provides the rules for constructing this URL.
-publisherToUrl :: Publisher -> Identifier -> Text
-publisherToUrl p iden
-  | p == ACS
-  = "https://pubs.acs.org/doi/pdf/" <> iden
-  | p == Wiley
-  = "https://onlinelibrary.wiley.com/doi/pdfdirect/" <> iden
-  | p == Elsevier
-  = "https://www.sciencedirect.com/science/article/pii/" <> iden <> "/pdfft"
-  | p == Nature
-  = "https://www.nature.com/articles/" <> iden <> ".pdf"
-  | p == Science
-  = "https://science.sciencemag.org/content/sci/" <> iden <> ".full.pdf"
-  | p == Springer
-  = "https://link.springer.com/content/pdf/" <> iden <> ".pdf"
-  | p == TaylorFrancis
-  = "https://www.tandfonline.com/doi/pdf/" <> iden
-  | p == AnnRev
-  = "https://www.annualreviews.org/doi/pdf/" <> iden
-  | p == RSC
-  = "https://pubs.rsc.org/en/content/articlepdf/" <> iden
+      getPubl2 streamDecodeUtf8 ""
 
 -- | Attempt to detect the (publisher, identifier) combination from the HTTP
 -- headers alone. This means we don't have to parse the body.
@@ -206,10 +179,11 @@ getPublFromHeaders doi headers
   | otherwise = Nothing
 
 -- | Attempt to detect the (publisher, identifier) combination from the HTTP
--- body. This is rather more involved. The input to this function must be a list
--- of lines of Text, which have already been decoded.
-getPublFromBody :: DOI -> Text -> Maybe (Publisher, Identifier)
-getPublFromBody doi = breakCap' pPubl
+-- body. This is rather more involved, and basically involves running a bunch of
+-- Megaparsec parsers (which replace the regexes in the Python version) on each
+-- line of the HTML response body.
+getPublFromBodyLine :: DOI -> Text -> Maybe (Publisher, Identifier)
+getPublFromBodyLine doi = breakCap' pPubl
  where
   -- Version of breakCap that throws away the prefix and suffix. Type is a bit
   -- specialised, but not hugely important here.
@@ -292,26 +266,35 @@ getPublFromBody doi = breakCap' pPubl
     char '>'
     pure (TaylorFrancis, doi)
 
--- | @isInHeaders val name headers@ checks if:
---  (a) there is one or more headers with the given @name@;
---  (b) any of the values of these headers contains the text @val@ anywhere in
---  it.
-isInHeaders :: Text -> Text -> ResponseHeaders -> Bool
-isInHeaders value headerName = any (T.isInfixOf value . decodeUtf8 . snd)
-  . filter ((== CI.mk (encodeUtf8 headerName)) . fst)
-
--- | Get the value of the first header with the specified name. Returns an empty
--- Text if the header is not found.
-getFirstHeaderValue :: Text -> ResponseHeaders -> Text
-getFirstHeaderValue headerName hdrs =
-  case filter ((== CI.mk (encodeUtf8 headerName)) . fst) hdrs of
-    []      -> ""
-    (h : _) -> decodeUtf8 . snd $ h
+-- | We assume (and this is borne out in practice) that the URL of the full text
+-- PDF can be uniquely determined given knowledge of: (a) the publisher; and (b)
+-- some kind of identifier, which may be the DOI, or something else entirely.
+-- This function provides the rules for constructing this URL.
+publisherToUrl :: Publisher -> Identifier -> Text
+publisherToUrl p iden
+  | p == ACS
+  = "https://pubs.acs.org/doi/pdf/" <> iden
+  | p == Wiley
+  = "https://onlinelibrary.wiley.com/doi/pdfdirect/" <> iden
+  | p == Elsevier
+  = "https://www.sciencedirect.com/science/article/pii/" <> iden <> "/pdfft"
+  | p == Nature
+  = "https://www.nature.com/articles/" <> iden <> ".pdf"
+  | p == Science
+  = "https://science.sciencemag.org/content/sci/" <> iden <> ".full.pdf"
+  | p == Springer
+  = "https://link.springer.com/content/pdf/" <> iden <> ".pdf"
+  | p == TaylorFrancis
+  = "https://www.tandfonline.com/doi/pdf/" <> iden
+  | p == AnnRev
+  = "https://www.annualreviews.org/doi/pdf/" <> iden
+  | p == RSC
+  = "https://pubs.rsc.org/en/content/articlepdf/" <> iden
 
 -- | Download a PDF.
 downloadPdf
-  :: FilePath -> Text -> NHC.Manager -> (Reference, Text) -> ExceptT Text IO ()
-downloadPdf cwd email manager (ref, url) = do
+  :: FilePath -> Text -> NHC.Manager -> Reference -> Text -> ExceptT Text IO ()
+downloadPdf cwd email manager ref url = do
   liftIO
     $  TIO.putStrLn
     $  "downloading PDF for DOI "
@@ -361,12 +344,12 @@ downloadPdf cwd email manager (ref, url) = do
       (x : _) -> do
         case T.splitOn "'" x of
           [_, link, _] -> do
-            TIO.putStrLn "redirected by Elsevier..."
             req' <- politeReq email <$> NHC.parseUrlThrow (T.unpack link)
             NHC.withResponse req' manager $ \resp' -> do
-              let body' = NHC.responseBody resp'
-              normalDownloadPdf body' hdl
+              normalDownloadPdf (NHC.responseBody resp') hdl
           _ -> pure False
+
+-- These are helper functions dealing with HTTP requests / response headers.
 
 -- | Add some courtesy headers to a request.
 --
@@ -387,3 +370,20 @@ politeReq email r = r
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
       <> " AppleWebKit/537.36 (KHTML, like Gecko)"
       <> " Chrome/90.0.4430.212 Safari/537.36"
+
+-- | @isInHeaders val name headers@ checks if:
+--  (a) there is one or more headers with the given @name@;
+--  (b) any of the values of these headers contains the text @val@ anywhere in
+--  it.
+isInHeaders :: Text -> Text -> ResponseHeaders -> Bool
+isInHeaders value headerName = any (T.isInfixOf value . decodeUtf8 . snd)
+  . filter ((== CI.mk (encodeUtf8 headerName)) . fst)
+
+-- | Get the value of the first header with the specified name. Returns an empty
+-- Text if the header is not found.
+getFirstHeaderValue :: Text -> ResponseHeaders -> Text
+getFirstHeaderValue headerName hdrs =
+  case filter ((== CI.mk (encodeUtf8 headerName)) . fst) hdrs of
+    []      -> ""
+    (h : _) -> decodeUtf8 . snd $ h
+

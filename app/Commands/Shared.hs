@@ -258,6 +258,9 @@ mEither :: Monad m => Either a b -> (a -> m c) -> (b -> m c) -> m c
 mEither (Left  a) f1 _  = f1 a
 mEither (Right b) _  f2 = f2 b
 
+refnoT :: Int -> Text
+refnoT i = "refno " <> T.pack (show i) <> ": "
+
 -- | Figure out whether to get the refnos from the arguments, or from the varin.
 getActiveRefnos
   :: Text -- ^ A prefix to add to any error messages thrown.

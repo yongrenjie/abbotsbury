@@ -65,7 +65,7 @@ runOpen args input = do
           $ zip jobs processReturns
   let showJob :: (Int, OpenFormat) -> Text
       showJob (r, f) =
-        mconcat ["       refno ", T.pack (show r), ", ", showT f]
+        mconcat ["       ", refnoT r, showT f]
   -- Print success message. In theory we could also tell the user which ones opened
   -- successfully, but I think it's too much noise.
   let successMsg =
