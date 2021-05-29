@@ -4,9 +4,6 @@ module Commands.Delete
 
 import           Abbotsbury
 import           Commands.Shared
-import           Control.Exception              ( catch
-                                                , throwIO
-                                                )
 import           Data.IntMap                    ( IntMap )
 import qualified Data.IntMap                   as IM
 import           Data.IntSet                    ( IntSet )
@@ -18,7 +15,6 @@ import           Internal.Path
 import           Lens.Micro.Platform
 import           Reference
 import           System.Directory               ( removeFile )
-import           System.IO.Error                ( isDoesNotExistError )
 
 prefix :: Text
 prefix = "delete: "
@@ -44,8 +40,3 @@ runDelete args input = do
   liftIO $ forM_ filesToDelete removeFileIfExists
   -- Return the new list of references, and don't pipe anything through.
   pure $ SCmdOutput refsout Nothing
-
-removeFileIfExists :: FilePath -> IO ()
-removeFileIfExists f =
-  removeFile f
-    `catch` (\e -> if isDoesNotExistError e then pure () else throwIO e)

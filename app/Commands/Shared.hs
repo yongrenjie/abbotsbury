@@ -6,6 +6,7 @@ module Commands.Shared
 
 import           Control.Exception              ( IOException(..)
                                                 , catch
+                                                , throwIO
                                                 )
 import           Control.Monad.IO.Class         ( MonadIO(..) )
 import qualified Data.ByteString.Char8         as B
@@ -43,6 +44,7 @@ import           System.IO                      ( Handle(..)
                                                 , IOMode(..)
                                                 , withBinaryFile
                                                 )
+import           System.IO.Error                ( isDoesNotExistError )
 import           System.Process
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
@@ -68,7 +70,7 @@ data SingleCmd = SingleCmd
 
 data BaseCommand = Help | List | Cite | Open | Sort
                  | Add | Delete | Edit | Fetch | New
-                 | Addpdf
+                 | Addpdf | Deletepdf
   deriving (Ord, Eq, Show)
 
 -- | A command takes several sources of input:
@@ -137,18 +139,19 @@ pSingleCmd :: Parser SingleCmd
 pSingleCmd = do
   baseCmdText <- replLexeme $ takeWhile1P (Just "alphabetical letter") isAlpha
   base        <- case baseCmdText of
-    t | t `elem` ["a", "add"]           -> pure Add
-      | t `elem` ["ap", "addpdf"]       -> pure Addpdf
-      | t `elem` ["c", "cite"]          -> pure Cite
-      | t `elem` ["d", "del", "delete"] -> pure Delete
-      | t `elem` ["e", "edit"]          -> pure Edit
-      | t `elem` ["f", "fetch"]         -> pure Fetch
-      | t `elem` ["h", "help"]          -> pure Help
-      | t `elem` ["l", "ls", "list"]    -> pure List
-      | t `elem` ["n", "new"]           -> pure New
-      | t `elem` ["o", "op", "open"]    -> pure Open
-      | t `elem` ["so", "sort"]         -> pure Sort
-      | otherwise                       -> fail "command not recognised"
+    t | t `elem` ["a", "add"]                -> pure Add
+      | t `elem` ["ap", "apdf", "addpdf"]    -> pure Addpdf
+      | t `elem` ["c", "cite"]               -> pure Cite
+      | t `elem` ["d", "del", "delete"]      -> pure Delete
+      | t `elem` ["dp", "dpdf", "deletepdf"] -> pure Deletepdf
+      | t `elem` ["e", "edit"]               -> pure Edit
+      | t `elem` ["f", "fetch"]              -> pure Fetch
+      | t `elem` ["h", "help"]               -> pure Help
+      | t `elem` ["l", "ls", "list"]         -> pure List
+      | t `elem` ["n", "new"]                -> pure New
+      | t `elem` ["o", "op", "open"]         -> pure Open
+      | t `elem` ["so", "sort"]              -> pure Sort
+      | otherwise                            -> fail "command not recognised"
   -- For a single command, the arguments cannot include the character '|',
   -- because it is exclusively used in pipes. We need to have a better way
   -- to deal with this, to be honest.
@@ -447,6 +450,11 @@ copyWithMkdir src dest = do
   destParentExists <- doesDirectoryExist destParent
   unless destParentExists (createDirectoryIfMissing True destParent)
   copyFileWithMetadata src dest
+
+removeFileIfExists :: FilePath -> IO ()
+removeFileIfExists f =
+  removeFile f
+    `catch` (\e -> if isDoesNotExistError e then pure () else throwIO e)
 
 -- These are helper functions dealing with HTTP requests / response headers.
 

@@ -90,6 +90,7 @@ executable abbot
     Commands.Addpdf
     Commands.Cite
     Commands.Delete
+    Commands.Deletepdf
     Commands.Edit
     Commands.Fetch
     Commands.Help
