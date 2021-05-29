@@ -139,19 +139,19 @@ pSingleCmd :: Parser SingleCmd
 pSingleCmd = do
   baseCmdText <- replLexeme $ takeWhile1P (Just "alphabetical letter") isAlpha
   base        <- case baseCmdText of
-    t | t `elem` ["a", "add"]                -> pure Add
-      | t `elem` ["ap", "apdf", "addpdf"]    -> pure Addpdf
-      | t `elem` ["c", "cite"]               -> pure Cite
-      | t `elem` ["d", "del", "delete"]      -> pure Delete
-      | t `elem` ["dp", "dpdf", "deletepdf"] -> pure Deletepdf
-      | t `elem` ["e", "edit"]               -> pure Edit
-      | t `elem` ["f", "fetch"]              -> pure Fetch
-      | t `elem` ["h", "help"]               -> pure Help
-      | t `elem` ["l", "ls", "list"]         -> pure List
-      | t `elem` ["n", "new"]                -> pure New
-      | t `elem` ["o", "op", "open"]         -> pure Open
-      | t `elem` ["so", "sort"]              -> pure Sort
-      | otherwise                            -> fail "command not recognised"
+    t | t `elem` ["a", "add"]                 -> pure Add
+      | t `elem` ["ap", "apdf", "addpdf"]     -> pure Addpdf
+      | t `elem` ["c", "cite"]                -> pure Cite
+      | t `elem` ["d", "del", "delete", "rm"] -> pure Delete
+      | t `elem` ["dp", "dpdf", "deletepdf"]  -> pure Deletepdf
+      | t `elem` ["e", "edit"]                -> pure Edit
+      | t `elem` ["f", "fetch"]               -> pure Fetch
+      | t `elem` ["h", "help"]                -> pure Help
+      | t `elem` ["l", "ls", "list"]          -> pure List
+      | t `elem` ["n", "new"]                 -> pure New
+      | t `elem` ["o", "op", "open"]          -> pure Open
+      | t `elem` ["so", "sort"]               -> pure Sort
+      | otherwise                             -> fail "command not recognised"
   -- For a single command, the arguments cannot include the character '|',
   -- because it is exclusively used in pipes. We need to have a better way
   -- to deal with this, to be honest.
