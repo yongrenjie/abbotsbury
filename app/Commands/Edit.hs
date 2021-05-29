@@ -50,11 +50,8 @@ runEdit args input = do
   refnos   <- parseInCommand pRefnos args prefix
   let argsRefnos = resolveRefnosWith refs refnos
   -- Figure out which refnos to edit
-  refnosToEdit <- getActiveRefnos prefix argsRefnos input
-  -- Check for any refnos that don't exist
-  errorOnInvalidRefnos prefix refnosToEdit input
-  -- Get the Works.
-  let refsToEdit  = IM.elems $ refs `IM.restrictKeys` refnosToEdit
+  refnosAndRefs <- getActiveRefs prefix argsRefnos True input
+  let (refnosToEdit, refsToEdit) = unzip refnosAndRefs
   -- Create a temporary file and dump the YAML into it.
   tmpfile <- liftIO $ makeSystemTempFile "abbot_edit.yaml"
   liftIO $ encodeFile tmpfile refsToEdit
@@ -85,7 +82,7 @@ runEdit args input = do
       (prefix <> "number of references not the same; discarding changes")
     )
   -- Edit the reference list.
-  let newRefnosRefs  = zip (IS.toList refnosToEdit) newRefs
+  let newRefnosRefs  = zip refnosToEdit newRefs
       refsout        = foldl
         (\rs (index, newRef) -> rs & ix index .~ newRef)
         refs

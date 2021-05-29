@@ -87,6 +87,7 @@ executable abbot
   other-modules:
     Commands
     Commands.Add
+    Commands.Addpdf
     Commands.Cite
     Commands.Delete
     Commands.Edit

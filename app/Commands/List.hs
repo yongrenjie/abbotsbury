@@ -24,13 +24,9 @@ runList args input = do
       numRefs = fst $ IM.findMax refs
   -- Parse arguments
   refnos' <- parseInCommand pRefnos args prefix
-  let refnos = resolveRefnosWith refs refnos'
-  -- TODO: this only works with non-piped input. Need to get it to work properly
-  -- with piped input. The problem is we can't reuse getActiveRefnos because
-  -- that errors on empty input -- and for this function in particular, empty
-  -- input is acceptable. end TODO
-  -- Check for any refnos that don't exist
-  errorOnInvalidRefnos prefix refnos input
+  let argsRefnos = resolveRefnosWith refs refnos'
+  refnosAndRefs <- getActiveRefs prefix argsRefnos False input
+  let refnos = IS.fromList $ map fst refnosAndRefs
   -- If we reached here, everything is good
   let refnosToPrint =
         if IS.null refnos then IS.fromList [1 .. numRefs] else refnos

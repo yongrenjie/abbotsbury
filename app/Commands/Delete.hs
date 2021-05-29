@@ -32,8 +32,9 @@ runDelete args input = do
   -- Parse arguments
   refnos     <- parseInCommand pRefnos args prefix
   let argsRefnos = resolveRefnosWith refs refnos
-  -- Figure out which refnos to print
-  refnosToDelete <- getActiveRefnos prefix argsRefnos input
+  -- Figure out which refnos to delete
+  refnosAndRefs <- getActiveRefs prefix argsRefnos True input
+  let refnosToDelete = IS.fromList $ map fst refnosAndRefs
   -- If we reached here, all is good...
   let refsToKeep   = IM.elems $ refs `IM.withoutKeys` refnosToDelete
       refsToDelete = IM.elems $ refs `IM.restrictKeys` refnosToDelete

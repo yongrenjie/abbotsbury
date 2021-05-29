@@ -51,11 +51,13 @@ runFetch args input = do
   -- Parse arguments
   refnos <- parseInCommand pRefnos args prefix
   let argsRefnos = resolveRefnosWith refs refnos
-  specifiedRefnos <- getActiveRefnos prefix argsRefnos input
+  -- Figure out which refnos to fetch (but this is only preliminary, because we
+  -- still need to remove refs which don't need to be fetched)
+  initialRefnosAndRefs <- getActiveRefs prefix argsRefnos False input
   -- Filter out anything that shouldn't be fetched
-  let getRnoDoiPairs :: Int -> ExceptT Text IO (Int, DOI)
-      getRnoDoiPairs rno = do
-        let w        = refs ^?! ix rno . work
+  let getRnoDoiPairs :: (Int, Reference) -> ExceptT Text IO (Int, DOI)
+      getRnoDoiPairs (rno, ref) = do
+        let w        = ref ^. work
         let maybeDoi = w ^? _article . doi
         -- Check if full text is already present
         fullTextExists <- liftIO $ doesFileExist $ getPDFPath FullText cwd w
@@ -69,9 +71,10 @@ runFetch args input = do
           Nothing ->
             throwError (prefix <> refnoT rno <> "DOI is not available")
           Just doi' -> pure (rno, doi')
-  (errors, refnosAndDois) <- liftIO $ partitionEithers <$> mapM
-    (runExceptT . getRnoDoiPairs)
-    (IS.toList specifiedRefnos)
+  (errors, refnosAndDois) <-
+    liftIO
+    $   partitionEithers
+    <$> mapM (runExceptT . getRnoDoiPairs) initialRefnosAndRefs
   -- Print errors as necessary
   forM_ errors printError
   -- Real work starts here.
@@ -84,14 +87,15 @@ runFetch args input = do
     maybeUrl <- getFullTextUrl email manager doi
     case maybeUrl of
       Nothing -> do
-        printErrorIO $ prefix <> refnoT rno <> "could not get URL for full text"
+        printError $ prefix <> refnoT rno <> "could not get URL for full text"
         pure Nothing
       -- If we managed to get it, then download the PDF.
       Just url -> do
         let destination = getPDFPath FullText cwd (refs IM.! rno)
         TIO.putStrLn $ "downloading PDF for DOI " <> doi <> "..."
         success <- downloadPdf email manager url destination
-        unless success (printErrorIO $ prefix <> refnoT rno <> "PDF download failed")
+        unless success
+               (printError $ prefix <> refnoT rno <> "PDF download failed")
         pure $ Just rno
   -- We return the refnos that succeeded.
   pure $ SCmdOutput refs (IS.fromList <$> sequence refnoOutcomes)

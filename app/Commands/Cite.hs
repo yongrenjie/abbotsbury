@@ -46,12 +46,10 @@ runCite args input = do
   -- Parse arguments
   (refnos, rules) <- parseInCommand pCite args prefix
   let argsRefnos = resolveRefnosWith refs refnos
-  -- Figure out which refnos to print
-  refnosToCite <- getActiveRefnos prefix argsRefnos input
-  -- Check for any refnos that don't exist
-  errorOnInvalidRefnos prefix refnosToCite input
+  -- Figure out which refnos to cite
+  refnosAndRefs <- getActiveRefs prefix argsRefnos True input
   -- Generate the citation(s)
-  let refsToCite = IM.elems (refsin input `IM.restrictKeys` refnosToCite)
+  let refsToCite = map snd refnosAndRefs
   let (style, format) = getStyleFormat rules
       citations =
         T.intercalate "\n\n" $ map (cite style format . _work) refsToCite

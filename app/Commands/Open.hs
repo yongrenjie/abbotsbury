@@ -42,16 +42,14 @@ runOpen args input = do
   (refnos, formats) <- parseInCommand pOpen args prefix
   let argsRefnos = resolveRefnosWith refs refnos
   -- Figure out which refnos to open
-  refnosToOpen <- getActiveRefnos prefix argsRefnos input
-  -- Check for any refnos that don't exist
-  errorOnInvalidRefnos prefix refnosToOpen input
+  refnosAndRefs <- getActiveRefs prefix argsRefnos True input
   -- Construct the links to be opened.
   let jobs =
-        [ (rno, fmt) | fmt <- S.toList formats, rno <- IS.toList refnosToOpen ]
+        [ (rno, ref, fmt) | fmt <- S.toList formats, (rno, ref) <- refnosAndRefs ]
   let openCommands = do
         -- list monad
-        (rno, fmt) <- jobs
-        let openLink = T.unpack <$> getOpenLink fmt (refs IM.! rno) cwd
+        (rno, ref, fmt) <- jobs
+        let openLink = T.unpack <$> getOpenLink fmt ref cwd
         case openLink of
           Just x  -> pure $ proc "open" [x]
           Nothing -> []
@@ -63,8 +61,8 @@ runOpen args input = do
         bimap (map fst) (map fst)
           . partition ((== ExitSuccess) . view (_2 . _1))
           $ zip jobs processReturns
-  let showJob :: (Int, OpenFormat) -> Text
-      showJob (r, f) =
+  let showJob :: (Int, Reference, OpenFormat) -> Text
+      showJob (r, _, f) =
         mconcat ["       ", refnoT r, showT f]
   -- Print success message. In theory we could also tell the user which ones opened
   -- successfully, but I think it's too much noise.
@@ -83,7 +81,7 @@ runOpen args input = do
   -- We don't ever want to throwError from within runOpen, because the last
   -- opened times of the refs always have to be updated, which we do here.
   currentTime <- liftIO getCurrentTime
-  let updatedRefnos = nub $ map fst successJobs
+  let updatedRefnos = nub $ successJobs ^.. each . _1
       updatedRefs   = foldl'
         (\rs rno -> set (ix rno . timeOpened) currentTime rs)
         refs

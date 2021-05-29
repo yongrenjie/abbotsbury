@@ -3,6 +3,7 @@ module Commands
   ) where
 
 import           Commands.Add
+import           Commands.Addpdf
 import           Commands.Cite
 import           Commands.Delete
 import           Commands.Edit
@@ -28,6 +29,7 @@ runCmdWith cmd input =
         -- Just one command...
         Single (SingleCmd base args) -> case base of
           Add    -> runAdd args input
+          Addpdf -> runAddpdf args input
           Cite   -> runCite args input
           Delete -> runDelete args input
           Edit   -> runEdit args input

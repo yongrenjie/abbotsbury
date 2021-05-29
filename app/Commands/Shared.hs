@@ -5,8 +5,7 @@ module Commands.Shared
 import           Control.Exception              ( IOException(..)
                                                 , catch
                                                 )
-import           System.Environment
-import           System.Process
+import           Control.Monad.IO.Class         ( MonadIO(..) )
 import           Data.Char
 import           Data.Foldable                  ( maximumBy )
 import           Data.IntMap                    ( IntMap )
@@ -29,6 +28,8 @@ import           Internal.Monad
 import           Internal.Style                 ( makeError )
 import           Lens.Micro.Platform
 import           Reference
+import           System.Environment
+import           System.Process
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer    as L
@@ -53,6 +54,7 @@ data SingleCmd = SingleCmd
 
 data BaseCommand = Help | List | Cite | Open | Sort
                  | Add | Delete | Edit | Fetch | New
+                 | Addpdf
   deriving (Ord, Eq, Show)
 
 -- | A command takes several sources of input:
@@ -122,6 +124,7 @@ pSingleCmd = do
   baseCmdText <- replLexeme $ takeWhile1P (Just "alphabetical letter") isAlpha
   base        <- case baseCmdText of
     t | t `elem` ["a", "add"]           -> pure Add
+      | t `elem` ["ap", "addpdf"]       -> pure Addpdf
       | t `elem` ["c", "cite"]          -> pure Cite
       | t `elem` ["d", "del", "delete"] -> pure Delete
       | t `elem` ["e", "edit"]          -> pure Edit
@@ -251,38 +254,82 @@ parseInCommand parser args prefix = case parse (parser <* eof) "" args of
 
 -- | Make a @Text@ containing a comma-separated list of refnos. Useful for error
 -- messages.
-intercalateCommas :: IntSet -> Text
-intercalateCommas = T.intercalate "," . map (T.pack . show) . IS.toList
+intercalateCommas :: [Int] -> Text
+intercalateCommas = T.intercalate "," . map (T.pack . show)
 
--- | A handy wrapper.
-printError :: Text -> ExceptT Text IO ()
-printError = liftIO . printErrorIO
-
--- | If you don't want ExceptT.
-printErrorIO :: Text -> IO ()
-printErrorIO = TIO.putStrLn . makeError
+printError :: MonadIO m => Text -> m ()
+printError = liftIO . TIO.putStrLn . makeError
 
 -- | A monadic version of 'either' from base.
 mEither :: Monad m => Either a b -> (a -> m c) -> (b -> m c) -> m c
 mEither (Left  a) f1 _  = f1 a
 mEither (Right b) _  f2 = f2 b
 
+-- | Non-partial way to sort a list into a bunch of failures and a bunch of
+-- successes.
+partitionMaybesBy :: forall a b . (a -> Maybe b) -> [a] -> ([a], [(a, b)])
+partitionMaybesBy f = foldr select ([], [])
+ where
+  select :: a -> ([a], [(a, b)]) -> ([a], [(a, b)])
+  select x (bads, goods) = case f x of
+    Just y  -> (bads, (x, y) : goods)
+    Nothing -> (x : bads, goods)
+
 refnoT :: Int -> Text
 refnoT i = "refno " <> T.pack (show i) <> ": "
 
--- | Figure out whether to get the refnos from the arguments, or from the varin.
-getActiveRefnos
-  :: Text -- ^ A prefix to add to any error messages thrown.
-  -> IntSet -- ^ The refnos parsed from the arguments.
-  -> CmdInput -- ^ The input passed to the command.
-  -> ExceptT Text IO IntSet
-getActiveRefnos prefix argsRefnos input =
+-- | This function does quite a lot of stuff.
+-- 1. Figures out whether to act on refnos passed via varin (i.e. piped into a
+--    second command), or whether to use refnos specified on the command-line
+--    (i.e. argsRefnos).
+-- 2. Throws an error if any of these are invalid.
+-- 3. It directly returns the refnos and the refs themselves, so that we don't
+--    have to use any partial functions to get the refs later on in the code.
+getActiveRefs
+  ::
+  -- | A prefix to add to any error messages thrown.
+     Text
+  ->
+  -- | The refnos parsed from the arguments.
+     IntSet
+  ->
+  -- | Whether to throw an error if no refnos were specified by both varin as
+  -- well as command-line args. This is usually True, because you can't run a
+  -- command on nothing; currently the sole exception is 'runList', where an
+  -- empty input simply means to print everything.
+     Bool
+  ->
+  -- | The input passed to the command, which includes the varin refnos as well
+  -- as the full reference list.
+     CmdInput
+  ->
+  -- | Either an error (which shortcircuits the entire command) or a list of
+  -- (refno, ref) tuples.
+     ExceptT Text IO [(Int, Reference)]
+getActiveRefs prefix argsRefnos throwOnEmpty input =
   case (varin input, IS.null argsRefnos) of
-    (Nothing     , True ) -> throwError (prefix <> "no references selected")
-    (Nothing     , False) -> pure argsRefnos
-    (Just vRefnos, True ) -> pure vRefnos
+    (Nothing, True) -> if throwOnEmpty
+      then throwError (prefix <> "no references selected")
+      else pure []
+    (Nothing     , False) -> validateRefnos argsRefnos
+    (Just vRefnos, True ) -> validateRefnos vRefnos
     (Just vRefnos, False) ->
       throwError (prefix <> "cannot specify refnos and a pipe simultaneously")
+ where
+  refs = refsin input
+  -- | Check whether all refnos exist in the reference list.
+  validateRefnos :: IntSet -> ExceptT Text IO [(Int, Reference)]
+  validateRefnos refnos = if null bads
+    then pure goods
+    else
+      throwError
+      $  prefix
+      <> "reference(s) "
+      <> intercalateCommas bads
+      <> " not found"
+   where
+    (bads, goods) =
+      partitionMaybesBy (\rno -> refs ^? ix rno) (IS.toList refnos)
 
 -- | Error if the reference list is empty.
 errorOnNoRefs
@@ -292,20 +339,6 @@ errorOnNoRefs
 errorOnNoRefs prefix input = when
   (IM.null $ refsin input)
   (throwError $ prefix <> "no references available")
-
--- | Error if some refnos don't exist in the reference list.
-errorOnInvalidRefnos
-  :: Text -- ^ A prefix to add to any error messages thrown.
-  -> IntSet -- ^ The set of supposed refnos to act on.
-  -> CmdInput -- ^ The input passed to the command.
-  -> ExceptT Text IO ()
-errorOnInvalidRefnos prefix refnos input = do
-  let badRefnos = refnos IS.\\ IM.keysSet (refsin input)
-  unless
-    (IS.null badRefnos)
-    (throwError
-      (prefix <> "reference(s) " <> intercalateCommas badRefnos <> " not found")
-    )
 
 -- | Attempt to get the email to use for HTTP requests.
 getUserEmail :: Text -> ExceptT Text IO Text
