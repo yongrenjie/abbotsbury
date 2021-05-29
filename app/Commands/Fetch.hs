@@ -1,5 +1,3 @@
-{-# LANGUAGE MultiWayIf #-}
-
 module Commands.Fetch
   ( runFetch
   ) where
@@ -8,7 +6,6 @@ import           Commands.Shared
 import           Control.Concurrent.Async       ( forConcurrently )
 import           Data.Bifunctor                 ( first )
 import qualified Data.ByteString.Char8         as B
-import qualified Data.CaseInsensitive          as CI
 import           Data.Either                    ( partitionEithers )
 import qualified Data.IntMap                   as IM
 import qualified Data.IntSet                   as IS
@@ -17,11 +14,7 @@ import           Data.Monoid                    ( First(..)
                                                 )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
-import           Data.Text.Encoding             ( Decoding(..)
-                                                , decodeUtf8
-                                                , encodeUtf8
-                                                , streamDecodeUtf8
-                                                )
+import qualified Data.Text.Encoding            as T
 import qualified Data.Text.IO                  as TIO
 import           Internal.Monad
 import           Internal.Path
@@ -32,10 +25,6 @@ import           Network.HTTP.Types.Header
 import           Reference
 import           Replace.Megaparsec             ( breakCap )
 import           System.Directory               ( doesFileExist )
-import           System.IO                      ( Handle(..)
-                                                , IOMode(..)
-                                                , withBinaryFile
-                                                )
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 
@@ -150,7 +139,7 @@ getPublFromResponse doi resp = do
             if B.null bs && T.null leftover
               then pure Nothing     -- body ended
               else do
-                let (Some text _ cont') = decodeContinuation bs
+                let (T.Some text _ cont') = decodeContinuation bs
                     (ts, leftover') = case T.splitOn "\n" (leftover <> text) of
                       []  -> ([], "")
                       [x] -> ([x], "")
@@ -158,7 +147,7 @@ getPublFromResponse doi resp = do
                 case getFirst $ foldMap (First . getPublFromBodyLine doi) ts of
                   Just (p', i') -> pure $ Just (p', i')
                   Nothing       -> getPubl2 cont' leftover'
-      getPubl2 streamDecodeUtf8 ""
+      getPubl2 T.streamDecodeUtf8 ""
 
 -- | Attempt to detect the (publisher, identifier) combination from the HTTP
 -- headers alone. This means we don't have to parse the body.
@@ -289,87 +278,3 @@ publisherToUrl p iden
   = "https://www.annualreviews.org/doi/pdf/" <> iden
   | p == RSC
   = "https://pubs.rsc.org/en/content/articlepdf/" <> iden
-
--- | Download a PDF. The returned Bool indicates whether the download succeeded.
-downloadPdf
-  :: Text -> NHC.Manager -> Text -> FilePath -> IO Bool
-downloadPdf email manager url destination = do
-  req       <- politeReq email <$> NHC.parseUrlThrow (T.unpack url)
-  NHC.withResponse req manager $ \resp -> do
-    let hdrs = NHC.responseHeaders resp
-        body = NHC.responseBody resp
-    if
-      | isInHeaders "application/pdf" "content-type" hdrs
-      -> withBinaryFile destination WriteMode (normalDownloadPdf body)
-      | "sciencedirect"
-        `T.isInfixOf` url
-        &&            isInHeaders "text/html" "content-type" hdrs
-      -> withBinaryFile destination WriteMode (elsevierDownloadPdf body)
-      | otherwise
-      -> pure False
- where
-  normalDownloadPdf :: NHC.BodyReader -> Handle -> IO Bool
-  normalDownloadPdf body hdl = do
-    let loop = do
-          bs <- NHC.brRead body
-          if B.null bs then pure () else B.hPut hdl bs >> loop
-    loop
-    pure True
-  -- Elsevier's "PDF URL" is not really a PDF, but rather a HTML page which
-  -- redirect us to a PDF. This wouldn't be problematic if they would just use
-  -- ordinary HTTP redirects; however, for whatever reason, they redirect us
-  -- with /JavaScript/ which means we need to parse the body.
-  elsevierDownloadPdf :: NHC.BodyReader -> Handle -> IO Bool
-  elsevierDownloadPdf body hdl = do
-    -- It's quite a small page, so just read the whole thing in.
-    text <- decodeUtf8 . B.concat <$> NHC.brConsume body
-    let
-      ws =
-        filter ("window.location" `T.isPrefixOf`) . map T.strip . T.lines $ text
-    case ws of
-      []      -> pure False
-      (x : _) -> do
-        case T.splitOn "'" x of
-          [_, link, _] -> do
-            req' <- politeReq email <$> NHC.parseUrlThrow (T.unpack link)
-            NHC.withResponse req' manager $ \resp' -> do
-              normalDownloadPdf (NHC.responseBody resp') hdl
-          _ -> pure False
-
--- These are helper functions dealing with HTTP requests / response headers.
-
--- | Add some courtesy headers to a request.
---
--- Unfortunately, Springer refuses to return proper information if I use the
--- "true" user-agent header, so I have to feed it something which looks like a
--- web browser. However, even with this spoofed user-agent, T&F papers don't
--- work. It refuses to give me proper headers. To be fair, T&F is kind of an
--- edge case...
-politeReq :: Text -> NHC.Request -> NHC.Request
-politeReq email r = r
-  { NHC.requestHeaders = [ ("mailto"    , encodeUtf8 email)
-                         , ("user-agent", userAgent)
-                         ]
-  }
- where
-  userAgent :: B.ByteString
-  userAgent =
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
-      <> " AppleWebKit/537.36 (KHTML, like Gecko)"
-      <> " Chrome/90.0.4430.212 Safari/537.36"
-
--- | @isInHeaders val name headers@ checks if:
---  (a) there is one or more headers with the given @name@;
---  (b) any of the values of these headers contains the text @val@ anywhere in
---  it.
-isInHeaders :: Text -> Text -> ResponseHeaders -> Bool
-isInHeaders value headerName = any (T.isInfixOf value . decodeUtf8 . snd)
-  . filter ((== CI.mk (encodeUtf8 headerName)) . fst)
-
--- | Get the value of the first header with the specified name. Returns an empty
--- Text if the header is not found.
-getFirstHeaderValue :: Text -> ResponseHeaders -> Text
-getFirstHeaderValue headerName hdrs =
-  case filter ((== CI.mk (encodeUtf8 headerName)) . fst) hdrs of
-    []      -> ""
-    (h : _) -> decodeUtf8 . snd $ h
