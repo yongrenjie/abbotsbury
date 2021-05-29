@@ -19,8 +19,8 @@ import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           Data.Time.Clock                ( getCurrentTime )
 import           Internal.Monad
-import           Internal.Path                  ( PDFType(..)
-                                                , getPDFPath
+import           Internal.Path                  ( PdfType(..)
+                                                , getPdfPath
                                                 )
 import           Lens.Micro.Platform
 import           Reference
@@ -118,8 +118,8 @@ getOpenLink
   -> FilePath   -- ^ Current working directory
   -> Maybe Text
 getOpenLink fmt ref cwd = case fmt of
-  OpenFullText -> Just (T.pack $ getPDFPath FullText cwd ref)
-  OpenSI       -> Just (T.pack $ getPDFPath SI cwd ref)
+  OpenFullText -> Just (T.pack $ getPdfPath FullText cwd ref)
+  OpenSI       -> Just (T.pack $ getPdfPath SI cwd ref)
   OpenWebURL   -> case ref ^. work of
     ArticleWork a -> Just $ "https://doi.org/" <> (a ^. doi)
     BookWork    b -> Nothing

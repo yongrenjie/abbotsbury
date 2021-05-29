@@ -105,20 +105,20 @@ makeSystemTempFile template = do
       (\(_, hdl) -> hClose hdl)
       (\(fp, _ ) -> pure fp)
 
-data PDFType
+data PdfType
   = FullText
   | SI
   deriving (Ord, Eq, Show)
 
-showPdfType :: PDFType -> Text
+showPdfType :: PdfType -> Text
 showPdfType FullText = "pdf"
 showPdfType SI       = "si"
 
 -- | Find the path to a PDF file belonging to a reference.
-getPDFPath
+getPdfPath
   :: Bibliographic x =>
   -- | Full text or SI.
-     PDFType
+     PdfType
   ->
   -- | Current working directory.
      FilePath
@@ -128,9 +128,14 @@ getPDFPath
   ->
   -- | Path to the file.
      FilePath
-getPDFPath pdfType cwd x = cwd </> dirName </> fileName
+getPdfPath pdfType cwd x = cwd </> dirName </> fileName
  where
   dirName = case pdfType of
     FullText -> "pdf-abbot"
     SI       -> "si-abbot"
   fileName = T.unpack . flip T.append ".pdf" $ mkIdentifier x
+
+getValidPdfTypes :: Reference -> [PdfType]
+getValidPdfTypes r = case r ^. work of
+  ArticleWork _ -> [FullText, SI]
+  BookWork    _ -> [FullText]

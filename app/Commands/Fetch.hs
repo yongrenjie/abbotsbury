@@ -60,7 +60,7 @@ runFetch args input = do
         let w        = ref ^. work
         let maybeDoi = w ^? _article . doi
         -- Check if full text is already present
-        fullTextExists <- liftIO $ doesFileExist $ getPDFPath FullText cwd w
+        fullTextExists <- liftIO $ doesFileExist $ getPdfPath FullText cwd w
         when
           fullTextExists
           (throwError
@@ -91,7 +91,7 @@ runFetch args input = do
         pure Nothing
       -- If we managed to get it, then download the PDF.
       Just url -> do
-        let destination = getPDFPath FullText cwd (refs IM.! rno)
+        let destination = getPdfPath FullText cwd (refs IM.! rno)
         TIO.putStrLn $ "downloading PDF for DOI " <> doi <> "..."
         success <- downloadPdf email manager url destination
         unless success

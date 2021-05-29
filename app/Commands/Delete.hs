@@ -40,7 +40,7 @@ runDelete args input = do
       refsToDelete = IM.elems $ refs `IM.restrictKeys` refnosToDelete
       refsout      = IM.fromList $ zip [1 ..] refsToKeep
       filesToDelete =
-        [ getPDFPath t cwd ref | t <- [FullText, SI], ref <- refsToDelete ]
+        [ getPdfPath t cwd ref | t <- [FullText, SI], ref <- refsToDelete ]
   liftIO $ forM_ filesToDelete removeFileIfExists
   -- Return the new list of references, and don't pipe anything through.
   pure $ SCmdOutput refsout Nothing

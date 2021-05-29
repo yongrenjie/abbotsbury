@@ -19,9 +19,6 @@ import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           Data.Time.Clock                ( getCurrentTime )
 import           Internal.Monad
-import           Internal.Path                  ( PDFType(..)
-                                                , getPDFPath
-                                                )
 import           Lens.Micro.Platform
 import           Reference
 import           Text.Megaparsec

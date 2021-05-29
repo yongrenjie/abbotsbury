@@ -155,10 +155,10 @@ mkBookColumns cwd refTags b = do
   pure (authorColumn, yearColumn, journalColumn, titleColumn)
 
 -- | Get availability string for a reference.
-mkAvailText :: Bibliographic x => FilePath -> [PDFType] -> x -> IO Text
+mkAvailText :: Bibliographic x => FilePath -> [PdfType] -> x -> IO Text
 mkAvailText cwd types w = do
   texts <- forM types $ \t -> do
-    avail <- doesFileExist $ getPDFPath t cwd w
+    avail <- doesFileExist $ getPdfPath t cwd w
     let symbol = if avail then setColor "seagreen" "\x2714"
                           else setColor "crimson" "\x2718"
     pure $ symbol <> " " <> showPdfType t
