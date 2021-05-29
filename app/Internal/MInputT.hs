@@ -21,6 +21,8 @@ import           Control.Monad.Catch            ( MonadCatch
 import           Control.Monad.IO.Class         ( MonadIO(..) )
 import           Control.Monad.State            ( MonadState(..) )
 import           Control.Monad.Trans.Class      ( MonadTrans(..) )
+import           Data.Text                      ( Text )
+import qualified Data.Text                     as T
 import           System.Console.Haskeline      as HL
                                                 ( InputT
                                                 , Settings
@@ -56,14 +58,14 @@ mHandleInterrupt
 mHandleInterrupt catchA tryA =
   MInputT $ HL.handleInterrupt (unMInputT catchA) (unMInputT tryA)
 
-mGetInputLine :: (MonadIO m, MonadMask m) => String -> MInputT m (Maybe String)
-mGetInputLine = MInputT . HL.getInputLine
+mGetInputLine :: (MonadIO m, MonadMask m) => Text -> MInputT m (Maybe Text)
+mGetInputLine = (fmap . fmap $ T.pack) . MInputT . HL.getInputLine . T.unpack
 
-mGetInputChar :: (MonadIO m, MonadMask m) => String -> MInputT m (Maybe Char)
-mGetInputChar = MInputT . HL.getInputChar
+mGetInputChar :: (MonadIO m, MonadMask m) => Text -> MInputT m (Maybe Char)
+mGetInputChar = MInputT . HL.getInputChar . T.unpack
 
-mOutputStr :: MonadIO m => String -> MInputT m ()
-mOutputStr = MInputT . HL.outputStr
+mOutputStr :: MonadIO m => Text -> MInputT m ()
+mOutputStr = MInputT . HL.outputStr . T.unpack
 
-mOutputStrLn :: MonadIO m => String -> MInputT m ()
-mOutputStrLn = MInputT . HL.outputStrLn
+mOutputStrLn :: MonadIO m => Text -> MInputT m ()
+mOutputStrLn = MInputT . HL.outputStrLn . T.unpack

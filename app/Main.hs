@@ -140,7 +140,7 @@ loop =
               unless
                 (null nrefs)
                 (mOutputStrLn
-                  ("Read in " ++ show (length nrefs) ++ " references.")
+                  ("Read in " <> T.pack (show (length nrefs)) <> " references.")
                 )
             Left errmsg -> printErr errmsg
         dirChanged .= False
@@ -150,7 +150,7 @@ loop =
         input <- prompt cwd
 
         -- Parse and run the command
-        case fmap T.pack input of
+        case input of
           Nothing      -> save >> exit -- Ctrl-D
           Just cmdArgs -> case runReplParser cmdArgs of
             Left _ ->
@@ -195,15 +195,15 @@ loop =
                   loop
 
 -- | Generates the prompt for the main loop.
-prompt :: FilePath -> MInputT (StateT LoopState IO) (Maybe String)
-prompt fp = mGetInputLine . T.unpack $ mconcat
+prompt :: FilePath -> MInputT (StateT LoopState IO) (Maybe Text)
+prompt fp = mGetInputLine $ mconcat
   [ setColor "plum" $ "(" <> T.pack fp <> ") "
   , setColor "hotpink" . setBold . setItalic $ "peep > "
   ]
 
 -- | Prints an error in the main loop.
 printErr :: Text -> MInputT (StateT LoopState IO) ()
-printErr = mOutputStrLn . T.unpack . makeError
+printErr = mOutputStrLn . makeError
 
 -- | Run the `abbot cite` command.
 -- Exit codes are:

@@ -45,12 +45,12 @@ runAddpdf args input = do
       -- correct Ctrl-D and Ctrl-C behaviour, as well as readline bindings.
       fpath <- mRunInputT
         defaultSettings
-        (mGetInputLine . T.unpack $ "enter path to " <> showPdfType t <> ": ")
+        (mGetInputLine $ "enter path to " <> showPdfType t <> ": ")
       case fpath of
         Just s ->
           printError
             $  "you asked for '"
-            <> T.pack s
+            <> s
             <> "', but addpdf isn't fully implemented yet, sorry!"
         Nothing -> pure ()
   throwError "uh oh"
