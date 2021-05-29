@@ -33,9 +33,12 @@ import           Internal.Monad
 import           Internal.Style                 ( makeError )
 import           Lens.Micro.Platform
 import qualified Network.HTTP.Client           as NHC
+import           Network.HTTP.Client.TLS        ( tlsManagerSettings )
 import           Network.HTTP.Types.Header
 import           Reference
+import           System.Directory
 import           System.Environment
+import           System.FilePath
 import           System.IO                      ( Handle(..)
                                                 , IOMode(..)
                                                 , withBinaryFile
@@ -386,10 +389,16 @@ isValidDoi = isJust . parseMaybe pDoi
       pure ()
 
 -- | Download a PDF. The returned Bool indicates whether the download succeeded.
-downloadPdf
-  :: Text -> NHC.Manager -> Text -> FilePath -> IO Bool
-downloadPdf email manager url destination = do
-  req       <- politeReq email <$> NHC.parseUrlThrow (T.unpack url)
+downloadPdf :: Text -> Maybe NHC.Manager -> Text -> FilePath -> IO Bool
+downloadPdf email maybeManager url destination = do
+  manager <- case maybeManager of
+    Just m  -> pure m
+    Nothing -> NHC.newManager tlsManagerSettings
+  req <- politeReq email <$> NHC.parseUrlThrow (T.unpack url)
+  -- Create the destination folder if it doesn't exist
+  let destParent = fst $ splitFileName destination
+  destParentExists <- doesDirectoryExist destParent
+  unless destParentExists (createDirectoryIfMissing True destParent)
   NHC.withResponse req manager $ \resp -> do
     let hdrs = NHC.responseHeaders resp
         body = NHC.responseBody resp
@@ -399,7 +408,7 @@ downloadPdf email manager url destination = do
       | "sciencedirect"
         `T.isInfixOf` url
         &&            isInHeaders "text/html" "content-type" hdrs
-      -> withBinaryFile destination WriteMode (elsevierDownloadPdf body)
+      -> withBinaryFile destination WriteMode (elsevierDownloadPdf manager body)
       | otherwise
       -> pure False
  where
@@ -414,8 +423,8 @@ downloadPdf email manager url destination = do
   -- redirect us to a PDF. This wouldn't be problematic if they would just use
   -- ordinary HTTP redirects; however, for whatever reason, they redirect us
   -- with /JavaScript/ which means we need to parse the body.
-  elsevierDownloadPdf :: NHC.BodyReader -> Handle -> IO Bool
-  elsevierDownloadPdf body hdl = do
+  elsevierDownloadPdf :: NHC.Manager -> NHC.BodyReader -> Handle -> IO Bool
+  elsevierDownloadPdf manager body hdl = do
     -- It's quite a small page, so just read the whole thing in.
     text <- T.decodeUtf8 . B.concat <$> NHC.brConsume body
     let
@@ -430,6 +439,14 @@ downloadPdf email manager url destination = do
             NHC.withResponse req' manager $ \resp' -> do
               normalDownloadPdf (NHC.responseBody resp') hdl
           _ -> pure False
+
+-- | Copy a file from src to dest, but make sure that the target exists first.
+copyWithMkdir :: FilePath -> FilePath -> IO ()
+copyWithMkdir src dest = do
+  let destParent = fst $ splitFileName dest
+  destParentExists <- doesDirectoryExist destParent
+  unless destParentExists (createDirectoryIfMissing True destParent)
+  copyFileWithMetadata src dest
 
 -- These are helper functions dealing with HTTP requests / response headers.
 

@@ -4,21 +4,22 @@ module Commands.Addpdf
 
 import           Abbotsbury.Work
 import           Commands.Shared
+import           Control.Exception              ( IOException(..)
+                                                , catch
+                                                )
 import           Data.Char                      ( isSpace )
 import           Data.IntSet                    ( IntSet )
 import qualified Data.IntSet                   as IS
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
-import           Internal.Monad
 import           Internal.MInputT
+import           Internal.Monad
 import           Internal.Path
 import           Internal.Style                 ( setBold )
 import           Lens.Micro.Platform
 import           Replace.Megaparsec             ( streamEdit )
-import           System.IO                      ( hFlush
-                                                , stdout
-                                                )
+import           System.Directory               ( doesFileExist )
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 
@@ -43,17 +44,27 @@ runAddpdf args input = do
     forM_ pdfTypes $ \t -> do
       -- Bring in haskeline here, which nicely automatically gives us the
       -- correct Ctrl-D and Ctrl-C behaviour, as well as readline bindings.
-      fpath <- mRunInputT
-        defaultSettings
-        (mGetInputLine $ "enter path to " <> showPdfType t <> ": ")
-      case fpath of
-        Just s ->
-          printError
-            $  "you asked for '"
-            <> s
-            <> "', but addpdf isn't fully implemented yet, sorry!"
-        Nothing -> pure ()
-  throwError "uh oh"
+      let dest = getPdfPath t cwd ref
+      destExists <- doesFileExist dest
+      if destExists
+        then TIO.putStrLn $ showPdfType t <> " already exists; skipping"
+        else do
+          maybeSrc <- mRunInputT
+            defaultSettings
+            (mGetInputLine $ "enter path to " <> showPdfType t <> ": ")
+          case maybeSrc of
+            Just s
+              | T.null s -> pure ()
+              | T.head s == '/' -> do   -- file path
+                let src = T.unpack . processCmdlineInput $ s
+                copyWithMkdir src dest
+              | otherwise -> do         -- not a file path, assume it's a URL
+                eitherEmail <- runExceptT (getUserEmail prefix)
+                case eitherEmail of
+                  Left  err   -> printError err
+                  Right email -> downloadPdf email Nothing s dest >> pure ()
+            Nothing -> pure ()  -- silently fail on Ctrl-D
+  pure $ SCmdOutput refs Nothing
 
 -- | This is a very crude way of removing escaped characters: basically, a
 -- backslash followed by any character X is just replaced with X itself.

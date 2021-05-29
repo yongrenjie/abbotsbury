@@ -82,7 +82,7 @@ runFetch args input = do
       Just url -> do
         let destination = getPdfPath FullText cwd (refs IM.! rno)
         TIO.putStrLn $ "downloading PDF for DOI " <> doi <> "..."
-        success <- downloadPdf email manager url destination
+        success <- downloadPdf email (Just manager) url destination
         unless success
                (printError $ prefix <> refnoT rno <> "PDF download failed")
         pure $ Just rno
