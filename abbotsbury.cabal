@@ -97,6 +97,7 @@ executable abbot
     Commands.List
     Commands.New
     Commands.Open
+    Commands.Search
     Commands.Shared
     Commands.Sort
     Internal.Copy

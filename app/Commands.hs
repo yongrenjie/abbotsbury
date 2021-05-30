@@ -13,6 +13,7 @@ import           Commands.Help
 import           Commands.List
 import           Commands.New
 import           Commands.Open
+import           Commands.Search
 import           Commands.Shared
 import           Commands.Sort
 import           Internal.Monad
@@ -40,6 +41,7 @@ runCmdWith cmd input =
           List      -> runList args input
           New       -> runNew args input
           Open      -> runOpen args input
+          Search    -> runSearch args input
           Sort      -> runSort args input
         -- Composed commands.
         Composed single1 other2 -> do

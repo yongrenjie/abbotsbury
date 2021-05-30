@@ -68,9 +68,9 @@ data SingleCmd = SingleCmd
   }
   deriving Show
 
-data BaseCommand = Help | List | Cite | Open | Sort
-                 | Add | Delete | Edit | Fetch | New
-                 | Addpdf | Deletepdf
+data BaseCommand = Add | Addpdf | Cite | Delete | Deletepdf
+                 | Edit | Fetch | Help | List | New | Open
+                 | Search | Sort
   deriving (Ord, Eq, Show)
 
 -- | A command takes several sources of input:
@@ -150,6 +150,7 @@ pSingleCmd = do
       | t `elem` ["l", "ls", "list"]          -> pure List
       | t `elem` ["n", "new"]                 -> pure New
       | t `elem` ["o", "op", "open"]          -> pure Open
+      | t `elem` ["s", "se", "search"]        -> pure Search
       | t `elem` ["so", "sort"]               -> pure Sort
       | otherwise                             -> fail "command not recognised"
   -- For a single command, the arguments cannot include the character '|',
