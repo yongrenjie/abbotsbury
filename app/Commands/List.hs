@@ -31,5 +31,6 @@ runList args input = do
   let refnosToPrint =
         if IS.null refnos then IS.fromList [1 .. numRefs] else refnos
       refsToPrint = refs `IM.restrictKeys` refnosToPrint
-  liftIO $ TIO.putStrLn =<< prettify cwd (Just 5) (IM.assocs refsToPrint)
+      authorLimit = if IS.null refnos then Just 5 else Nothing
+  liftIO $ TIO.putStrLn =<< prettify cwd authorLimit (IM.assocs refsToPrint)
   pure $ SCmdOutput refs (Just refnosToPrint)
