@@ -60,7 +60,7 @@ runSort args input = do
         then sortedRefs   -- was piped into, local sort only
         else zip [1 ..] (map snd sortedRefs) -- global sort
   -- Print the sorted refs.
-  liftIO $ TIO.putStrLn =<< prettify cwd sortedRenumberedRefs
+  liftIO $ TIO.putStrLn =<< prettify cwd (Just 5) sortedRenumberedRefs
   -- The reference list we return should only be modified if 'sort' wasn't piped
   -- into.
   let refsout = if isJust vIn

@@ -36,11 +36,11 @@ import           Text.Megaparsec                ( eof
 -- | Construct pretty-printed text from a set of references to be displayed on
 -- the screen. The output of this text can be directly passed to
 -- 'Data.Text.IO.putStrLn'.
-prettify :: FilePath -> [(Int, Reference)] -> IO Text
-prettify cwd refs = if null refs
+prettify :: FilePath -> Maybe Int -> [(Int, Reference)] -> IO Text
+prettify cwd authLimit refs = if null refs
   then pure ""
   else do
-    rawColumns <- mkRawColumns cwd refs
+    rawColumns <- mkRawColumns cwd authLimit refs
     fieldSizes <- getFieldSizes rawColumns
     let header = mkHeader fieldSizes
         refsText = fmap (convertRawColumnsToText fieldSizes) rawColumns
@@ -93,16 +93,17 @@ type RawFifthColumn = [(Text, CookLater)]
 
 -- | Generate the *four* last columns (i.e. ignoring the number column).
 mkArticleColumns
-  :: FilePath   -- Current working directory
-  -> Set Tag    -- Any tags belonging to the Reference containing the Article.
+  :: FilePath   -- ^ Current working directory.
+  -> Set Tag    -- ^ Any tags belonging to the Reference.
+  -> Maybe Int  -- ^ Max number of authors to display. Nothing for unlimited.
   -> Article
   -> IO (Column, Column, Column, RawFifthColumn)
-mkArticleColumns cwd refTags a = do
+mkArticleColumns cwd refTags authLimit a = do
   -- This line is the only thing that requires IO. So annoying. I mean, I could
   -- factorise it out, but at the cost of making the function signature worse.
   availText <- mkAvailText cwd [FullText, SI] a
   -- Build up the columns first.
-  let authorColumn  = mkPersonColumn 5 a
+  let authorColumn  = mkPersonColumn authLimit a
       yearColumn    = [T.pack . show $ a ^. year]
       journalColumn = [getShortestJournalName a, getVolInfo a]
       titleColumn =
@@ -113,14 +114,21 @@ mkArticleColumns cwd refTags a = do
         ]
   pure (authorColumn, yearColumn, journalColumn, titleColumn)
 
--- | Generate the author column.
-mkPersonColumn :: Bibliographic w => Int -> w -> [Text]
-mkPersonColumn n w = trimIfOverN allContribs
+-- | Generate the author column, optionally trimming it to a maximum number of
+-- rows.
+--
+-- It doesn't make sense to trim to a smaller number than 3 (first author +
+-- ellipses + last author), so if n < 3 we fall back to 3. (That technically
+-- includes zero and negative numbers.)
+mkPersonColumn :: Bibliographic w => Maybe Int -> w -> [Text]
+mkPersonColumn authLimit w = case authLimit of
+                                  Just n | n >= 3 -> trimIfOver n allContribs
+                                         | otherwise -> trimIfOver 3 allContribs
+                                  Nothing -> allContribs
  where
   allContribs = formatPersonForList <$> getContributors w
-  -- It doesn't make sense to trim if n is smaller than 4.
-  trimIfOverN :: [Text] -> [Text]
-  trimIfOverN ts =
+  trimIfOver :: Int -> [Text] -> [Text]
+  trimIfOver n ts =
     if n >= 4 && length ts > n then take (n - 2) ts ++ ["...", last ts] else ts
 
 -- | In the 'list' command, we display authors as (e.g.) JRJ Yong.
@@ -134,14 +142,15 @@ formatPersonForList auth =
 
 -- | Does the job for a Book.
 mkBookColumns
-  :: FilePath   -- Current working directory
-  -> Set Tag    -- Any tags belonging to the Reference containing the Book.
+  :: FilePath   -- ^ Current working directory.
+  -> Set Tag    -- ^ Any tags belonging to the Reference.
+  -> Maybe Int  -- ^ Max number of authors to display. Nothing for unlimited.
   -> Book
   -> IO (Column, Column, Column, RawFifthColumn)
-mkBookColumns cwd refTags b = do
+mkBookColumns cwd refTags authLimit b = do
   availText <- mkAvailText cwd [FullText] b
   -- Build up the columns first.
-  let authorColumn  = mkPersonColumn 5 b
+  let authorColumn  = mkPersonColumn authLimit b
       yearColumn    = [T.pack . show $ b ^. year]
       editionText   = b ^. edition
       editionText2  = if T.null editionText then "" else editionText <> " ed."
@@ -221,9 +230,10 @@ totalSizes fss = sum $ fss ^.. each
 -- or mkBookColumn and adds on the first one.
 mkRawColumns
   :: FilePath
+  -> Maybe Int  -- ^ Max number of authors to display. Nothing for unlimited.
   -> [(Int, Reference)]
   -> IO [(Column, Column, Column, Column, RawFifthColumn)]
-mkRawColumns cwd refnosAndRefs = do
+mkRawColumns cwd authLimit refnosAndRefs = do
   let mkRawColumns1
         :: (Int, Reference)
         -> IO (Column, Column, Column, Column, RawFifthColumn)
@@ -231,8 +241,8 @@ mkRawColumns cwd refnosAndRefs = do
       mkRawColumns1 (refno, ref) = do
         let refTags = ref ^. tags
         (c2, c3, c4, c5) <- case ref ^. work of
-          ArticleWork a -> mkArticleColumns cwd refTags a
-          BookWork    b -> mkBookColumns cwd refTags b
+          ArticleWork a -> mkArticleColumns cwd refTags authLimit a
+          BookWork    b -> mkBookColumns cwd refTags authLimit b
         -- A hack here: we use a combination of a wide emoji plus a zero-width
         -- space to mimic a Text that has length 2 (i.e. its length is equal to
         -- the space it occupies in the terminal).

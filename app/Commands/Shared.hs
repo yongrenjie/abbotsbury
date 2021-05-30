@@ -8,7 +8,6 @@ import           Control.Exception              ( IOException(..)
                                                 , catch
                                                 , throwIO
                                                 )
-import           Control.Monad.IO.Class         ( MonadIO(..) )
 import qualified Data.ByteString.Char8         as B
 import qualified Data.CaseInsensitive          as CI
 import           Data.Char

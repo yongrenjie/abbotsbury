@@ -2,7 +2,7 @@
 -- we want to use.
 
 module Internal.Monad
-  ( Control.Monad.IO.Class.liftIO
+  ( Control.Monad.IO.Class.MonadIO(..)
   , Control.Monad.Except.ExceptT(..)
   , Control.Monad.Except.runExceptT
   , Control.Monad.Except.MonadError(..)

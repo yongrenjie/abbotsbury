@@ -33,30 +33,26 @@ runSearch args input = do
   -- TODO: do the search
   let refsMatchingAllQueries = IM.filter (queries `allFoundIn`) refs
   if not (IM.null refsMatchingAllQueries)
-    then liftIO $ do
-      let m = IM.size refsMatchingAllQueries
-      TIO.putStrLn
-        $  prefix
-        <> "found "
-        <> (T.pack . show $ m)
-        <> "references"
-        <> "matching all queries"
-      prettify cwd (IM.assocs refsMatchingAllQueries) >>= TIO.putStrLn
+    then printMatches cwd "all" refsMatchingAllQueries
     else do
       let refsMatchingAnyQueries = IM.filter (queries `anyFoundIn`) refs
       if not (IM.null refsMatchingAnyQueries)
-        then liftIO $ do
-          let n = IM.size refsMatchingAnyQueries
-          TIO.putStrLn
-            $  prefix
-            <> "found "
-            <> (T.pack . show $ n)
-            <> "references"
-            <> "matching all queries"
-          prettify cwd (IM.assocs refsMatchingAnyQueries) >>= TIO.putStrLn
+        then printMatches cwd "any" refsMatchingAnyQueries
         else throwError $ prefix <> "no articles found"
   -- Return basically nothing
   pure $ SCmdOutput (refsin input) Nothing
+
+printMatches :: MonadIO m => FilePath -> Text -> IntMap Reference -> m ()
+printMatches cwd desc refs = liftIO $ do
+  let n = IM.size refs
+  TIO.putStrLn
+    $  prefix
+    <> "found "
+    <> (T.pack . show $ n)
+    <> " references matching "
+    <> desc
+    <> " queries"
+  prettify cwd Nothing (IM.assocs refs) >>= TIO.putStrLn
 
 -- | Makes a series of Text pieces containing reference metadata, against which
 -- the search query/queries can be matched.
