@@ -27,7 +27,7 @@ import           Internal.Style                 ( setBold
                                                 )
 import           Lens.Micro.Platform
 import           Reference
-import qualified System.Console.Terminal.Size   as TermSize
+import qualified System.Console.Terminal.Size  as TermSize
 import           System.Directory               ( doesFileExist )
 import           Text.Megaparsec                ( eof
                                                 , parse
@@ -42,7 +42,7 @@ prettify cwd authLimit refs = if null refs
   else do
     rawColumns <- mkRawColumns cwd authLimit refs
     fieldSizes <- getFieldSizes rawColumns
-    let header = mkHeader fieldSizes
+    let header   = mkHeader fieldSizes
         refsText = fmap (convertRawColumnsToText fieldSizes) rawColumns
     pure $ header <> "\n" <> T.intercalate "\n\n" refsText
 
@@ -52,6 +52,10 @@ prettify cwd authLimit refs = if null refs
 -- | A constant.
 headings :: (Text, Text, Text, Text, Text)
 headings = ("   #", "Authors", "Year", "Journal/Publisher", "Title/DOI")
+
+-- | Another constant; basically the lengths of each heading.
+headingLengths :: (Int, Int, Int, Int, Int)
+headingLengths = headings & each %~ T.length
 
 mkHeader :: FieldSizes -> Text
 mkHeader fss = mconcat
@@ -122,9 +126,9 @@ mkArticleColumns cwd refTags authLimit a = do
 -- includes zero and negative numbers.)
 mkPersonColumn :: Bibliographic w => Maybe Int -> w -> [Text]
 mkPersonColumn authLimit w = case authLimit of
-                                  Just n | n >= 3 -> trimIfOver n allContribs
-                                         | otherwise -> trimIfOver 3 allContribs
-                                  Nothing -> allContribs
+  Just n | n >= 3    -> trimIfOver n allContribs
+         | otherwise -> trimIfOver 3 allContribs
+  Nothing -> allContribs
  where
   allContribs = formatPersonForList <$> getContributors w
   trimIfOver :: Int -> [Text] -> [Text]
@@ -168,8 +172,9 @@ mkAvailText :: Bibliographic x => FilePath -> [PdfType] -> x -> IO Text
 mkAvailText cwd types w = do
   texts <- forM types $ \t -> do
     avail <- doesFileExist $ getPdfPath t cwd w
-    let symbol = if avail then setColor "seagreen" "\x2714"
-                          else setColor "crimson" "\x2718"
+    let symbol = if avail
+          then setColor "seagreen" "\x2714"
+          else setColor "crimson" "\x2718"
     pure $ symbol <> " " <> showPdfType t
   pure $ T.unwords texts
 
@@ -196,7 +201,7 @@ getVolInfo :: Article -> Text
 getVolInfo a = T.intercalate ", "
   $ filter (not . T.null) [theVolInfo, thePages]
  where
-  thePages = displayPages (a ^. pages)
+  thePages   = displayPages (a ^. pages)
   theVolInfo = case (a ^. volume, a ^. issue) of
     (""    , ""    ) -> ""
     (""    , theIss) -> "No. " <> theIss
@@ -263,6 +268,8 @@ cookFifthColumn width | width == 0 = map fst
   cookIndivTexts :: (Text, CookLater) -> [Text]
   cookIndivTexts (t, c) = if c == Cook then T.chunksOf width t else [t]
 
+-- brittany-disable-next-binding
+
 -- | This function uses the (raw) columns previously generated to calculate the
 -- correct field sizes.
 getFieldSizes :: [(Column, Column, Column, Column, RawFifthColumn)] -> IO FieldSizes
@@ -281,11 +288,19 @@ getFieldSizes rawColumns = do
   let tempCooked = rawColumns & each . _5 %~ cookFifthColumn 0
   -- Calculate the maximum size of each of these.
   -- unzip5 tempCooked :: ([Column], [Column], [Column], [Column], [Column])
-  -- The lens expression says: to each entry of this 5-tuple, do @maximum 0 .
+  -- The lens expression says: to each entry of this 5-tuple, do @maximum0 .
   -- fmap columnWidth@ (which basically the longest width) to it.
   let fss1 = unzip5 tempCooked & each %~ maximum0 . fmap columnWidth
-  -- The first four fields need some padding, so we add that here.
-  let fss2 = fss1 & _1 %~ (+ fieldPadding)
+  -- We need to make sure that the first four fields are not any shorter than
+  -- their headings. Technically, the fifth field is safe because we will later
+  -- enforce a lower limit of 40 characters on it, but we'll do it anyway.
+  let fss2 = fss1 & _1 %~ (\l -> max l (headingLengths ^. _1))
+                  & _2 %~ (\l -> max l (headingLengths ^. _2))
+                  & _3 %~ (\l -> max l (headingLengths ^. _3))
+                  & _4 %~ (\l -> max l (headingLengths ^. _4))
+                  & _5 %~ (\l -> max l (headingLengths ^. _5))
+  -- Then we need to add the padding to the first four fields.
+  let fss3 = fss2 & _1 %~ (+ fieldPadding)
                   & _2 %~ (+ fieldPadding)
                   & _3 %~ (+ fieldPadding)
                   & _4 %~ (+ fieldPadding)
@@ -299,12 +314,12 @@ getFieldSizes rawColumns = do
   --     in the terminal.
   termWidth <- maybe 80 TermSize.width <$> TermSize.size
   let lowerLimit = 40
-      upperLimit = fss2 ^. _5
-      ideal      = termWidth - (fss2 ^. _1 + fss2 ^. _2 + fss2 ^. _3 + fss2 ^. _4)
+      upperLimit = fss3 ^. _5
+      ideal      = termWidth - (fss3 ^. _1 + fss3 ^. _2 + fss3 ^. _3 + fss3 ^. _4)
       result     | ideal < lowerLimit = lowerLimit
                  | ideal > upperLimit = upperLimit
                  | otherwise          = ideal
-  let fss = fss2 & _5 .~ result
+  let fss = fss3 & _5 .~ result
   pure fss
 
 -- $step4-cook
@@ -318,23 +333,24 @@ getFieldSizes rawColumns = do
 convertRawColumnsToText
   :: FieldSizes -> (Column, Column, Column, Column, RawFifthColumn) -> Text
 convertRawColumnsToText fss rawCols = t
-  where
+ where
     -- Cook the fifth column according to the field size which was calculated.
-    cols = rawCols & _5 %~ cookFifthColumn (fss ^. _5)
-    -- Turn it into a list. That makes life easier.
-    colsList = cols ^.. each
-    -- Pad all the columns so that they have the same height.
-    maxColumnHeight = maximum . fmap length $ colsList
-    padColumn :: Column -> Column
-    padColumn c = take maxColumnHeight (c ++ repeat "")
-    paddedColumns = fmap padColumn colsList
-    -- Transpose it to get the rows instead of columns!!
-    rows = transpose paddedColumns
-    -- Convert a row of Texts (one from each column) into a single line of Text.
-    printf :: [Text] -> Text
-    printf row = foldMap (\(t, fs) -> T.justifyLeft fs ' ' t) (zip row (fss ^.. each))
-    -- Then just fmap that over the rows.
-    allLines = fmap printf rows
-    -- And stick newlines between them. T.unlines gives one extra newline at the
-    -- end, which I don't want.
-    t = T.intercalate "\n" allLines
+  cols            = rawCols & _5 %~ cookFifthColumn (fss ^. _5)
+  -- Turn it into a list. That makes life easier.
+  colsList        = cols ^.. each
+  -- Pad all the columns so that they have the same height.
+  maxColumnHeight = maximum . fmap length $ colsList
+  padColumn :: Column -> Column
+  padColumn c = take maxColumnHeight (c ++ repeat "")
+  paddedColumns = fmap padColumn colsList
+  -- Transpose it to get the rows instead of columns!!
+  rows          = transpose paddedColumns
+  -- Convert a row of Texts (one from each column) into a single line of Text.
+  printf :: [Text] -> Text
+  printf row =
+    foldMap (\(t, fs) -> T.justifyLeft fs ' ' t) (zip row (fss ^.. each))
+  -- Then just fmap that over the rows.
+  allLines = fmap printf rows
+  -- And stick newlines between them. T.unlines gives one extra newline at the
+  -- end, which I don't want.
+  t        = T.intercalate "\n" allLines
