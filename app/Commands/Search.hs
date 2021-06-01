@@ -27,20 +27,24 @@ runSearch args input = do
   let refs    = refsin input
       cwd     = cwdin input
       queries = T.words . searchNormalise $ args
+      refsToSearchIn = case varin input of
+                            Just s -> refs `IM.restrictKeys` s
+                            Nothing -> refs
   -- If no refs present, or no search terms specified error immediately
   errorOnNoRefs prefix input
   when (null queries) $ throwError (prefix <> "no search terms given")
-  -- TODO: do the search
-  let refsMatchingAllQueries = IM.filter (queries `allFoundIn`) refs
-  if not (IM.null refsMatchingAllQueries)
-    then printMatches cwd "all" refsMatchingAllQueries
-    else do
-      let refsMatchingAnyQueries = IM.filter (queries `anyFoundIn`) refs
-      if not (IM.null refsMatchingAnyQueries)
-        then printMatches cwd "any" refsMatchingAnyQueries
-        else throwError $ prefix <> "no articles found"
-  -- Return basically nothing
-  pure $ SCmdOutput (refsin input) Nothing
+  -- Lazy evaluation means we won't run the second unnecessarily...
+  let refsMatchingAll = IM.filter (queries `allFoundIn`) refsToSearchIn
+      refsMatchingAny = IM.filter (queries `anyFoundIn`) refsToSearchIn
+  if not (IM.null refsMatchingAll)
+    then do
+      printMatches cwd "all" refsMatchingAll
+      pure $ SCmdOutput (refsin input) (Just $ IM.keysSet refsMatchingAll)
+    else if not (IM.null refsMatchingAny)
+      then do
+        printMatches cwd "any" refsMatchingAny
+        pure $ SCmdOutput (refsin input) (Just $ IM.keysSet refsMatchingAny)
+      else throwError $ prefix <> "no articles found"
 
 printMatches :: MonadIO m => FilePath -> Text -> IntMap Reference -> m ()
 printMatches cwd desc refs = liftIO $ do
