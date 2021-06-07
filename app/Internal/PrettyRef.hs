@@ -189,7 +189,11 @@ getShortestJournalName =
     . T.filter (\c -> isAlphaNum c || isSpace c)
     . (^. journalShort)
  where
-  acronyms = [("Nucl Magn Reson", "NMR")]
+  acronyms =
+    [ ("Nucl Magn Reson"     , "NMR")
+    , ("Oxford University"   , "OU")
+    , ("Cambridge University", "CU")
+    ]
   replaceAcronyms startText =
     foldl' (flip (uncurry T.replace)) startText acronyms
 
