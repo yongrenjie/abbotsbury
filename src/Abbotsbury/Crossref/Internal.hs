@@ -285,10 +285,13 @@ getJournalAbbrev :: Text -> Maybe Text
 getJournalAbbrev long = M.lookup long abbrevMap
   where
     abbrevMap = M.fromList
-      [ ("Angewandte Chemie International Edition"              , "Angew. Chem. Int. Ed."              )
+      [ ("Analytical Chemistry"                                 , "Anal. Chem."                        )
+      , ("Angewandte Chemie International Edition"              , "Angew. Chem. Int. Ed."              )
       , ("Annual Reports on NMR Spectroscopy"                   , "Annu. Rep. NMR Spectrosc."          )
       , ("Biochemistry Journal"                                 , "Biochem. J."                        )
       , ("Chemical Physics Letters"                             , "Chem. Phys. Lett."                  )
+      , ("Chemical Science"                                     , "Chem. Sci."                         )
+      , ("Chemical Communications"                              , "Chem. Commun."                      )
       , ("Communications Chemistry"                             , "Commun. Chem."                      )
       , ("Journal of Biomolecular NMR"                          , "J. Biomol. NMR"                     )
       , ("Journal of Chemical Informatics and Modeling"         , "J. Chem. Inf. Model."               )
@@ -298,6 +301,8 @@ getJournalAbbrev long = M.lookup long abbrevMap
       , ("Journal of Magnetic Resonance, Series A"              , "J. Magn. Reson., Ser. A"            )
       , ("Journal of Magnetic Resonance, Series B"              , "J. Magn. Reson., Ser. B"            )
       , ("Journal of Molecular Biology"                         , "J. Mol. Biol."                      )
+      , ("Journal of Molecular Spectroscopy"                    , "J. Mol. Spectrosc."                 )
+      , ("Journal of the American Chemical Society"             , "J. Am. Chem. Soc."                  )
       , ("Magnetic Resonance in Chemistry"                      , "Magn. Reson. Chem."                 )
       , ("Nature Chemistry"                                     , "Nat. Chem."                         )
       , ("Nature Communications"                                , "Nat. Commun."                       )
@@ -306,6 +311,7 @@ getJournalAbbrev long = M.lookup long abbrevMap
       , ("Nucleic Acids Research"                               , "Nucleic Acids Res."                 )
       , ("Proceedings of the National Academy of Sciences"      , "Proc. Natl. Acad. Sci. U. S. A."    )
       , ("Progress in Nuclear Magnetic Resonance Spectroscopy"  , "Prog. Nucl. Magn. Reson. Spectrosc.")
+      , ("Review of Scientific Instruments"                     , "Rev. Sci. Instrum."                 )
       , ("Scientific Reports"                                   , "Sci. Rep."                          )
       , ("The Journal of Chemical Physics"                      , "J. Chem. Phys."                     )
       ]
