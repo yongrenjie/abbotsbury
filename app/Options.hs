@@ -25,9 +25,15 @@ data AbbotMainOptions = AbbotMainOptions
   { -- | The working directory to start in.
     startingDirectory :: FilePath
   ,
+    -- | Quiet flag.
+    verbosity         :: AbbotVerbosity
+  , 
     -- | Whether to show the version number and exit.
     mainVersion       :: Bool
   }
+
+data AbbotVerbosity = NormalVerbosity | Quiet
+                    deriving (Eq, Show)
 
 abbotParserPrefs :: ParserPrefs
 abbotParserPrefs =
@@ -59,6 +65,11 @@ mainParser =
               <> help "Directory to start in"
               <> value "."
               <> showDefaultWith (const "current working directory")
+              )
+        <*> flag NormalVerbosity Quiet
+              (  short 'q'
+              <> long "quiet"
+              <> help "Silence prompt"
               )
         <*> switch (long "version" <> help "Display version number and exit")
         )

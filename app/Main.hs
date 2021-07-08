@@ -66,6 +66,7 @@ import           Options                        ( AbbotCiteOptions
                                                 , AbbotMainOptions
                                                   ( AbbotMainOptions
                                                   )
+                                                , AbbotVerbosity(..)
                                                 , CopyOption(..)
                                                 , abbotParserPrefs
                                                 , parserInfo
@@ -91,6 +92,8 @@ data LoopState = LoopState
     _oldDir     :: FilePath
   , -- The last wd. Analogous to bash $OLDPWD.
     _dirChanged :: Bool
+  , -- Verbosity level.
+    _verbosity :: AbbotVerbosity
   , -- Flag to indicate that the working directory was
     --  changed by the last command, which means that we
     --  should save and reread the references.
@@ -106,10 +109,10 @@ main = do
   case options of
     AbbotCite citeOptions -> runAbbotCite citeOptions
     AbbotMain mainOptions -> do
-      let AbbotMainOptions startingDirectory version' = mainOptions
+      let AbbotMainOptions startingDirectory verbosity version' = mainOptions
       when version' displayVersionAndExit
       startDir <- expandDirectory startingDirectory
-      let startState = LoopState startDir startDir True IM.empty
+      let startState = LoopState startDir startDir True verbosity IM.empty
       evalStateT (mRunInputT defaultSettings $ mWithInterrupt loop) startState
       exitSuccess
  where
@@ -130,6 +133,7 @@ loop =
   in  mHandleInterrupt loop $ do
         curD <- use curDir
         dirC <- use dirChanged
+        verb <- use verbosity
 
         -- If the directory was changed, read in new data, then turn off the flag
         when dirC $ do
@@ -138,7 +142,7 @@ loop =
             Right nrefs -> do
               references .= nrefs
               unless
-                (null nrefs)
+                (null nrefs || verb == Quiet)
                 (mOutputStrLn
                   ("Read in " <> T.pack (show (length nrefs)) <> " references.")
                 )
@@ -147,7 +151,7 @@ loop =
 
         -- Show the prompt and get the command
         cwd   <- liftIO $ expandDirectory curD
-        input <- prompt cwd
+        input <- prompt verb cwd
 
         -- Parse and run the command
         case input of
@@ -195,11 +199,16 @@ loop =
                   loop
 
 -- | Generates the prompt for the main loop.
-prompt :: FilePath -> MInputT (StateT LoopState IO) (Maybe Text)
-prompt fp = mGetInputLine $ mconcat
-  [ setColor "plum" $ "(" <> T.pack fp <> ") "
-  , setColor "hotpink" . setBold . setItalic $ "peep > "
-  ]
+prompt
+  :: AbbotVerbosity -> FilePath -> MInputT (StateT LoopState IO) (Maybe Text)
+prompt verb fp = mGetInputLine promptText
+ where
+  promptText
+    | verb == Quiet = ""
+    | otherwise = mconcat
+      [ setColor "plum" $ "(" <> T.pack fp <> ") "
+      , setColor "hotpink" . setBold . setItalic $ "peep > "
+      ]
 
 -- | Prints an error in the main loop.
 printErr :: Text -> MInputT (StateT LoopState IO) ()
