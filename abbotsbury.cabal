@@ -1,7 +1,7 @@
 cabal-version:       2.4
 
 name:                abbotsbury
-version:             0.3.1.0
+version:             0.4.0.0
 synopsis:            Minimalistic reference management
 description:         `abbotsbury` is a small package designed to fetch data
                      from Crossref and generate citations from them in a
