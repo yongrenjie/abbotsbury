@@ -317,7 +317,7 @@ getFieldSizes rawColumns = do
   --   - apart from those limits, we ideally want to use up the remaining space
   --     in the terminal.
   termWidth <- maybe 80 TermSize.width <$> TermSize.size
-  let lowerLimit = 40
+  let lowerLimit = 30
       upperLimit = fss3 ^. _5
       ideal      = termWidth - (fss3 ^. _1 + fss3 ^. _2 + fss3 ^. _3 + fss3 ^. _4)
       result     | ideal < lowerLimit = lowerLimit
