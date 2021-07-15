@@ -30,7 +30,7 @@ extra-source-files:  README.md, tests/test-data/*.json
 
 common abbot-deps
   build-depends:
-    , base ^>=4.14.1.0
+    base ^>=4.14.1.0 || ^>=4.15.0.0
     , containers
     , text , unicode-transforms
     , aeson , bytestring
@@ -110,7 +110,7 @@ executable abbot
     Reference
     Paths_abbotsbury
   build-depends:
-    base ^>=4.14.1.0
+    base ^>=4.14.1.0 || ^>=4.15.0.0
     , abbotsbury
     , haskeline , ansi-terminal , colour , terminal-size
     , optparse-applicative , ansi-wl-pprint
@@ -140,7 +140,7 @@ test-suite tests
     Crossref
     TestWorks
   build-depends:
-    base ^>=4.14.1.0
+    base ^>=4.14.1.0 || ^>=4.15.0.0
     , abbotsbury
     , tasty
     , tasty-hunit
