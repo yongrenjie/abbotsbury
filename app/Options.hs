@@ -168,6 +168,7 @@ citeParser =
               )
         <*> switch
               (  long "use-git-email"
+              <> short 'G'
               <> help "Use email from `git config` to fetch metadata"
               )
         )
