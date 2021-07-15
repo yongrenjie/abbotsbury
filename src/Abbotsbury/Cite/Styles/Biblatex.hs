@@ -12,6 +12,7 @@ import           Abbotsbury.LatexEscapes
 import           Abbotsbury.Work
 import           Data.Char                      ( isAscii
                                                 , isUpper
+                                                , isAlpha
                                                 )
 import           Data.Foldable                  ( toList )
 import           Data.Maybe                     ( mapMaybe )
@@ -74,7 +75,7 @@ articleConstructorBib a = plain (latexReplaceEscapes t)
   t = T.intercalate "\n" ([headerL] ++ fields ++ ["}"])
   bibIdentifier :: Text
   bibIdentifier =
-    toAscii (a ^. authors . ix 0 . family)
+    (T.filter isAlpha . toAscii) (a ^. authors . ix 0 . family)
       <> (T.pack . show) (a ^. year)
       <> T.filter isUpper (a ^. journalShort)
   headerL :: Text
@@ -118,7 +119,8 @@ bookConstructorBib b = plain (latexReplaceEscapes t)
   t = T.intercalate "\n" ([headerL] ++ fields ++ ["}"])
   bibIdentifier :: Text
   bibIdentifier =
-    toAscii (getContributors b ^. _head . family) <> T.pack (show (b ^. year))
+    (T.filter isAlpha . toAscii) (getContributors b ^. _head . family)
+      <> (T.pack . show) (b ^. year)
   headerL :: Text
   headerL = "@book{" <> bibIdentifier <> ","
   -- We need to precalculate whether to include an 'edition' key.
