@@ -78,20 +78,16 @@ data AbbotCiteOptions = AbbotCiteOptions
   { -- | The DOIs to cite.
     citeDOI     :: [DOI]
   ,
-    -- | The citation style to use.
-    style       :: Style
-  ,
-    -- | The output format to use.
-    format      :: Format
-  ,
-    -- | The output format to use.
-    copy        :: CopyOption
+    -- | The output settings.
+    sfc         :: StyleFormatCopy
   ,
     -- | Whether to get the email from `git config --get user.email`.
     useGitEmail :: Bool
   }
 
 data CopyOption = NoCopy | CopyAsText | CopyAsRtf deriving (Eq, Show, Bounded, Enum)
+
+type StyleFormatCopy = (Style, Format, CopyOption)
 
 -- | Option reader which converts a string (given on command line) to a concrete style.
 styleReader :: ReadM Style
@@ -130,6 +126,60 @@ copyReader = eitherReader $ \c ->
         | c' == "rtf"  -> Right CopyAsRtf
         | otherwise -> Left $ makeInvalidArgMessage c
 
+sfcOption :: Parser StyleFormatCopy
+sfcOption = wordSfc <|> manualSfc
+ where
+  wordSfc, manualSfc :: Parser StyleFormatCopy
+  wordSfc = flag'
+    (acsShortStyle, textFormat, CopyAsRtf)
+    (short 'W' <> help "alias for '-s acs-short -f text -c rtf'")
+  manualSfc =
+    (,,)
+      <$> option
+            styleReader
+            (  metavar "STYLE"
+            <> long "style"
+            <> short 's'
+            <> value acsShortStyle
+            <> helpDoc (Just styleHelp)
+            )
+      <*> option
+            formatReader
+            (  metavar "FORMAT"
+            <> long "format"
+            <> short 'f'
+            <> value textFormat
+            <> helpDoc (Just formatHelp)
+            )
+      <*> option
+            copyReader
+            (  metavar "COPY"
+            <> long "copy"
+            <> short 'c'
+            <> value NoCopy
+            <> helpDoc (Just copyHelp)
+            )
+  styleHelp, formatHelp, copyHelp :: PP.Doc
+  styleHelp = PP.nest 2 $ PP.vsep
+    [ PP.text "Citation style to use. Acceptable options:"
+    , PP.text "{a, acs}               - ACS, with title and DOI"
+    , PP.text "{as, acs-short}        - ACS, no title or DOI"
+    , PP.text "{b, bib}               - BibLaTeX"
+    ]
+  formatHelp = PP.nest 2 $ PP.vsep
+    [ PP.text "Output format to use. Acceptable options:"
+    , PP.text "{t, text}              - Plain text (default)"
+    , PP.text "{m, md, markdown}      - Markdown"
+    , PP.text "{r, rst, restructured} - reStructuredText"
+    , PP.text "{h, html}              - HTML"
+    ]
+  copyHelp = PP.nest 2 $ PP.vsep
+    [ PP.text "Whether to copy text to clipboard. Acceptable options:"
+    , PP.text "none                   - don't copy (default)"
+    , PP.text "yes                    - copy as plain text"
+    , PP.text "rtf                    - copy as formatted text (only on macOS)"
+    ]
+
 makeInvalidArgMessage :: String -> String
 makeInvalidArgMessage badArgVal = mconcat
   [ "argument '"
@@ -142,61 +192,15 @@ citeParser =
   AbbotCite
     <$> (   AbbotCiteOptions
         <$> some (strArgument (metavar "DOI" <> helpDoc (Just doiHelp)))
-        <*> option
-              styleReader
-              (  metavar "STYLE"
-              <> long "style"
-              <> short 's'
-              <> value acsShortStyle
-              <> helpDoc (Just styleHelp)
-              )
-        <*> option
-              formatReader
-              (  metavar "FORMAT"
-              <> long "format"
-              <> short 'f'
-              <> value textFormat
-              <> helpDoc (Just formatHelp)
-              )
-        <*> option
-              copyReader
-              (  metavar "COPY"
-              <> long "copy"
-              <> short 'c'
-              <> value NoCopy
-              <> helpDoc (Just copyHelp)
-              )
+        <*> sfcOption
         <*> switch
-              (  long "use-git-email"
-              <> short 'G'
-              <> help "Use email from `git config` to fetch metadata"
+              (long "use-git-email" <> short 'G' <> help
+                "Use email from `git config` to fetch metadata"
               )
         )
  where
   doiHelp :: PP.Doc
   doiHelp = PP.nest 2 $ PP.vsep [PP.text "DOI(s) to generate citations for."]
-  styleHelp :: PP.Doc
-  styleHelp = PP.nest 2 $ PP.vsep
-    [ PP.text "Citation style to use. Acceptable options:"
-    , PP.text "{a, acs}               - ACS, with title and DOI"
-    , PP.text "{as, acs-short}        - ACS, no title or DOI"
-    , PP.text "{b, bib}               - BibLaTeX"
-    ]
-  formatHelp :: PP.Doc
-  formatHelp = PP.nest 2 $ PP.vsep
-    [ PP.text "Output format to use. Acceptable options:"
-    , PP.text "{t, text}              - Plain text (default)"
-    , PP.text "{m, md, markdown}      - Markdown"
-    , PP.text "{r, rst, restructured} - reStructuredText"
-    , PP.text "{h, html}              - HTML"
-    ]
-  copyHelp :: PP.Doc
-  copyHelp = PP.nest 2 $ PP.vsep
-    [ PP.text "Whether to copy text to clipboard. Acceptable options:"
-    , PP.text "none                   - don't copy (default)"
-    , PP.text "yes                    - copy as plain text"
-    , PP.text "rtf                    - copy as formatted text (only on macOS)"
-    ]
 
 citeParserInfo :: ParserInfo AbbotCommand
 citeParserInfo = info

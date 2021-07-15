@@ -222,7 +222,7 @@ printErr = mOutputStrLn . makeError
 --     2 if all DOIs failed to resolve
 runAbbotCite :: AbbotCiteOptions -> IO ()
 runAbbotCite citeOptions = do
-  let AbbotCiteOptions dois style' format' copy' useGit = citeOptions
+  let AbbotCiteOptions dois (style', format', copy') useGit = citeOptions
   email <- if useGit
     then
       (do
