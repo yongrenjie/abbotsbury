@@ -3,16 +3,17 @@ module Internal.Copy where
 import           Control.Exception              ( SomeException
                                                 , handle
                                                 )
+import           Data.Char                      ( ord )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           System.IO                      ( stderr )
 import           System.Info                    ( os )
 import           System.Process                 ( CreateProcess(std_in)
+                                                , ProcessHandle
                                                 , StdStream(CreatePipe)
                                                 , createProcess
                                                 , shell
-                                                , ProcessHandle
                                                 )
 
 -- | Copies text to the clipboard, silently ignoring ALL exceptions.
@@ -24,14 +25,12 @@ copy t =
         pure Nothing
       )
     $ case os of
-        "darwin" -> do
-          (Just hIn, _, _, ph) <- createProcess (shell "pbcopy")
-            { std_in = CreatePipe
-            }
-          TIO.hPutStr hIn t
-          pure $ Just ph
-        _ -> do 
-          TIO.hPutStrLn stderr ("abbot: copy not supported on operating system " <> T.pack os)
+        "darwin"  -> t `pipedInto` "pbcopy"
+        "mingw32" -> t `pipedInto` "clip"
+        _         -> do
+          TIO.hPutStrLn
+            stderr
+            ("abbot: copy not supported on operating system " <> T.pack os)
           pure Nothing
 
 -- | Converts a piece of HTML into rich text and then copies it to the clipboard. This is useful for
@@ -46,17 +45,21 @@ copyHtmlAsRtf htmlText =
         pure Nothing
       )
     $ case os of
-        "darwin" -> do
-          (Just in1, _, _, ph) <- createProcess
-            (shell
-                "textutil -convert rtf -stdin -stdout -inputencoding UTF-8 -format html | pbcopy -Prefer rtf"
-              )
-              { std_in = CreatePipe
-              }
-          TIO.hPutStr in1 htmlText
-          pure $ Just ph
+        "darwin" ->
+          htmlText
+            `pipedInto` "textutil -convert rtf -stdin -stdout -inputencoding UTF-8 -format html | pbcopy -Prefer rtf"
+        "mingw32" ->
+          escapedHtmlText
+            `pipedInto` "powershell -Command \"$input | Set-Clipboard -AsHtml\""
+         where
+          -- see https://stackoverflow.com/questions/47474346
+          escapedHtmlText = T.concatMap escape htmlText
+          escape c | ord c > 127 = "&#" <> (T.pack . show $ ord c) <> ";"
+                   | otherwise   = T.singleton c
         _ -> do
-          TIO.hPutStrLn stderr ("abbot: copy not supported on operating system " <> T.pack os)
+          TIO.hPutStrLn
+            stderr
+            ("abbot: RTF copy not supported on operating system " <> T.pack os)
           pure Nothing
 
 -- | Helper function which surrounds each line with <p>...</p> and runs copyHtmlAsRtf on the whole
@@ -64,3 +67,11 @@ copyHtmlAsRtf htmlText =
 copyHtmlLinesAsRtf :: [Text] -> IO (Maybe ProcessHandle)
 copyHtmlLinesAsRtf =
   copyHtmlAsRtf . T.concat . map (\t -> "<p>" <> t <> "</p>")
+
+-- | @stdin `pipedInto` command@ pipes the Text @stdin@ into the specified
+-- command.
+pipedInto :: Text -> String -> IO (Maybe ProcessHandle)
+pipedInto stdin cmd = do
+  (Just hIn, _, _, ph) <- createProcess (shell cmd) { std_in = CreatePipe }
+  TIO.hPutStr hIn stdin
+  pure $ Just ph
