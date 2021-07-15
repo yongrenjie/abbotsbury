@@ -257,7 +257,9 @@ runAbbotCite citeOptions = do
          CopyAsText -> copy citations
          CopyAsRtf -> do
            let htmlCitations = map (cite style' htmlFormat) works
-           copyHtmlLinesAsRtf htmlCitations
+           case htmlCitations of
+                [c] -> copyHtmlAsRtf c
+                _   -> copyHtmlLinesAsRtf htmlCitations
     -- We must block until the copying finishes, or else the thread running the
     -- copy will be silently killed when the main process exits!
     case maybeHandle of

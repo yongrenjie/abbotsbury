@@ -59,7 +59,9 @@ runCite args input = do
   liftIO $ if rules `elem` [AcsWord, AcsShortWord]
     then do
       let htmlLines = map (cite style htmlFormat . _work) refsToCite
-      copyHtmlLinesAsRtf htmlLines
+      case htmlLines of
+           [c] -> copyHtmlAsRtf c
+           _   -> copyHtmlLinesAsRtf htmlLines
     else copy citations
   -- Return basically nothing
   pure $ SCmdOutput (refsin input) Nothing
