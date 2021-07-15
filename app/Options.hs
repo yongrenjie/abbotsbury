@@ -144,8 +144,11 @@ citeParser =
         <$> some (strArgument (metavar "DOI" <> helpDoc (Just doiHelp)))
         <*> option
               styleReader
-              (metavar "STYLE" <> long "style" <> short 's' <> helpDoc
-                (Just styleHelp)
+              (  metavar "STYLE"
+              <> long "style"
+              <> short 's'
+              <> value acsShortStyle
+              <> helpDoc (Just styleHelp)
               )
         <*> option
               formatReader
