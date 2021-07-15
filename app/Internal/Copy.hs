@@ -27,6 +27,7 @@ copy t =
     $ case os of
         "darwin"  -> t `pipedInto` "pbcopy"
         "mingw32" -> t `pipedInto` "clip"
+        "linux"   -> t `pipedInto` "xclip --selection clipboard"
         _         -> do
           TIO.hPutStrLn
             stderr
@@ -56,6 +57,8 @@ copyHtmlAsRtf htmlText =
           escapedHtmlText = T.concatMap escape htmlText
           escape c | ord c > 127 = "&#" <> (T.pack . show $ ord c) <> ";"
                    | otherwise   = T.singleton c
+        "linux" ->
+          htmlText `pipedInto` "xclip --selection clipboard -t text/html"
         _ -> do
           TIO.hPutStrLn
             stderr
