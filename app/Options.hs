@@ -176,7 +176,7 @@ sfcOption = wordSfc <|> manualSfc
   copyHelp = PP.nest 2 $ PP.vsep
     [ PP.text "Whether to copy text to clipboard. Acceptable options:"
     , PP.text "none                   - don't copy (default)"
-    , PP.text "yes                    - copy as plain text"
+    , PP.text "text                   - copy as plain text"
     , PP.text "rtf                    - copy as formatted text (only on macOS)"
     ]
 
