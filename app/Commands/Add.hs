@@ -51,7 +51,7 @@ runAdd args input = do
   unless
     (null dois)
     (liftIO $ TIO.putStrLn
-      (  "Fetching data for DOI"
+      (  "fetching data for DOI"
       <> (if length dois > 1 then "s" else "")
       <> ": "
       <> T.intercalate ", " dois
