@@ -309,6 +309,7 @@ getJournalAbbrev long = M.lookup long abbrevMap
       , ("Nature Reviews Chemistry"                             , "Nat. Rev. Chem."                    )
       , ("Nature Reviews Methods Primers"                       , "Nat. Rev. Methods Primers"          )
       , ("Nucleic Acids Research"                               , "Nucleic Acids Res."                 )
+      , ("Pure and Applied Chemistry"                           , "Pure Appl. Chem."                   )
       , ("Proceedings of the National Academy of Sciences"      , "Proc. Natl. Acad. Sci. U. S. A."    )
       , ("Progress in Nuclear Magnetic Resonance Spectroscopy"  , "Prog. Nucl. Magn. Reson. Spectrosc.")
       , ("Review of Scientific Instruments"                     , "Rev. Sci. Instrum."                 )
