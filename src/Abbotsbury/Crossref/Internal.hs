@@ -286,7 +286,7 @@ getJournalAbbrev long = M.lookup long abbrevMap
   where
     abbrevMap = M.fromList
       [ ("Analytical Chemistry"                                 , "Anal. Chem."                        )
-      , ("Angewandte Chemie International Edition"              , "Angew. Chem. Int. Ed."              )
+      , ("Angewandte Chemie International Edition"              , "Angew. Chem., Int. Ed."             )
       , ("Annual Reports on NMR Spectroscopy"                   , "Annu. Rep. NMR Spectrosc."          )
       , ("Biochemistry Journal"                                 , "Biochem. J."                        )
       , ("Chemical Physics Letters"                             , "Chem. Phys. Lett."                  )
