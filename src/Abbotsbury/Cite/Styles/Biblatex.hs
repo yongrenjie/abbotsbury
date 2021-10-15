@@ -164,7 +164,7 @@ makeMaybeBibFieldWith pred key val =
 -- diacritics from the original letters (that's what NFD does), and then remove
 -- all the diacritics, leaving the original letters behind.
 toAscii :: Text -> Text
-toAscii = T.filter isAscii . normalize NFD
+toAscii = T.filter isAscii . normalize NFD . T.replace "\248" "o"
 
 -- | Generate the BibLaTeX-formatted value for the @author@ key, i.e. joined by
 -- @and@s.
