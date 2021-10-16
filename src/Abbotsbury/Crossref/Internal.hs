@@ -162,7 +162,7 @@ parseCrossrefMessage doi' useInternalAbbrevs messageVal = do
 parseArticle :: Bool -> Object -> DAT.Parser Article
 parseArticle useInternalAbbrevs messageObj = do
   -- Title
-  _articleTitle <- normalize NFC
+  _articleTitle <- processArticleTitle
     <$> safeHead "could not get title" (messageObj .: "title")
   -- Authors
   _authorArray    <- messageObj .: "author"
@@ -202,6 +202,63 @@ parseArticle useInternalAbbrevs messageObj = do
     <|> (ArticleNumber <$> messageObj .: "article-number")
     <|> pure (PageRange "")
   pure $ Article { .. }
+
+-- | Preprocess article titles, including Unicode normalisation and also
+-- replacing Greek letters in old ACS titles.
+processArticleTitle :: Text -> Text
+processArticleTitle = replaceGreek . normalize NFC
+ where
+  replaceGreek :: Text -> Text
+  replaceGreek t = M.foldrWithKey T.replace t $ M.fromList
+    [ (".alpha."  , "α")
+    , (".beta."   , "β")
+    , (".gamma."  , "γ")
+    , (".delta."  , "δ")
+    , (".epsilon.", "ε")
+    , (".zeta."   , "ζ")
+    , (".eta."    , "η")
+    , (".theta."  , "θ")
+    , (".iota."   , "ι")
+    , (".kappa."  , "κ")
+    , (".lambda." , "λ")
+    , (".mu."     , "μ")
+    , (".nu."     , "ν")
+    , (".xi."     , "ξ")
+    , (".omicron.", "ο")
+    , (".pi."     , "π")
+    , (".rho."    , "ρ")
+    , (".sigma."  , "σ")
+    , (".tau."    , "τ")
+    , (".upsilon.", "υ")
+    , (".phi."    , "φ")
+    , (".chi."    , "χ")
+    , (".psi."    , "ψ")
+    , (".omega."  , "ω")
+    , (".Alpha."  , "Α")
+    , (".Beta."   , "Β")
+    , (".Gamma."  , "Γ")
+    , (".Delta."  , "Δ")
+    , (".Epsilon.", "Ε")
+    , (".Zeta."   , "Ζ")
+    , (".Eta."    , "Η")
+    , (".Theta."  , "Θ")
+    , (".Iota."   , "Ι")
+    , (".Kappa."  , "Κ")
+    , (".Lambda." , "Λ")
+    , (".Mu."     , "Μ")
+    , (".Nu."     , "Ν")
+    , (".Xi."     , "Ξ")
+    , (".Omicron.", "Ο")
+    , (".Pi."     , "Π")
+    , (".Rho."    , "Ρ")
+    , (".Sigma."  , "Σ")
+    , (".Tau."    , "Τ")
+    , (".Upsilon.", "Υ")
+    , (".Phi."    , "Φ")
+    , (".Chi."    , "Χ")
+    , (".Psi."    , "Ψ")
+    , (".Omega."  , "Ω")
+    ]
 
 parseBook :: Object -> DAT.Parser Book
 parseBook messageObj = do
