@@ -18,6 +18,7 @@ import           Internal.Monad
 import           Internal.PrettyRef
 import           Lens.Micro.Platform
 import           Reference
+import           Text.Unidecode                 ( unidecode )
 
 prefix :: Text
 prefix = "search: "
@@ -80,7 +81,7 @@ mkHaystack ref = map searchNormalise $ shared ++ tags' ++ individual
 -- | Strip diacritics and convert to 'folded case' to allow for case-insensitive
 -- comparison.
 searchNormalise :: Text -> Text
-searchNormalise = T.toCaseFold . T.filter isAscii . normalize NFD
+searchNormalise = T.toCaseFold . T.concatMap (T.pack . unidecode)
 
 -- * The search queries passed to the following three functions MUST already
 -- have been passed through the searchNormalise function. This condition is not

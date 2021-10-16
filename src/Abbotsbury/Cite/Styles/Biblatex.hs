@@ -10,18 +10,15 @@ import           Abbotsbury.Cite.Helpers.Person
 import           Abbotsbury.Cite.Internal
 import           Abbotsbury.LatexEscapes
 import           Abbotsbury.Work
-import           Data.Char                      ( isAscii
-                                                , isUpper
+import           Data.Char                      ( isUpper
                                                 , isAlpha
                                                 )
 import           Data.Foldable                  ( toList )
 import           Data.Maybe                     ( mapMaybe )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
-import           Data.Text.Normalize            ( NormalizationMode(..)
-                                                , normalize
-                                                )
 import           Lens.Micro
+import           Text.Unidecode                 ( unidecode )
 
 -- | This generates a BibLaTeX entry. The output 'Format' chosen doesn't affect
 -- the BibLaTeX entry in any way, so that can be arbitrarily selected.
@@ -160,11 +157,9 @@ makeMaybeBibFieldWith
 makeMaybeBibFieldWith pred key val =
   if pred val then Just (makeBibField key val) else Nothing
 
--- | Convert a name to plain ASCII. As best as we can. That is, separate all the
--- diacritics from the original letters (that's what NFD does), and then remove
--- all the diacritics, leaving the original letters behind.
+-- | Convert a name to plain ASCII. As best as we can.
 toAscii :: Text -> Text
-toAscii = T.filter isAscii . normalize NFD . T.replace "\248" "o"
+toAscii = T.concatMap (T.pack . unidecode)
 
 -- | Generate the BibLaTeX-formatted value for the @author@ key, i.e. joined by
 -- @and@s.
