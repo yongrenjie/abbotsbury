@@ -397,7 +397,7 @@ downloadPdf email maybeManager url destination = do
   manager <- case maybeManager of
     Just m  -> pure m
     Nothing -> NHC.newManager tlsManagerSettings
-  req <- politeReq email <$> NHC.parseUrlThrow (T.unpack url)
+  req <- politeReq email <$> NHC.parseRequest (T.unpack url)
   -- Create the destination folder if it doesn't exist
   let destParent = fst $ splitFileName destination
   destParentExists <- doesDirectoryExist destParent

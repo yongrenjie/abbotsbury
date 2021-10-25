@@ -55,7 +55,10 @@ runAddpdf args input = do
           case maybeSrc of
             Just s
               | T.null s -> pure ()
-              | T.head s == '/' -> do   -- file path
+              | "file://" `T.isPrefixOf` s -> do    -- file path
+                let src = T.unpack . processCmdlineInput $ T.drop 7 s
+                copyWithMkdir src dest
+              | T.head s == '/' -> do   -- assume it's a file path
                 let src = T.unpack . processCmdlineInput $ s
                 copyWithMkdir src dest
               | otherwise -> do         -- not a file path, assume it's a URL

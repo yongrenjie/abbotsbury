@@ -1,364 +1,364 @@
-- _timeOpened: 2021-05-15T16:17:15.172234Z
+- _tags:
+  - nmr
   _timeAdded: 2021-05-15T16:17:15.172234Z
+  _timeOpened: 2021-05-15T16:17:15.172234Z
   _work:
     contents:
-      _bookEditors: []
-      _bookTitle: High-Resolution NMR Techniques in Organic Chemistry
       _bookAuthors:
-      - _suffix: null
+      - _family: Claridge
         _given: Timothy D. W.
-        _family: Claridge
+        _suffix: null
+      _bookEdition: 3rd
+      _bookEditors: []
+      _bookIsbn: 978-0-08-099986-9
       _bookNumber: ''
-      _bookYear: 2016
       _bookPublisher: Elsevier
       _bookPublisherLoc: Amsterdam
-      _bookIsbn: 978-0-08-099986-9
       _bookSeries: ''
-      _bookEdition: 3rd
+      _bookTitle: High-Resolution NMR Techniques in Organic Chemistry
+      _bookYear: 2016
     tag: BookWork
-  _tags:
-  - nmr
-- _timeOpened: 2021-05-15T17:31:49.196446Z
+- _tags: []
   _timeAdded: 2021-05-15T17:31:49.196446Z
+  _timeOpened: 2021-05-15T17:31:49.196446Z
   _work:
     contents:
+      _articleAuthors:
+      - _family: Mansfield
+        _given: Steven J.
+        _suffix: null
+      - _family: Smith
+        _given: Russell C.
+        _suffix: null
+      - _family: Yong
+        _given: Jonathan R. J.
+        _suffix: null
+      - _family: Garry
+        _given: Olivia L.
+        _suffix: null
+      - _family: Anderson
+        _given: Edward A.
+        _suffix: null
       _articleDoi: 10.1021/acs.orglett.9b00971
-      _articleVolume: '21'
+      _articleIssue: '8'
+      _articleJournalLong: Organic Letters
+      _articleJournalShort: Org. Lett.
       _articlePages:
         contents: 2918-2922
         tag: PageRange
-      _articleJournalLong: Organic Letters
-      _articleJournalShort: Org. Lett.
-      _articleAuthors:
-      - _suffix: null
-        _given: Steven J.
-        _family: Mansfield
-      - _suffix: null
-        _given: Russell C.
-        _family: Smith
-      - _suffix: null
-        _given: Jonathan R. J.
-        _family: Yong
-      - _suffix: null
-        _given: Olivia L.
-        _family: Garry
-      - _suffix: null
-        _given: Edward A.
-        _family: Anderson
-      _articleYear: 2019
       _articleTitle: A General Copper-Catalyzed Synthesis of Ynamides from 1,2-Dichloroenamides
-      _articleIssue: '8'
+      _articleVolume: '21'
+      _articleYear: 2019
     tag: ArticleWork
-  _tags: []
-- _timeOpened: 2021-05-15T17:32:05.910796Z
+- _tags: []
   _timeAdded: 2021-05-15T17:32:05.910796Z
+  _timeOpened: 2021-05-15T17:32:05.910796Z
   _work:
     contents:
+      _articleAuthors:
+      - _family: Kupče
+        _given: Ēriks
+        _suffix: null
+      - _family: Frydman
+        _given: Lucio
+        _suffix: null
+      - _family: Webb
+        _given: Andrew G.
+        _suffix: null
+      - _family: Yong
+        _given: Jonathan R. J.
+        _suffix: null
+      - _family: Claridge
+        _given: Tim D. W.
+        _suffix: null
       _articleDoi: 10.1038/s43586-021-00024-3
-      _articleVolume: '1'
+      _articleIssue: '1'
+      _articleJournalLong: Nature Reviews Methods Primers
+      _articleJournalShort: Nat. Rev. Methods Primers
       _articlePages:
         contents: '27'
         tag: ArticleNumber
-      _articleJournalLong: Nature Reviews Methods Primers
-      _articleJournalShort: Nat. Rev. Methods Primers
-      _articleAuthors:
-      - _suffix: null
-        _given: Ēriks
-        _family: Kupče
-      - _suffix: null
-        _given: Lucio
-        _family: Frydman
-      - _suffix: null
-        _given: Andrew G.
-        _family: Webb
-      - _suffix: null
-        _given: Jonathan R. J.
-        _family: Yong
-      - _suffix: null
-        _given: Tim D. W.
-        _family: Claridge
-      _articleYear: 2021
       _articleTitle: Parallel nuclear magnetic resonance spectroscopy
-      _articleIssue: '1'
+      _articleVolume: '1'
+      _articleYear: 2021
     tag: ArticleWork
-  _tags: []
-- _timeOpened: 2021-05-22T00:58:17.020509Z
+- _tags: []
   _timeAdded: 2021-05-22T00:58:17.020509Z
+  _timeOpened: 2021-05-22T00:58:17.020509Z
   _work:
     contents:
+      _articleAuthors:
+      - _family: Verstraete
+        _given: Jean-Baptiste
+        _suffix: null
+      - _family: Myers
+        _given: William K.
+        _suffix: null
+      - _family: Foroozandeh
+        _given: Mohammadali
+        _suffix: null
       _articleDoi: 10.1063/5.0038511
-      _articleVolume: '154'
+      _articleIssue: '9'
+      _articleJournalLong: The Journal of Chemical Physics
+      _articleJournalShort: J. Chem. Phys.
       _articlePages:
         contents: '094201'
         tag: PageRange
-      _articleJournalLong: The Journal of Chemical Physics
-      _articleJournalShort: J. Chem. Phys.
-      _articleAuthors:
-      - _suffix: null
-        _given: Jean-Baptiste
-        _family: Verstraete
-      - _suffix: null
-        _given: William K.
-        _family: Myers
-      - _suffix: null
-        _given: Mohammadali
-        _family: Foroozandeh
-      _articleYear: 2021
       _articleTitle: Chirped ordered pulses for ultra-broadband ESR spectroscopy
-      _articleIssue: '9'
+      _articleVolume: '154'
+      _articleYear: 2021
     tag: ArticleWork
-  _tags: []
-- _timeOpened: 2021-05-22T01:24:29.238777Z
+- _tags: []
   _timeAdded: 2021-05-22T01:24:29.238777Z
+  _timeOpened: 2021-10-25T14:04:28.959616Z
   _work:
     contents:
+      _articleAuthors:
+      - _family: Kupče
+        _given: Ēriks
+        _suffix: null
+      - _family: Mote
+        _given: Kaustubh R.
+        _suffix: null
+      - _family: Webb
+        _given: Andrew
+        _suffix: null
+      - _family: Madhu
+        _given: Perunthiruthy K.
+        _suffix: null
+      - _family: Claridge
+        _given: Tim D. W.
+        _suffix: null
       _articleDoi: 10.1016/j.pnmrs.2021.03.001
-      _articleVolume: 124-125
+      _articleIssue: ''
+      _articleJournalLong: Progress in Nuclear Magnetic Resonance Spectroscopy
+      _articleJournalShort: Prog. Nucl. Magn. Reson. Spectrosc.
       _articlePages:
         contents: 1-56
         tag: PageRange
-      _articleJournalLong: Progress in Nuclear Magnetic Resonance Spectroscopy
-      _articleJournalShort: Prog. Nucl. Magn. Reson. Spectrosc.
-      _articleAuthors:
-      - _suffix: null
-        _given: Ēriks
-        _family: Kupče
-      - _suffix: null
-        _given: Kaustubh R.
-        _family: Mote
-      - _suffix: null
-        _given: Andrew
-        _family: Webb
-      - _suffix: null
-        _given: Perunthiruthy K.
-        _family: Madhu
-      - _suffix: null
-        _given: Tim D. W.
-        _family: Claridge
-      _articleYear: 2021
       _articleTitle: Multiplexing experiments in NMR and multi-nuclear MRI
-      _articleIssue: ''
+      _articleVolume: 124-125
+      _articleYear: 2021
     tag: ArticleWork
-  _tags: []
-- _timeOpened: 2021-05-27T17:42:22.804902Z
+- _tags: []
   _timeAdded: 2021-05-25T23:11:20.915842Z
+  _timeOpened: 2021-05-27T17:42:22.804902Z
   _work:
     contents:
+      _articleAuthors:
+      - _family: Gershenfeld
+        _given: N. A.
+        _suffix: null
+      - _family: Chuang
+        _given: I. L.
+        _suffix: null
       _articleDoi: 10.1126/science.275.5298.350
-      _articleVolume: '275'
+      _articleIssue: '5298'
+      _articleJournalLong: Science
+      _articleJournalShort: Science
       _articlePages:
         contents: 350-356
         tag: PageRange
-      _articleJournalLong: Science
-      _articleJournalShort: Science
-      _articleAuthors:
-      - _suffix: null
-        _given: N. A.
-        _family: Gershenfeld
-      - _suffix: null
-        _given: I. L.
-        _family: Chuang
-      _articleYear: 1997
       _articleTitle: Bulk Spin-Resonance Quantum Computation
-      _articleIssue: '5298'
+      _articleVolume: '275'
+      _articleYear: 1997
     tag: ArticleWork
-  _tags: []
-- _timeOpened: 2021-05-25T23:24:34.037354Z
+- _tags: []
   _timeAdded: 2021-05-25T23:24:34.037354Z
+  _timeOpened: 2021-05-25T23:24:34.037354Z
   _work:
     contents:
+      _articleAuthors:
+      - _family: Kiraly
+        _given: Peter
+        _suffix: null
+      - _family: Adams
+        _given: Ralph W.
+        _suffix: null
+      - _family: Paudel
+        _given: Liladhar
+        _suffix: null
+      - _family: Foroozandeh
+        _given: Mohammadali
+        _suffix: null
+      - _family: Aguilar
+        _given: Juan A.
+        _suffix: null
+      - _family: Timári
+        _given: István
+        _suffix: null
+      - _family: Cliff
+        _given: Matthew J.
+        _suffix: null
+      - _family: Nilsson
+        _given: Mathias
+        _suffix: null
+      - _family: Sándor
+        _given: Péter
+        _suffix: null
+      - _family: Batta
+        _given: Gyula
+        _suffix: null
+      - _family: Waltho
+        _given: Jonathan P.
+        _suffix: null
+      - _family: Kövér
+        _given: Katalin E.
+        _suffix: null
+      - _family: Morris
+        _given: Gareth A.
+        _suffix: null
       _articleDoi: 10.1007/s10858-015-9913-z
-      _articleVolume: '62'
+      _articleIssue: '1'
+      _articleJournalLong: Journal of Biomolecular NMR
+      _articleJournalShort: J. Biomol. NMR
       _articlePages:
         contents: 43-52
         tag: PageRange
-      _articleJournalLong: Journal of Biomolecular NMR
-      _articleJournalShort: J. Biomol. NMR
-      _articleAuthors:
-      - _suffix: null
-        _given: Peter
-        _family: Kiraly
-      - _suffix: null
-        _given: Ralph W.
-        _family: Adams
-      - _suffix: null
-        _given: Liladhar
-        _family: Paudel
-      - _suffix: null
-        _given: Mohammadali
-        _family: Foroozandeh
-      - _suffix: null
-        _given: Juan A.
-        _family: Aguilar
-      - _suffix: null
-        _given: István
-        _family: Timári
-      - _suffix: null
-        _given: Matthew J.
-        _family: Cliff
-      - _suffix: null
-        _given: Mathias
-        _family: Nilsson
-      - _suffix: null
-        _given: Péter
-        _family: Sándor
-      - _suffix: null
-        _given: Gyula
-        _family: Batta
-      - _suffix: null
-        _given: Jonathan P.
-        _family: Waltho
-      - _suffix: null
-        _given: Katalin E.
-        _family: Kövér
-      - _suffix: null
-        _given: Gareth A.
-        _family: Morris
-      _articleYear: 2015
       _articleTitle: 'Real-time pure shift 15N HSQC of proteins: a real improvement
         in resolution and sensitivity'
-      _articleIssue: '1'
+      _articleVolume: '62'
+      _articleYear: 2015
     tag: ArticleWork
-  _tags: []
-- _timeOpened: 2021-05-25T23:30:29.026549Z
+- _tags: []
   _timeAdded: 2021-05-25T23:30:29.026549Z
+  _timeOpened: 2021-05-25T23:30:29.026549Z
   _work:
     contents:
+      _articleAuthors:
+      - _family: Ladd-Parada
+        _given: Marjorie
+        _suffix: null
+      - _family: Povey
+        _given: Megan J.
+        _suffix: null
+      - _family: Vieira
+        _given: Josélio
+        _suffix: null
+      - _family: Ries
+        _given: Michael E.
+        _suffix: null
       _articleDoi: 10.1080/00268976.2018.1508784
-      _articleVolume: '117'
+      _articleIssue: 7-8
+      _articleJournalLong: Molecular Physics
+      _articleJournalShort: Molecular Physics
       _articlePages:
         contents: 1020-1027
         tag: PageRange
-      _articleJournalLong: Molecular Physics
-      _articleJournalShort: Molecular Physics
-      _articleAuthors:
-      - _suffix: null
-        _given: Marjorie
-        _family: Ladd-Parada
-      - _suffix: null
-        _given: Megan J.
-        _family: Povey
-      - _suffix: null
-        _given: Josélio
-        _family: Vieira
-      - _suffix: null
-        _given: Michael E.
-        _family: Ries
-      _articleYear: 2019
       _articleTitle: Fast field cycling NMR relaxometry studies of molten and cooled
         cocoa butter
-      _articleIssue: 7-8
+      _articleVolume: '117'
+      _articleYear: 2019
     tag: ArticleWork
-  _tags: []
-- _timeOpened: 2021-05-29T14:45:27.869229Z
+- _tags: []
   _timeAdded: 2021-05-26T23:41:50.910465Z
+  _timeOpened: 2021-10-25T14:05:15.54434Z
   _work:
     contents:
+      _articleAuthors:
+      - _family: Foroozandeh
+        _given: M.
+        _suffix: null
+      - _family: Adams
+        _given: R. W.
+        _suffix: null
+      - _family: Kiraly
+        _given: P.
+        _suffix: null
+      - _family: Nilsson
+        _given: M.
+        _suffix: null
+      - _family: Morris
+        _given: G. A.
+        _suffix: null
       _articleDoi: 10.1039/c5cc06293d
-      _articleVolume: '51'
+      _articleIssue: '84'
+      _articleJournalLong: Chemical Communications
+      _articleJournalShort: Chem. Commun.
       _articlePages:
         contents: 15410-15413
         tag: PageRange
-      _articleJournalLong: Chemical Communications
-      _articleJournalShort: Chem. Commun.
-      _articleAuthors:
-      - _suffix: null
-        _given: M.
-        _family: Foroozandeh
-      - _suffix: null
-        _given: R. W.
-        _family: Adams
-      - _suffix: null
-        _given: P.
-        _family: Kiraly
-      - _suffix: null
-        _given: M.
-        _family: Nilsson
-      - _suffix: null
-        _given: G. A.
-        _family: Morris
-      _articleYear: 2015
       _articleTitle: 'Measuring couplings in crowded NMR spectra: pure shift NMR with
         multiplet analysis'
-      _articleIssue: '84'
+      _articleVolume: '51'
+      _articleYear: 2015
     tag: ArticleWork
-  _tags: []
-- _timeOpened: 2021-05-29T23:49:44.882396Z
+- _tags: []
   _timeAdded: 2021-05-26T23:56:34.838788Z
+  _timeOpened: 2021-05-29T23:49:44.882396Z
   _work:
     contents:
+      _articleAuthors:
+      - _family: Foroozandeh
+        _given: Mohammadali
+        _suffix: null
+      - _family: Adams
+        _given: Ralph W.
+        _suffix: null
+      - _family: Meharry
+        _given: Nicola J.
+        _suffix: null
+      - _family: Jeannerat
+        _given: Damien
+        _suffix: null
+      - _family: Nilsson
+        _given: Mathias
+        _suffix: null
+      - _family: Morris
+        _given: Gareth A.
+        _suffix: null
       _articleDoi: 10.1002/anie.201404111
-      _articleVolume: '53'
+      _articleIssue: '27'
+      _articleJournalLong: Angewandte Chemie International Edition
+      _articleJournalShort: Angew. Chem. Int. Ed.
       _articlePages:
         contents: 6990-6992
         tag: PageRange
-      _articleJournalLong: Angewandte Chemie International Edition
-      _articleJournalShort: Angew. Chem. Int. Ed.
-      _articleAuthors:
-      - _suffix: null
-        _given: Mohammadali
-        _family: Foroozandeh
-      - _suffix: null
-        _given: Ralph W.
-        _family: Adams
-      - _suffix: null
-        _given: Nicola J.
-        _family: Meharry
-      - _suffix: null
-        _given: Damien
-        _family: Jeannerat
-      - _suffix: null
-        _given: Mathias
-        _family: Nilsson
-      - _suffix: null
-        _given: Gareth A.
-        _family: Morris
-      _articleYear: 2014
       _articleTitle: Ultrahigh-Resolution NMR Spectroscopy
-      _articleIssue: '27'
+      _articleVolume: '53'
+      _articleYear: 2014
     tag: ArticleWork
-  _tags: []
-- _timeOpened: 2021-05-29T14:45:27.869229Z
+- _tags: []
   _timeAdded: 2021-05-27T00:15:49.788816Z
+  _timeOpened: 2021-05-29T14:45:27.869229Z
   _work:
     contents:
+      _articleAuthors:
+      - _family: Foroozandeh
+        _given: Mohammadali
+        _suffix: null
       _articleDoi: 10.1016/j.jmr.2020.106768
-      _articleVolume: '318'
+      _articleIssue: ''
+      _articleJournalLong: Journal of Magnetic Resonance
+      _articleJournalShort: J. Magn. Reson.
       _articlePages:
         contents: '106768'
         tag: PageRange
-      _articleJournalLong: Journal of Magnetic Resonance
-      _articleJournalShort: J. Magn. Reson.
-      _articleAuthors:
-      - _suffix: null
-        _given: Mohammadali
-        _family: Foroozandeh
-      _articleYear: 2020
       _articleTitle: 'Spin dynamics during chirped pulses: applications to homonuclear
         decoupling and broadband excitation'
-      _articleIssue: ''
+      _articleVolume: '318'
+      _articleYear: 2020
     tag: ArticleWork
-  _tags: []
-- _timeOpened: 2021-05-29T18:36:38.674442Z
-  _timeAdded: 2021-05-27T00:18:46.081208Z
+- _tags: []
+  _timeAdded: 2021-10-25T14:03:54.148914Z
+  _timeOpened: 2021-10-25T14:05:04.150141Z
   _work:
     contents:
+      _articleAuthors:
+      - _family: Giraudeau
+        _given: Patrick
+        _suffix: null
+      - _family: Frydman
+        _given: Lucio
+        _suffix: null
       _articleDoi: 10.1146/annurev-anchem-071213-020208
-      _articleVolume: '7'
+      _articleIssue: '1'
+      _articleJournalLong: Annual Review of Analytical Chemistry
+      _articleJournalShort: Annual Rev. Anal. Chem.
       _articlePages:
         contents: 129-161
         tag: PageRange
-      _articleJournalLong: Annual Review of Analytical Chemistry
-      _articleJournalShort: Annual Rev. Anal. Chem.
-      _articleAuthors:
-      - _suffix: null
-        _given: Patrick
-        _family: Giraudeau
-      - _suffix: null
-        _given: Lucio
-        _family: Frydman
-      _articleYear: 2014
       _articleTitle: 'Ultrafast 2D NMR: An Emerging Tool in Analytical Spectroscopy'
-      _articleIssue: '1'
+      _articleVolume: '7'
+      _articleYear: 2014
     tag: ArticleWork
-  _tags: []
