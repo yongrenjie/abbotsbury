@@ -402,18 +402,21 @@ downloadPdf email maybeManager url destination = do
   let destParent = fst $ splitFileName destination
   destParentExists <- doesDirectoryExist destParent
   unless destParentExists (createDirectoryIfMissing True destParent)
-  NHC.withResponse req manager $ \resp -> do
+  -- Carry out the download
+  result <- NHC.withResponse req manager $ \resp -> do
     let hdrs = NHC.responseHeaders resp
         body = NHC.responseBody resp
     if
       | isInHeaders "application/pdf" "content-type" hdrs
       -> withBinaryFile destination WriteMode (normalDownloadPdf body)
-      | "sciencedirect"
-        `T.isInfixOf` url
-        &&            isInHeaders "text/html" "content-type" hdrs
+      | "sciencedirect" `T.isInfixOf` url
+        && isInHeaders "text/html" "content-type" hdrs
       -> withBinaryFile destination WriteMode (elsevierDownloadPdf manager body)
       | otherwise
       -> pure False
+  -- Delete the file if the download failed
+  unless result (removePathForcibly destination)
+  pure result
  where
   normalDownloadPdf :: NHC.BodyReader -> Handle -> IO Bool
   normalDownloadPdf body hdl = do
