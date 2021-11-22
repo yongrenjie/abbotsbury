@@ -32,7 +32,7 @@ common abbot-deps
   build-depends:
     base ^>=4.14.1.0 || ^>=4.15.0.0
     , containers
-    , text , unicode-transforms , unidecode
+    , text , unicode-transforms , unidecode , vty
     , aeson , bytestring
     , http-client , http-client-tls , network-uri
     , raw-strings-qq

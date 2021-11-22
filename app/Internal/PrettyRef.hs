@@ -25,6 +25,7 @@ import           Internal.Path
 import           Internal.Style                 ( setBold
                                                 , setColor
                                                 )
+import           Graphics.Text.Width            ( safeWctwidth )
 import           Lens.Micro.Platform
 import           Reference
 import qualified System.Console.Terminal.Size  as TermSize
@@ -252,12 +253,9 @@ mkRawColumns cwd authLimit refnosAndRefs = do
         (c2, c3, c4, c5) <- case ref ^. work of
           ArticleWork a -> mkArticleColumns cwd refTags authLimit a
           BookWork    b -> mkBookColumns cwd refTags authLimit b
-        -- A hack here: we use a combination of a wide emoji plus a zero-width
-        -- space to mimic a Text that has length 2 (i.e. its length is equal to
-        -- the space it occupies in the terminal).
         let workTypeSymbol = case ref ^. work of
-              ArticleWork _ -> "\x1f4dd\x200b"
-              BookWork    _ -> "\x1f4d8\x200b"
+              ArticleWork _ -> "\x1f4dd"
+              BookWork    _ -> "\x1f4d8"
         let c1 = [workTypeSymbol <> " " <> (T.pack . show $ refno)]
         pure (c1, c2, c3, c4, c5)
   mapM mkRawColumns1 refnosAndRefs
@@ -350,9 +348,16 @@ convertRawColumnsToText fss rawCols = t
   -- Transpose it to get the rows instead of columns!!
   rows          = transpose paddedColumns
   -- Convert a row of Texts (one from each column) into a single line of Text.
+  -- For some reason safeWctwidth doesn't work on the emoji so we need to
+  -- manually hardcode its width.
+  getWidth :: Text -> Int
+  getWidth t | T.null t = 0
+             | T.head t `elem` ['\x1f4dd', '\x1f4d8'] = safeWctwidth t + 1
+             | otherwise = safeWctwidth t
+  padSpaces :: Text -> Int -> Text
+  padSpaces t fs = t <> T.replicate (fs - getWidth t) " "
   printf :: [Text] -> Text
-  printf row =
-    foldMap (\(t, fs) -> T.justifyLeft fs ' ' t) (zip row (fss ^.. each))
+  printf row = foldMap (uncurry padSpaces) (zip row (fss ^.. each))
   -- Then just fmap that over the rows.
   allLines = fmap printf rows
   -- And stick newlines between them. T.unlines gives one extra newline at the
