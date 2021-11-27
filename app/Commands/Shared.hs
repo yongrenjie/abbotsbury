@@ -446,13 +446,16 @@ downloadPdf email maybeManager url destination = do
               normalDownloadPdf (NHC.responseBody resp') hdl
           _ -> pure False
 
--- | Copy a file from src to dest, but make sure that the target exists first.
+-- | Copy a file from src to dest, but make sure that the target directory
+-- exists first.
 copyWithMkdir :: FilePath -> FilePath -> IO ()
 copyWithMkdir src dest = do
-  let destParent = fst $ splitFileName dest
-  destParentExists <- doesDirectoryExist destParent
-  unless destParentExists (createDirectoryIfMissing True destParent)
-  copyFileWithMetadata src dest
+  fileExists <- doesFileExist src
+  when fileExists $ do
+    let destParent = fst $ splitFileName dest
+    destParentExists <- doesDirectoryExist destParent
+    unless destParentExists (createDirectoryIfMissing True destParent)
+    copyFileWithMetadata src dest
 
 removeFileIfExists :: FilePath -> IO ()
 removeFileIfExists f =
