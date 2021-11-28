@@ -1,8 +1,12 @@
 module Internal.PrettyRef
-  ( prettify
+  ( prettify, prettify'
   ) where
 
 import           Abbotsbury.Cite.Helpers.Person
+import           Brick.Types
+import           Brick.Widgets.Border
+import           Brick.Widgets.Core
+import           Brick.Widgets.Table
 import           Commands.Shared
 import           Data.Char                      ( isAlphaNum
                                                 , isSpace
@@ -20,12 +24,12 @@ import           Data.Set                       ( Set )
 import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
+import           Graphics.Text.Width            ( safeWctwidth )
 import           Internal.Monad
 import           Internal.Path
 import           Internal.Style                 ( setBold
                                                 , setColor
                                                 )
-import           Graphics.Text.Width            ( safeWctwidth )
 import           Lens.Micro.Platform
 import           Reference
 import qualified System.Console.Terminal.Size  as TermSize
@@ -33,19 +37,167 @@ import           System.Directory               ( doesFileExist )
 import           Text.Megaparsec                ( eof
                                                 , parse
                                                 )
+import           Text.Wrap                      ( WrapSettings(..)
+                                                , defaultWrapSettings
+                                                )
+
+
+data SizedWidget = SizedWidget { widget :: Widget ()
+                               , rows   :: Int
+                               , cols   :: Int }
+
+
+makeSizedWidget :: [Text] -> SizedWidget
+makeSizedWidget ts =
+  SizedWidget (vBox $ fmap txt ts) (length ts) (maximum $ fmap textWidth ts)
+
+
+type WidgetRow
+  = (SizedWidget, SizedWidget, SizedWidget, SizedWidget, Widget ())
+
+
+-- Liable to crashing! Use with care
+_getColWidth :: Int -> WidgetRow -> Int
+_getColWidth i (a, b, c, d, _) = case i of
+  1 -> cols a
+  2 -> cols b
+  3 -> cols c
+  4 -> cols d
+  _ -> error "This should never happen"
+
 
 -- | Construct pretty-printed text from a set of references to be displayed on
 -- the screen. The output of this text can be directly passed to
 -- 'Data.Text.IO.putStrLn'.
+prettify' :: FilePath -> Maybe Int -> [(Int, Reference)] -> IO [Widget ()]
+prettify' cwd authLimit refs = if null refs
+  then pure []
+  else do
+    refsW1 <- mapM (\(i, r) -> makeRefW i cwd (Just 5) r) refs
+    let (headW2 : refsW2) = applyColPadding (heading : refsW1)
+        headW = withAttr "bold" . hBox $ headW2
+        refsW = vBox . fmap (padBottom (Pad 1) . hBox) $ refsW2
+    pure [joinBorders . border $ vBox [headW <=> hBorder <=> refsW]]
+
+
+-- old version for compatibility
 prettify :: FilePath -> Maybe Int -> [(Int, Reference)] -> IO Text
 prettify cwd authLimit refs = if null refs
-  then pure ""
-  else do
+                                 then pure ""
+                                 else do
     rawColumns <- mkRawColumns cwd authLimit refs
     fieldSizes <- getFieldSizes rawColumns
-    let header   = mkHeader fieldSizes
-        refsText = fmap (convertRawColumnsToText fieldSizes) rawColumns
-    pure $ header <> "\n" <> T.intercalate "\n\n" refsText
+    let header = mkHeader fieldSizes
+        ts     = fmap (convertRawColumnsToText fieldSizes) rawColumns
+    pure $ header <> "\n" <> T.intercalate "\n\n" ts
+
+
+applyColPadding
+  :: [(SizedWidget, SizedWidget, SizedWidget, SizedWidget, Widget ())]
+  -> [[Widget ()]]
+applyColPadding rows =
+  let largest1 = maximum $ fmap (_getColWidth 1) rows
+      largest2 = maximum $ fmap (_getColWidth 2) rows
+      largest3 = maximum $ fmap (_getColWidth 3) rows
+      largest4 = maximum $ fmap (_getColWidth 4) rows
+      applyColPaddingOne (sw1, sw2, sw3, sw4, w5) =
+        [ hLimit (largest1 + 2) . padRight Max $ widget sw1
+        , hLimit (largest2 + 2) . padRight Max $ widget sw2
+        , hLimit (largest3 + 2) . padRight Max $ widget sw3
+        , hLimit (largest4 + 2) . padRight Max $ widget sw4
+        , padRight Max w5
+        ]
+   in fmap applyColPaddingOne rows
+
+
+-- txtWrap but break long words (not sure if it really has any effect)
+txtWrap' :: Text -> Widget n
+txtWrap' =
+  let settings = defaultWrapSettings { breakLongWords = True }
+  in  txtWrapWith settings
+
+
+-- Header row of widgets
+heading :: (SizedWidget, SizedWidget, SizedWidget, SizedWidget, Widget ())
+heading =
+  let t1 = "  #"
+      t2 = "Authors"
+      t3 = "Year"
+      t4 = "Journal/Publisher"
+      t5 = "Title/DOI"
+  in  ( makeSizedWidget [t1]
+      , makeSizedWidget [t2]
+      , makeSizedWidget [t3]
+      , makeSizedWidget [t4]
+      , txtWrap' t5
+      )
+
+
+-- Generate a table row from a reference, just delegates appropriately
+makeRefW
+  :: Int        -- ^ Number of the reference
+  -> FilePath   -- ^ Current working directory.
+  -> Maybe Int  -- ^ Max number of authors to display. Nothing for unlimited.
+  -> Reference  -- ^ The reference
+  -> IO (SizedWidget, SizedWidget, SizedWidget, SizedWidget, Widget ())
+makeRefW i cwd mi ref =
+  let ts = ref ^. tags
+  in  case ref ^. work of
+        ArticleWork a -> makeArticleW i cwd ts mi a
+        BookWork    b -> makeBookW i cwd ts mi b
+
+
+-- Heavy lifting for articles
+makeArticleW
+  :: Int        -- ^ Number of the reference
+  -> FilePath   -- ^ Current working directory.
+  -> Set Tag    -- ^ Any tags belonging to the Reference.
+  -> Maybe Int  -- ^ Max number of authors to display. Nothing for unlimited.
+  -> Article    -- ^ The reference
+  -> IO
+       ( SizedWidget
+       , SizedWidget
+       , SizedWidget
+       , SizedWidget
+       , Widget ()
+       )
+makeArticleW i cwd refTags authLimit a = do
+  availText <- mkAvailText cwd [FullText, SI] a
+  -- TODO: Double-width emojis also break Brick. "\x1f4dd"
+  let numberW  = makeSizedWidget ["A" <> " " <> (T.pack . show $ i)]
+      authorW  = makeSizedWidget $ mkPersonColumn authLimit a
+      yearW    = makeSizedWidget [T.pack . show $ a ^. year]
+      journalW = makeSizedWidget [getShortestJournalName a, getVolInfo a]
+      titleW   = vBox
+        $ fmap txtWrap' [a ^. title, a ^. doi, availText, mkTagText refTags]
+  pure (numberW, authorW, yearW, journalW, titleW)
+
+
+-- Heavy lifting for books
+makeBookW
+  :: Int        -- ^ Number of the reference
+  -> FilePath   -- ^ Current working directory.
+  -> Set Tag    -- ^ Any tags belonging to the Reference.
+  -> Maybe Int  -- ^ Max number of authors to display. Nothing for unlimited.
+  -> Book       -- ^ The reference
+  -> IO (SizedWidget, SizedWidget, SizedWidget, SizedWidget, Widget ())
+makeBookW i cwd refTags authLimit b = do
+  availText <- mkAvailText cwd [FullText] b
+  -- TODO: Double-width emojis also break Brick. "\x1f4d8"
+  let numberW  = makeSizedWidget ["B" <> " " <> (T.pack . show $ i)]
+      authorW  = makeSizedWidget $ mkPersonColumn authLimit b
+      yearW    = makeSizedWidget [T.pack . show $ b ^. year]
+      editionText   = b ^. edition
+      editionText2  = if T.null editionText then "" else editionText <> " ed."
+      editionW = makeSizedWidget [b ^. publisher, editionText2]
+      titleW = vBox $ fmap txtWrap'
+        [ b ^. title
+        , b ^. isbn
+        , availText
+        , mkTagText refTags
+        ]
+  pure (numberW, authorW, yearW, editionW, titleW)
+
 
 -- $step1-generate-heads
 -- First, we generate the header row. This can really be anything we like.
@@ -115,7 +267,7 @@ mkArticleColumns cwd refTags authLimit a = do
         [ (a ^. title         , Cook)
         , (a ^. doi           , Cook)
         , (availText          , DontCook)
-        , (mkTagString refTags, Cook)
+        , (mkTagText refTags, Cook)
         ]
   pure (authorColumn, yearColumn, journalColumn, titleColumn)
 
@@ -164,7 +316,7 @@ mkBookColumns cwd refTags authLimit b = do
         [ (b ^. title         , Cook)
         , (b ^. isbn          , Cook)
         , (availText          , DontCook)
-        , (mkTagString refTags, Cook)
+        , (mkTagText refTags, Cook)
         ]
   pure (authorColumn, yearColumn, journalColumn, titleColumn)
 
@@ -173,9 +325,13 @@ mkAvailText :: Bibliographic x => FilePath -> [PdfType] -> x -> IO Text
 mkAvailText cwd types w = do
   texts <- forM types $ \t -> do
     avail <- doesFileExist $ getPdfPath t cwd w
+    -- TODO: ANSI escape sequences break Brick, find a workaround
+    -- let symbol = if avail
+    --       then setColor "seagreen" "\x2714"
+    --       else setColor "crimson" "\x2718"
     let symbol = if avail
-          then setColor "seagreen" "\x2714"
-          else setColor "crimson" "\x2718"
+          then "\x2714"
+          else "\x2718"
     pure $ symbol <> " " <> showPdfType t
   pure $ T.unwords texts
 
@@ -214,8 +370,8 @@ getVolInfo a = T.intercalate ", "
     (theVol, theIss) -> theVol <> " (" <> theIss <> ")"
 
 -- | Generate a one-liner describing the tags.
-mkTagString :: Set Text -> Text
-mkTagString tagSet = case ts of
+mkTagText :: Set Text -> Text
+mkTagText tagSet = case ts of
   [] -> ""
   _  -> "[" <> T.intercalate ", " ts <> "]"
   where ts = toList tagSet
@@ -352,7 +508,7 @@ convertRawColumnsToText fss rawCols = t
   -- manually hardcode its width.
   getWidth :: Text -> Int
   getWidth t | T.null t = 0
-             | T.head t `elem` ['\x1f4dd', '\x1f4d8'] = safeWctwidth t + 1
+             | T.head t `elem` ['\x1f4dd', '\x1f4d8'] = safeWctwidth t
              | otherwise = safeWctwidth t
   padSpaces :: Text -> Int -> Text
   padSpaces t fs = t <> T.replicate (fs - getWidth t) " "

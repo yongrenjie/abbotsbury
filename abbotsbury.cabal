@@ -112,6 +112,8 @@ executable abbot
   build-depends:
     base ^>=4.14.1.0 || ^>=4.15.0.0
     , abbotsbury
+    , brick
+    , word-wrap
     , haskeline , ansi-terminal , colour , terminal-size
     , optparse-applicative , ansi-wl-pprint
     , megaparsec , replace-megaparsec

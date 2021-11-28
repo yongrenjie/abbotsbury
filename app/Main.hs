@@ -7,6 +7,12 @@ import           Abbotsbury                     ( cite
                                                 , getDoiFromException
                                                 , htmlFormat
                                                 )
+import           Brick.AttrMap
+import           Brick.Main
+import           Brick.Types
+import           Brick.Widgets.Border
+import           Brick.Widgets.Core
+import           Brick.Widgets.Table
 import           Commands                       ( runCmdWith )
 import           Commands.Shared                ( AbbotCmd(Cd, Nop, Quit)
                                                 , CmdInput(CmdInput)
@@ -32,6 +38,8 @@ import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           Data.Version                   ( showVersion )
+import           Graphics.Vty.Attributes
+import           Graphics.Vty.Input.Events
 import           Internal.Copy
 import           Internal.MInputT               ( MInputT
                                                 , defaultSettings
@@ -47,15 +55,13 @@ import           Internal.Path                  ( expandDirectory
                                                 , saveRefs
                                                 , setCurrentDirectory
                                                 )
+import           Internal.PrettyRef
 import           Internal.Style                 ( makeError
                                                 , setBold
                                                 , setColor
                                                 , setItalic
                                                 )
-import           Lens.Micro.Platform            ( (.=)
-                                                , makeLenses
-                                                , use
-                                                )
+import           Lens.Micro.Platform
 import           Options                        ( AbbotCiteOptions
                                                   ( AbbotCiteOptions
                                                   )
@@ -86,21 +92,36 @@ import           System.Process                 ( readProcess
                                                 )
 
 -- | All information needed for the main loop.
-data LoopState = LoopState
-  { _curDir     :: FilePath
-  , -- Current working directory ('wd').
-    _oldDir     :: FilePath
-  , -- The last wd. Analogous to bash $OLDPWD.
-    _dirChanged :: Bool
-  , -- Verbosity level.
-    _verbosity :: AbbotVerbosity
-  , -- Flag to indicate that the working directory was
-    --  changed by the last command, which means that we
-    --  should save and reread the references.
-    _references :: IntMap Reference -- The references.
+data AbbotState = AbbotState
+  { _curDir     :: FilePath -- Current working directory ('wd').
+  , _oldDir     :: FilePath -- The last wd. Analogous to bash $OLDPWD.
+  , _dirChanged :: Bool -- Did last command change wd?
+  , _verbosity :: AbbotVerbosity  -- Verbosity level
+  , _references :: IntMap Reference -- The references.
+  , _refsWidget :: [Widget ()] -- Pretty-printed references
   }
 
-makeLenses ''LoopState
+makeLenses ''AbbotState
+
+app :: App AbbotState e ()
+app = App
+  { appDraw         = draw
+  , appChooseCursor = showFirstCursor
+  , appHandleEvent  = handleEvent
+  , appStartEvent   = pure
+  , appAttrMap      = const $ attrMap mempty [("bold", withStyle defAttr bold)]
+  }
+
+-- Render the TUI.
+draw :: AbbotState -> [Widget ()]
+draw astate = astate ^. refsWidget
+
+handleEvent :: AbbotState -> BrickEvent n e -> EventM n (Next AbbotState)
+handleEvent s e = case e of
+  VtyEvent vtye -> case vtye of
+    EvKey (KChar 'q') [] -> halt s
+    _                    -> continue s
+  _ -> continue s
 
 -- | Entry point.
 main :: IO ()
@@ -111,19 +132,39 @@ main = do
     AbbotMain mainOptions -> do
       let AbbotMainOptions startingDirectory verbosity version' = mainOptions
       when version' displayVersionAndExit
+      -- Initialise state
       startDir <- expandDirectory startingDirectory
-      let startState = LoopState startDir startDir True verbosity IM.empty
-      evalStateT (mRunInputT defaultSettings $ mWithInterrupt loop) startState
+      initialState <- mkAbbotState startDir startDir False
+      endState <- defaultMain app initialState
       exitSuccess
  where
   displayVersionAndExit :: IO ()
   displayVersionAndExit =
     putStrLn ("abbot version " <> showVersion version) >> exitSuccess
 
+-- Create a new AbbotState by reading in references.
+mkAbbotState :: FilePath -> FilePath -> Bool -> IO AbbotState
+mkAbbotState curDir oldDir dirChanged = do
+  eRefs <- runExceptT $ readRefs curDir
+  let refs = case eRefs of
+              Left _ -> IM.empty
+              Right r -> r
+  refsWidget <- prettify' curDir (Just 5) (IM.assocs refs)
+  pure $ AbbotState { _curDir = curDir
+                    , _oldDir = oldDir
+                    , _dirChanged = dirChanged
+                    , _verbosity = Quiet
+                    , _references = refs
+                    , _refsWidget = refsWidget }
+
+
+-- old stuff                 
+-----------------------------
+
 -- | The main REPL loop of abbot. The `quit` and `cd` functions are implemented
 -- here, because they affect the entire state of the program. Other functions
 -- are implemented elsewhere.
-loop :: MInputT (StateT LoopState IO) ()
+loop :: MInputT (StateT AbbotState IO) ()
 loop =
   let exit = pure ()
       save = do
@@ -200,7 +241,7 @@ loop =
 
 -- | Generates the prompt for the main loop.
 prompt
-  :: AbbotVerbosity -> FilePath -> MInputT (StateT LoopState IO) (Maybe Text)
+  :: AbbotVerbosity -> FilePath -> MInputT (StateT AbbotState IO) (Maybe Text)
 prompt verb fp = mGetInputLine promptText
  where
   promptText
@@ -211,8 +252,12 @@ prompt verb fp = mGetInputLine promptText
       ]
 
 -- | Prints an error in the main loop.
-printErr :: Text -> MInputT (StateT LoopState IO) ()
+printErr :: Text -> MInputT (StateT AbbotState IO) ()
 printErr = mOutputStrLn . makeError
+
+
+-- `abbot cite` subcommand --
+-----------------------------
 
 -- | Run the `abbot cite` command.
 -- Exit codes are:
@@ -282,3 +327,5 @@ runAbbotCite citeOptions = do
     where t' = (setColor "tomato" . setBold $ "error: ") <> setColor "tomato" t
   exitWithError :: Text -> IO ()
   exitWithError t = displayError t >> exitFailure
+
+
