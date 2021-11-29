@@ -68,7 +68,7 @@ data SingleCmd = SingleCmd
   deriving Show
 
 data BaseCommand = Add | Addpdf | Cite | Delete | Deletepdf
-                 | Edit | Fetch | Help | List | New | Open
+                 | Edit | Fetch | Help | New | Open
                  | Search | Sort
   deriving (Ord, Eq, Show)
 
@@ -146,7 +146,6 @@ pSingleCmd = do
       | t `elem` ["e", "edit"]                -> pure Edit
       | t `elem` ["f", "fetch"]               -> pure Fetch
       | t `elem` ["h", "help"]                -> pure Help
-      | t `elem` ["l", "ls", "list"]          -> pure List
       | t `elem` ["n", "new"]                 -> pure New
       | t `elem` ["o", "op", "open"]          -> pure Open
       | t `elem` ["s", "se", "search"]        -> pure Search

@@ -94,7 +94,6 @@ executable abbot
     Commands.Edit
     Commands.Fetch
     Commands.Help
-    Commands.List
     Commands.New
     Commands.Open
     Commands.Search

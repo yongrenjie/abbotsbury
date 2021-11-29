@@ -48,16 +48,7 @@ runSearch args input = do
       else throwError $ prefix <> "no articles found"
 
 printMatches :: MonadIO m => FilePath -> Text -> IntMap Reference -> m ()
-printMatches cwd desc refs = liftIO $ do
-  let n = IM.size refs
-  TIO.putStrLn
-    $  prefix
-    <> "found "
-    <> (T.pack . show $ n)
-    <> " references matching "
-    <> desc
-    <> " queries"
-  prettify cwd Nothing (IM.assocs refs) >>= TIO.putStrLn
+printMatches cwd desc refs = liftIO $ TIO.putStrLn "found matches"
 
 -- | Makes a series of Text pieces containing reference metadata, against which
 -- the search query/queries can be matched.

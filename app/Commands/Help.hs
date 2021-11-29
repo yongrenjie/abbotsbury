@@ -25,5 +25,4 @@ runHelp args = case runReplParser args of
     Help -> "Print help."
     Cite -> "Cite some references."
     Open -> "Open some references."
-    List -> "List selected or all references."
     Sort -> "Sort references."

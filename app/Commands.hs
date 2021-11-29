@@ -10,7 +10,6 @@ import           Commands.Deletepdf
 import           Commands.Edit
 import           Commands.Fetch
 import           Commands.Help
-import           Commands.List
 import           Commands.New
 import           Commands.Open
 import           Commands.Search
@@ -38,7 +37,6 @@ runCmdWith cmd input =
           Edit      -> runEdit args input
           Fetch     -> runFetch args input
           Help      -> runHelp args >> pure nop
-          List      -> runList args input
           New       -> runNew args input
           Open      -> runOpen args input
           Search    -> runSearch args input

@@ -13,7 +13,6 @@ import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           Internal.Monad
-import           Internal.PrettyRef
 import           Lens.Micro.Platform
 import           Reference
 import           Text.Megaparsec                ( anySingle
@@ -59,8 +58,6 @@ runSort args input = do
   let sortedRenumberedRefs = if isJust vIn
         then sortedRefs   -- was piped into, local sort only
         else zip [1 ..] (map snd sortedRefs) -- global sort
-  -- Print the sorted refs.
-  liftIO $ TIO.putStrLn =<< prettify cwd (Just 5) sortedRenumberedRefs
   -- The reference list we return should only be modified if 'sort' wasn't piped
   -- into.
   let refsout = if isJust vIn

@@ -12,6 +12,8 @@ import           Brick.Main
 import           Brick.Types
 import           Brick.Util
 import           Brick.Widgets.Border
+import           Brick.Widgets.Border.Style
+import           Brick.Widgets.Center
 import           Brick.Widgets.Core
 import           Brick.Widgets.Table
 import           Commands                       ( runCmdWith )
@@ -97,14 +99,16 @@ import           System.Process                 ( readProcess
 
 -- | All information needed for the main loop.
 data AbbotState = AbbotState
-  { _curDir     :: FilePath -- Current working directory ('wd').
-  , _oldDir     :: FilePath -- The last wd. Analogous to bash $OLDPWD.
-  , _dirChanged :: Bool -- Did last command change wd?
-  , _verbosity :: AbbotVerbosity  -- Verbosity level
-  , _references :: IntMap Reference -- The references.
-  , _refsWidget :: [Widget RName] -- Pretty-printed references
-  , _refsCurrent :: Int     -- Currently active reference
-  , _status :: Text         -- Status to display in the bottom bar
+  { _curDir       :: FilePath         -- Current working directory ('wd').
+  , _oldDir       :: FilePath         -- The last wd. Analogous to bash $OLDPWD.
+  , _dirChanged   :: Bool             -- Did last command change wd?
+  , _verbosity    :: AbbotVerbosity   -- Verbosity level
+  , _activeWidget :: WidgetID         -- Currently active widget
+  , _refs         :: IntMap Reference -- The references
+  , _refsWidget   :: [Widget RName]   -- Pretty-printed references
+  , _refsCurrent  :: Int              -- Currently active reference
+  , _commandText  :: Text             -- Current command
+  , _searchText   :: Text             -- Current search query
   }
 
 makeLenses ''AbbotState
@@ -117,15 +121,17 @@ mkAbbotState curDir oldDir dirChanged = do
               Left _ -> IM.empty
               Right r -> r
       refsCurrent = 1
-  refsWidget <- prettify' curDir (Just 5) refsCurrent (IM.assocs refs)
+  refsWidget <- prettify curDir (Just 5) refsCurrent (IM.assocs refs)
   pure $ AbbotState { _curDir = curDir
                     , _oldDir = oldDir
                     , _dirChanged = dirChanged
                     , _verbosity = Quiet
-                    , _references = refs
+                    , _activeWidget = References
+                    , _refs = refs
                     , _refsWidget = refsWidget
                     , _refsCurrent = refsCurrent
-                    , _status = "Press a key or something..." }
+                    , _commandText = "Command bar here..."
+                    , _searchText  = "Search bar here..." }
 
 app :: App AbbotState e RName
 app = App
@@ -135,64 +141,98 @@ app = App
   , appStartEvent   = pure
   , appAttrMap      = const $ attrMap
                         mempty
-                        [ ("bold"       , withStyle currentAttr bold)
-                        , ("selectedRef", rgbColor 0 55 215 `on` rgbColor 215 255 255)
+                        [ ("bold"       , currentAttr `withStyle` bold)
+                        , ("selectedRef", currentAttr `withStyle` bold)
+                        -- scrollbarAttr must be set so that it doesn't get
+                        -- turned blue
+                        , (scrollbarAttr, defAttr)
+                        , ("activeWidget", currentAttr `withBackColor` rgbColor 255 255 215)
                         ]
   }
-
 
 -- Recalculates the refWidget component of the state. 
 updateState :: AbbotState -> IO AbbotState
 updateState ast = do
   let cwd   = ast ^. curDir
-      refs  = ast ^. references
-      refsN = ast ^. refsCurrent
-  refsWidget <- prettify' cwd (Just 5) refsN (IM.assocs refs)
+      rs  = ast ^. refs
+      n = ast ^. refsCurrent
+  refsWidget <- prettify cwd (Just 5) n (IM.assocs rs)
   pure $ ast { _refsWidget = refsWidget }
-
 
 -- Render the TUI.
 draw :: AbbotState -> [Widget RName]
 draw ast =
-  let refsW = head $ ast ^. refsWidget
-      cmdW  = border . padRight Max . txt $ ast ^. status
-  in  [vBox [refsW, cmdW]]
+  let
+    highlightIf =
+      \w -> if w == ast ^. activeWidget then withBorderStyle unicodeBold else id
+    refsW = highlightIf References $ head $ ast ^. refsWidget
+    cmdW =
+      highlightIf Command
+        $ border
+        . hLimit 40
+        . padRight Max
+        $ if T.null (ast ^. commandText)
+            then txtWrap (T.replicate 40 " ")
+            else txtWrap (ast ^. commandText)
+    searchW =
+      highlightIf Search
+        $ border
+        . hLimit 30
+        . padRight Max
+        $ if T.null (ast ^. searchText)
+            then txtWrap (T.replicate 30 " ")
+            else txtWrap (ast ^. searchText)
+    bottomW = vLimit 2 . padRight Max $ hBox [cmdW, searchW]
+  in
+    [vBox [refsW, bottomW]]
 
 -- Handle events.
 handleEvent
   :: AbbotState -> BrickEvent RName e -> EventM RName (Next AbbotState)
 handleEvent ast e = do
-  vty <- getVtyHandle
-  let output = outputIface vty
-  when (supportsMode output Mouse) $ liftIO $ setMode output Mouse True
+  let continueWithUpdate :: AbbotState -> EventM RName (Next AbbotState)
+      continueWithUpdate astate = do
+        updatedState <- liftIO $ updateState astate
+        continue updatedState
   case e of
     VtyEvent vtye -> case vtye of
       -- q: quit
       EvKey (KChar 'q') []      -> halt ast
       -- <C-L>: redraw
-      EvKey (KChar 'l') [MCtrl] -> continue ast
-      -- j: move down
-      EvKey (KChar 'j') []      -> do
-        let refs = ast ^. references
+      EvKey (KChar 'l') [MCtrl] -> continueWithUpdate ast
+      -- Arrow-down: move down
+      EvKey KDown       []      -> do
+        let rs   = ast ^. refs
             curr = ast ^. refsCurrent
-        case IM.lookupGT curr refs of
-          Just (next, _) -> do
-            ast' <- liftIO $ updateState $ ast { _refsCurrent = next }
-            continue $ ast' {_status = T.pack . show $ next}
-          Nothing        -> continue $ ast  {_status = "Nothing" }
-      -- k: move up
-      EvKey (KChar 'k') [] -> do
-        let refs = ast ^. references
+        continueWithUpdate $ case IM.lookupGT curr rs of
+          Just (next, _) -> ast { _refsCurrent = next }
+          Nothing        -> ast
+      -- Arrow-down: move down
+      EvKey KUp [] -> do
+        let rs   = ast ^. refs
             curr = ast ^. refsCurrent
-        case IM.lookupLT curr refs of
-          Just (prev, _) -> do
-            ast' <- liftIO $ updateState $ ast { _refsCurrent = prev }
-            continue $ ast' {_status = T.pack . show $ prev}
-          Nothing        -> continue $ ast  {_status = "Nothing" }
-      -- Something else: show it in the status window
-      other -> do
-        let ast' = ast { _status = T.pack . show $ other }
-        continue ast'
+        continueWithUpdate $ case IM.lookupLT curr rs of
+          Just (prev, _) -> ast { _refsCurrent = prev }
+          Nothing        -> ast
+      -- Colon: highlight the command window
+      EvKey (KChar ':') [] -> continue $ ast { _activeWidget = Command }
+      -- Forward slash: highlight the search window
+      EvKey (KChar '/') [] -> continue $ ast { _activeWidget = Search }
+      -- Escape: go back to references widget and clear the current widget
+      EvKey KEsc        [] -> do
+        let
+          currActive = ast ^. activeWidget
+          newCommandText =
+            if currActive == Command then "" else ast ^. commandText
+          newSearchText =
+            if currActive == Search then "" else ast ^. searchText
+        continueWithUpdate $ ast { _activeWidget = References
+                                 , _commandText  = newCommandText
+                                 , _searchText   = newSearchText
+                                 }
+      -- Something else: show it in the command window (for now)
+      other -> continueWithUpdate
+        $ ast { _commandText = "You entered: " <> T.pack (show other) }
     _ -> continue ast
 
 -- | Entry point.
@@ -220,102 +260,7 @@ main = do
     putStrLn ("abbot version " <> showVersion version) >> exitSuccess
 
 
--- old stuff                 
------------------------------
 
--- | The main REPL loop of abbot. The `quit` and `cd` functions are implemented
--- here, because they affect the entire state of the program. Other functions
--- are implemented elsewhere.
-loop :: MInputT (StateT AbbotState IO) ()
-loop =
-  let exit = pure ()
-      save = do
-        refs <- use references
-        curD <- use curDir
-        unless (null refs) (liftIO $ saveRefs refs curD)
-  in  mHandleInterrupt loop $ do
-        curD <- use curDir
-        dirC <- use dirChanged
-        verb <- use verbosity
-
-        -- If the directory was changed, read in new data, then turn off the flag
-        when dirC $ do
-          newRefs <- liftIO . runExceptT $ readRefs curD
-          case newRefs of
-            Right nrefs -> do
-              references .= nrefs
-              unless
-                (null nrefs || verb == Quiet)
-                (mOutputStrLn
-                  ("Read in " <> T.pack (show (length nrefs)) <> " references.")
-                )
-            Left errmsg -> printErr errmsg
-        dirChanged .= False
-
-        -- Show the prompt and get the command
-        cwd   <- liftIO $ expandDirectory curD
-        input <- prompt verb cwd
-
-        -- Parse and run the command
-        case input of
-          Nothing      -> save >> exit -- Ctrl-D
-          Just cmdArgs -> case runReplParser cmdArgs of
-            Left _ ->
-              printErr ("command '" <> cmdArgs <> "' not recognised") >> loop
-            -- Special commands that we need to handle in main loop
-            Right Nop     -> loop
-            Right Quit    -> mOutputStrLn "quitting..." >> save >> exit
-            Right (Cd fp) -> do
-              -- Check for 'cd -'
-              newD <- if fp == "-"
-                then use oldDir
-                else liftIO $ expandDirectory (T.unpack fp)
-              -- If the new directory is different, then change the working directory
-              when (newD /= curD) $ catchIOError
-                (do
-                  save
-                  liftIO (setCurrentDirectory newD)
-                  curDir .= newD
-                  oldDir .= curD
-                  dirChanged .= True
-                )
-                (\_ -> printErr (T.pack newD <> ": no such directory"))
-              loop
-            -- All other commands
-            Right otherCmd -> do
-              currentDir  <- use curDir
-              currentRefs <- use references
-              let cmdInput = CmdInput currentDir currentRefs Nothing
-              -- Run the command. If an IOException occurs, display it and
-              -- continue the programme.
-              cmdOutput <- liftIO $ catch
-                (runExceptT (runCmdWith otherCmd cmdInput))
-                (\(e :: IOException) -> do
-                  TIO.putStrLn . makeError . T.pack . show $ e
-                  pure $ Right (SCmdOutput currentRefs Nothing)
-                )
-              case cmdOutput of
-                Left  err                    -> printErr err >> loop
-                Right (SCmdOutput newRefs _) -> do
-                  references .= newRefs
-                  save
-                  loop
-
--- | Generates the prompt for the main loop.
-prompt
-  :: AbbotVerbosity -> FilePath -> MInputT (StateT AbbotState IO) (Maybe Text)
-prompt verb fp = mGetInputLine promptText
- where
-  promptText
-    | verb == Quiet = ""
-    | otherwise = mconcat
-      [ setColor "plum" $ "(" <> T.pack fp <> ") "
-      , setColor "hotpink" . setBold . setItalic $ "peep > "
-      ]
-
--- | Prints an error in the main loop.
-printErr :: Text -> MInputT (StateT AbbotState IO) ()
-printErr = mOutputStrLn . makeError
 
 
 -- `abbot cite` subcommand --
