@@ -10,6 +10,7 @@ import           Abbotsbury                     ( cite
 import           Brick.AttrMap
 import           Brick.Main
 import           Brick.Types
+import           Brick.Util
 import           Brick.Widgets.Border
 import           Brick.Widgets.Core
 import           Brick.Widgets.Table
@@ -38,8 +39,10 @@ import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           Data.Version                   ( showVersion )
+import           Graphics.Vty
 import           Graphics.Vty.Attributes
 import           Graphics.Vty.Input.Events
+import           Graphics.Vty.Output.Interface
 import           Internal.Copy
 import           Internal.MInputT               ( MInputT
                                                 , defaultSettings
@@ -61,6 +64,7 @@ import           Internal.Style                 ( makeError
                                                 , setColor
                                                 , setItalic
                                                 )
+import           Internal.Types
 import           Lens.Micro.Platform
 import           Options                        ( AbbotCiteOptions
                                                   ( AbbotCiteOptions
@@ -98,30 +102,98 @@ data AbbotState = AbbotState
   , _dirChanged :: Bool -- Did last command change wd?
   , _verbosity :: AbbotVerbosity  -- Verbosity level
   , _references :: IntMap Reference -- The references.
-  , _refsWidget :: [Widget ()] -- Pretty-printed references
+  , _refsWidget :: [Widget RName] -- Pretty-printed references
+  , _refsCurrent :: Int     -- Currently active reference
+  , _status :: Text         -- Status to display in the bottom bar
   }
 
 makeLenses ''AbbotState
 
-app :: App AbbotState e ()
+-- Create a new AbbotState by reading in references.
+mkAbbotState :: FilePath -> FilePath -> Bool -> IO AbbotState
+mkAbbotState curDir oldDir dirChanged = do
+  eRefs <- runExceptT $ readRefs curDir
+  let refs = case eRefs of
+              Left _ -> IM.empty
+              Right r -> r
+      refsCurrent = 1
+  refsWidget <- prettify' curDir (Just 5) refsCurrent (IM.assocs refs)
+  pure $ AbbotState { _curDir = curDir
+                    , _oldDir = oldDir
+                    , _dirChanged = dirChanged
+                    , _verbosity = Quiet
+                    , _references = refs
+                    , _refsWidget = refsWidget
+                    , _refsCurrent = refsCurrent
+                    , _status = "Press a key or something..." }
+
+app :: App AbbotState e RName
 app = App
   { appDraw         = draw
   , appChooseCursor = showFirstCursor
   , appHandleEvent  = handleEvent
   , appStartEvent   = pure
-  , appAttrMap      = const $ attrMap mempty [("bold", withStyle defAttr bold)]
+  , appAttrMap      = const $ attrMap
+                        mempty
+                        [ ("bold"       , withStyle currentAttr bold)
+                        , ("selectedRef", rgbColor 0 55 215 `on` rgbColor 215 255 255)
+                        ]
   }
 
--- Render the TUI.
-draw :: AbbotState -> [Widget ()]
-draw astate = astate ^. refsWidget
 
-handleEvent :: AbbotState -> BrickEvent n e -> EventM n (Next AbbotState)
-handleEvent s e = case e of
-  VtyEvent vtye -> case vtye of
-    EvKey (KChar 'q') [] -> halt s
-    _                    -> continue s
-  _ -> continue s
+-- Recalculates the refWidget component of the state. 
+updateState :: AbbotState -> IO AbbotState
+updateState ast = do
+  let cwd   = ast ^. curDir
+      refs  = ast ^. references
+      refsN = ast ^. refsCurrent
+  refsWidget <- prettify' cwd (Just 5) refsN (IM.assocs refs)
+  pure $ ast { _refsWidget = refsWidget }
+
+
+-- Render the TUI.
+draw :: AbbotState -> [Widget RName]
+draw ast =
+  let refsW = head $ ast ^. refsWidget
+      cmdW  = border . padRight Max . txt $ ast ^. status
+  in  [vBox [refsW, cmdW]]
+
+-- Handle events.
+handleEvent
+  :: AbbotState -> BrickEvent RName e -> EventM RName (Next AbbotState)
+handleEvent ast e = do
+  vty <- getVtyHandle
+  let output = outputIface vty
+  when (supportsMode output Mouse) $ liftIO $ setMode output Mouse True
+  case e of
+    VtyEvent vtye -> case vtye of
+      -- q: quit
+      EvKey (KChar 'q') []      -> halt ast
+      -- <C-L>: redraw
+      EvKey (KChar 'l') [MCtrl] -> continue ast
+      -- j: move down
+      EvKey (KChar 'j') []      -> do
+        let refs = ast ^. references
+            curr = ast ^. refsCurrent
+        case IM.lookupGT curr refs of
+          Just (next, _) -> do
+            ast' <- liftIO $ updateState $ ast { _refsCurrent = next }
+            continue $ ast' {_status = T.pack . show $ next}
+          Nothing        -> continue $ ast  {_status = "Nothing" }
+      -- k: move up
+      EvKey (KChar 'k') [] -> do
+        let refs = ast ^. references
+            curr = ast ^. refsCurrent
+        case IM.lookupLT curr refs of
+          Just (prev, _) -> do
+            ast' <- liftIO $ updateState $ ast { _refsCurrent = prev }
+            continue $ ast' {_status = T.pack . show $ prev}
+          Nothing        -> continue $ ast  {_status = "Nothing" }
+      -- Something else: show it in the status window
+      other -> do
+        let ast' = ast { _status = T.pack . show $ other }
+        continue ast'
+    _ -> continue ast
 
 -- | Entry point.
 main :: IO ()
@@ -133,29 +205,19 @@ main = do
       let AbbotMainOptions startingDirectory verbosity version' = mainOptions
       when version' displayVersionAndExit
       -- Initialise state
-      startDir <- expandDirectory startingDirectory
+      startDir     <- expandDirectory startingDirectory
       initialState <- mkAbbotState startDir startDir False
-      endState <- defaultMain app initialState
+      initialVty   <- mkVty $ defaultConfig { termName = Just "xterm-256color" }
+      endState     <- customMain initialVty
+                                 (pure initialVty)
+                                 Nothing
+                                 app
+                                 initialState
       exitSuccess
  where
   displayVersionAndExit :: IO ()
   displayVersionAndExit =
     putStrLn ("abbot version " <> showVersion version) >> exitSuccess
-
--- Create a new AbbotState by reading in references.
-mkAbbotState :: FilePath -> FilePath -> Bool -> IO AbbotState
-mkAbbotState curDir oldDir dirChanged = do
-  eRefs <- runExceptT $ readRefs curDir
-  let refs = case eRefs of
-              Left _ -> IM.empty
-              Right r -> r
-  refsWidget <- prettify' curDir (Just 5) (IM.assocs refs)
-  pure $ AbbotState { _curDir = curDir
-                    , _oldDir = oldDir
-                    , _dirChanged = dirChanged
-                    , _verbosity = Quiet
-                    , _references = refs
-                    , _refsWidget = refsWidget }
 
 
 -- old stuff                 

@@ -106,6 +106,7 @@ executable abbot
     Internal.Path
     Internal.PrettyRef
     Internal.Style
+    Internal.Types
     Options
     Reference
     Paths_abbotsbury

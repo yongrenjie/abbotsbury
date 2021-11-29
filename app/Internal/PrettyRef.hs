@@ -3,6 +3,7 @@ module Internal.PrettyRef
   ) where
 
 import           Abbotsbury.Cite.Helpers.Person
+import           Brick.AttrMap
 import           Brick.Types
 import           Brick.Widgets.Border
 import           Brick.Widgets.Core
@@ -30,6 +31,7 @@ import           Internal.Path
 import           Internal.Style                 ( setBold
                                                 , setColor
                                                 )
+import           Internal.Types
 import           Lens.Micro.Platform
 import           Reference
 import qualified System.Console.Terminal.Size  as TermSize
@@ -42,7 +44,7 @@ import           Text.Wrap                      ( WrapSettings(..)
                                                 )
 
 
-data SizedWidget = SizedWidget { widget :: Widget ()
+data SizedWidget = SizedWidget { widget :: Widget RName
                                , rows   :: Int
                                , cols   :: Int }
 
@@ -53,7 +55,7 @@ makeSizedWidget ts =
 
 
 type WidgetRow
-  = (SizedWidget, SizedWidget, SizedWidget, SizedWidget, Widget ())
+  = (SizedWidget, SizedWidget, SizedWidget, SizedWidget, Widget RName)
 
 
 -- Liable to crashing! Use with care
@@ -67,16 +69,32 @@ _getColWidth i (a, b, c, d, _) = case i of
 
 
 -- | Construct pretty-printed text from a set of references to be displayed on
--- the screen. The output of this text can be directly passed to
--- 'Data.Text.IO.putStrLn'.
-prettify' :: FilePath -> Maybe Int -> [(Int, Reference)] -> IO [Widget ()]
-prettify' cwd authLimit refs = if null refs
+-- the screen.
+prettify'
+  :: FilePath           -- ^ Current working directory
+  -> Maybe Int          -- ^ Maximum number of displayed authors
+  -> Int                -- ^ Currently active reference number
+  -> [(Int, Reference)] -- ^ The references
+  -> IO [Widget RName]
+prettify' cwd authLimit curNum refs = if null refs
   then pure []
   else do
-    refsW1 <- mapM (\(i, r) -> makeRefW i cwd (Just 5) r) refs
+    -- Create the widgets for each reference
+    attrsRefs <- mapM (\(i, r) -> makeRefW i cwd authLimit curNum r) refs
+    let attrs  = map fst attrsRefs
+        refsW1 = map snd attrsRefs
+    -- Apply vertical padding to align them
     let (headW2 : refsW2) = applyColPadding (heading : refsW1)
-        headW = withAttr "bold" . hBox $ headW2
-        refsW = vBox . fmap (padBottom (Pad 1) . hBox) $ refsW2
+    -- Then generate hBoxes from them and style
+    let headW = withAttr "bold" . hBox $ headW2
+        refsW3 = map hBox refsW2
+        refsW4 = zipWith (foldl' (.) id) attrs refsW3
+        refsW =
+          viewport ViewportRefs Vertical
+            -- .  cached CacheRefs
+            .  vBox
+            $  fmap (padBottom (Pad 1)) (init refsW4)
+            ++ [last refsW4]
     pure [joinBorders . border $ vBox [headW <=> hBorder <=> refsW]]
 
 
@@ -93,8 +111,8 @@ prettify cwd authLimit refs = if null refs
 
 
 applyColPadding
-  :: [(SizedWidget, SizedWidget, SizedWidget, SizedWidget, Widget ())]
-  -> [[Widget ()]]
+  :: [(SizedWidget, SizedWidget, SizedWidget, SizedWidget, Widget RName)]
+  -> [[Widget RName]]
 applyColPadding rows =
   let largest1 = maximum $ fmap (_getColWidth 1) rows
       largest2 = maximum $ fmap (_getColWidth 2) rows
@@ -118,7 +136,7 @@ txtWrap' =
 
 
 -- Header row of widgets
-heading :: (SizedWidget, SizedWidget, SizedWidget, SizedWidget, Widget ())
+heading :: (SizedWidget, SizedWidget, SizedWidget, SizedWidget, Widget RName)
 heading =
   let t1 = "  #"
       t2 = "Authors"
@@ -138,13 +156,26 @@ makeRefW
   :: Int        -- ^ Number of the reference
   -> FilePath   -- ^ Current working directory.
   -> Maybe Int  -- ^ Max number of authors to display. Nothing for unlimited.
+  -> Int        -- ^ Number of currently active reference
   -> Reference  -- ^ The reference
-  -> IO (SizedWidget, SizedWidget, SizedWidget, SizedWidget, Widget ())
-makeRefW i cwd mi ref =
+  -> IO
+       ( [Widget RName -> Widget RName]
+       , ( SizedWidget
+         , SizedWidget
+         , SizedWidget
+         , SizedWidget
+         , Widget RName
+         )
+       )
+makeRefW i cwd mi curNum ref = do
   let ts = ref ^. tags
-  in  case ref ^. work of
-        ArticleWork a -> makeArticleW i cwd ts mi a
-        BookWork    b -> makeBookW i cwd ts mi b
+  widgets <- case ref ^. work of
+    ArticleWork a -> makeArticleW i cwd ts mi a
+    BookWork    b -> makeBookW i cwd ts mi b
+  let attrs = if i == curNum
+                     then [withAttr "selectedRef", visible]
+                     else []
+  pure (attrs, widgets)
 
 
 -- Heavy lifting for articles
@@ -159,7 +190,7 @@ makeArticleW
        , SizedWidget
        , SizedWidget
        , SizedWidget
-       , Widget ()
+       , Widget RName
        )
 makeArticleW i cwd refTags authLimit a = do
   availText <- mkAvailText cwd [FullText, SI] a
@@ -180,7 +211,7 @@ makeBookW
   -> Set Tag    -- ^ Any tags belonging to the Reference.
   -> Maybe Int  -- ^ Max number of authors to display. Nothing for unlimited.
   -> Book       -- ^ The reference
-  -> IO (SizedWidget, SizedWidget, SizedWidget, SizedWidget, Widget ())
+  -> IO (SizedWidget, SizedWidget, SizedWidget, SizedWidget, Widget RName)
 makeBookW i cwd refTags authLimit b = do
   availText <- mkAvailText cwd [FullText] b
   -- TODO: Double-width emojis also break Brick. "\x1f4d8"
