@@ -66,10 +66,18 @@ runAdd args input = do
       (  prefix
       <> "could not get Crossref data for DOI '"
       <> getDoiFromException e
-      <> "'"
+      <> "'. Reason: "
+      <> showCrossrefError e
       )
     )
   now <- liftIO getCurrentTime
   let newRefs = map (\w -> Reference w S.empty now now) newWorks
       refsout = IM.fromList $ zip [1 ..] (IM.elems refs ++ newRefs)
   pure $ SCmdOutput refsout Nothing
+
+
+showCrossrefError :: CrossrefException -> Text
+showCrossrefError (CRHttpException _ _) = "Crossref is down or DOI not valid"
+showCrossrefError (CRJsonException _ _) = "Crossref provided invalid JSON"
+showCrossrefError (CRUnknownWorkException _ w) = "Work type " <> w <> " not currently supported"
+showCrossrefError (CROtherException _ _) = "Unknown"

@@ -18,7 +18,7 @@ module Abbotsbury.Crossref
   , fetchWorkFile'
     -- * What could go wrong
     -- $crossref-exceptions
-  , Abbotsbury.Crossref.Internal.CrossrefException
+  , Abbotsbury.Crossref.Internal.CrossrefException (..)
   , Abbotsbury.Crossref.Internal.getDoiFromException
   ) where
 
