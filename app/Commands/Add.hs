@@ -30,7 +30,7 @@ prefix = "add: "
 runAdd :: Args -> CmdInput -> CmdOutput
 runAdd args input = do
   let refs     = refsin input
-      argsDois = T.words args -- Argument parsing here is trivial.
+      argsDois = map T.toLower . T.words $ args -- Argument parsing here is trivial.
       -- Error out if no DOIs were given.
   when (null argsDois) $ throwError (prefix <> "no DOIs supplied")
   -- Remove any DOIs that are already in the library, and any that are obviously

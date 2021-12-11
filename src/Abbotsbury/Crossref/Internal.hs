@@ -193,7 +193,7 @@ parseArticle useInternalAbbrevs messageObj = do
   -- Volume, issue, DOI
   _articleVolume <- messageObj .:? "volume" .!= ""
   _articleIssue  <- (messageObj .: "journal-issue" >>= (.: "issue")) <|> pure ""
-  _articleDoi    <- messageObj .:? "DOI" .!= ""
+  _articleDoi    <- T.toLower <$> messageObj .:? "DOI" .!= ""
   -- The pages are the most annoying one, I think. Try to get pages first, then
   -- fall back on article number, and if none of them exist, just use an empty
   -- page range.
