@@ -353,6 +353,7 @@ getJournalAbbrev long = M.lookup long abbrevMap
       , ("Journal of Biomolecular NMR"                          , "J. Biomol. NMR"                     )
       , ("Journal of Chemical Informatics and Modeling"         , "J. Chem. Inf. Model."               )
       , ("Journal of Computational Chemistry"                   , "J. Comp. Chem."                     )
+      , ("Journal of Heterocyclic Chemistry"                    , "J. Heterocycl. Chem."               )
       , ("Journal of Magnetic Resonance (1969)"                 , "J. Magn. Reson."                    )
       , ("Journal of Magnetic Resonance"                        , "J. Magn. Reson."                    )
       , ("Journal of Magnetic Resonance, Series A"              , "J. Magn. Reson., Ser. A"            )
