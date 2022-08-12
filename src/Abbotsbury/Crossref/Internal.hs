@@ -346,6 +346,7 @@ getJournalAbbrev long = M.lookup long abbrevMap
       , ("Angewandte Chemie International Edition"              , "Angew. Chem., Int. Ed."             )
       , ("Annual Reports on NMR Spectroscopy"                   , "Annu. Rep. NMR Spectrosc."          )
       , ("Biochemistry Journal"                                 , "Biochem. J."                        )
+      , ("Chemical Physics"                                     , "Chem. Phys."                        )
       , ("Chemical Physics Letters"                             , "Chem. Phys. Lett."                  )
       , ("Chemical Science"                                     , "Chem. Sci."                         )
       , ("Chemical Communications"                              , "Chem. Commun."                      )
