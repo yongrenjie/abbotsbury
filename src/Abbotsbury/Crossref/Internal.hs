@@ -363,6 +363,7 @@ getJournalAbbrev long = M.lookup long abbrevMap
       , ("Journal of Molecular Spectroscopy"                    , "J. Mol. Spectrosc."                 )
       , ("Journal of the American Chemical Society"             , "J. Am. Chem. Soc."                  )
       , ("Magnetic Resonance in Chemistry"                      , "Magn. Reson. Chem."                 )
+      , ("Magnetic Resonance Imaging"                           , "Magn. Reson. Imaging"               )
       , ("Nature Chemistry"                                     , "Nat. Chem."                         )
       , ("Nature Communications"                                , "Nat. Commun."                       )
       , ("Nature Reviews Chemistry"                             , "Nat. Rev. Chem."                    )
